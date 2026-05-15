@@ -1,0 +1,13 @@
+# Sbonus+ .gitignore
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+keys/
+*.pem
+.venv/
+venv/
+dist/
+build/
+*.db
+.DS_Store

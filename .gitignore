@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.local
+.env.*
+!.env.example
+.next/
+.expo/
+*.pem
+__pycache__/
+*.pyc
+.DS_Store
+keys/
+dist/
+build/
+coverage/

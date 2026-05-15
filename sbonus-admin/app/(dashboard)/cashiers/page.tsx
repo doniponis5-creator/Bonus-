@@ -1,0 +1,137 @@
+'use client';
+import { Briefcase, Loader2, XCircle, Plus, CheckCircle2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { adminAPI } from '@/lib/api';
+
+export default function CashiersPage() {
+  const [cashiers, setCashiers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [branches, setBranches] = useState<any[]>([]);
+
+  // Form
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('+996');
+  const [pin, setPin] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [cashiersRes, branchesRes] = await Promise.all([
+        adminAPI.cashiers(),
+        adminAPI.branches(),
+      ]);
+      setCashiers(cashiersRes.data);
+      setBranches(branchesRes.data);
+      if (branchesRes.data.length > 0 && !branchId) {
+        setBranchId(branchesRes.data[0].id);
+      }
+    } catch {
+      setCashiers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMsg(''); setErr('');
+    if (!branchId) { setErr('Выберите филиал'); return; }
+    setSaving(true);
+    try {
+      await adminAPI.createCashier({ phone, full_name: name, pin, branch_id: branchId });
+      setMsg(`<CheckCircle2 size={14} style={{display:'inline',marginRight:4}} /> Кассир "${name}" добавлен`);
+      setName(''); setPhone('+996'); setPin('');
+      load();
+    } catch (er: any) {
+      setErr(er?.response?.data?.detail?.message || 'Ошибка');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24 }}><Briefcase size={24} /> Кассиры</h1>
+
+      {/* Таблица кассиров */}
+      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead>
+            <tr>
+              {['#', 'ФИО', 'Телефон', 'Филиал', 'Статус', 'Добавлен'].map(h => (
+                <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}><Loader2 className="animate-spin" style={{marginRight: 8, display: 'inline'}} size={16} /> Загрузка...</td></tr>
+            )}
+            {!loading && cashiers.length === 0 && (
+              <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Кассиры не найдены</td></tr>
+            )}
+            {!loading && cashiers.map((c, i) => (
+              <tr key={c.id}>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{i + 1}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#e2eaf6' }}>{c.full_name}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{c.phone}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{c.branch_name}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                  <span style={{
+                    background: c.is_active ? '#00e5a018' : '#ff4d4d18',
+                    color: c.is_active ? '#00e5a0' : '#ff4d4d',
+                    padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700,
+                  }}>
+                    {c.is_active ? 'Активен' : 'Отключён'}
+                  </span>
+                </td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                  {new Date(c.created_at).toLocaleDateString('ru-RU')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Форма добавления */}
+      <div className="card" style={{ maxWidth: 520 }}>
+        <h3 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 16, fontWeight: 700, marginBottom: 20 }}><Plus size={16} /> Добавить кассира</h3>
+        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Полное имя *</label>
+            <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Айгуль Асанова" required />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Телефон *</label>
+              <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+996700123456" required />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>PIN (4 цифры) *</label>
+              <input className="input" type="password" maxLength={4} minLength={4} value={pin} onChange={e => setPin(e.target.value)} placeholder="••••" required />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Филиал *</label>
+            <select className="input" value={branchId} onChange={e => setBranchId(e.target.value)} required>
+              <option value="">— Выберите филиал —</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={saving} style={{ marginTop: 4 }}>
+            {saving ? 'Добавление...' : 'Добавить кассира'}
+          </button>
+        </form>
+        {msg && <div style={{ marginTop: 12, color: 'var(--accent)', fontSize: 14, fontWeight: 600 }}>{msg}</div>}
+        {err && <div style={{ marginTop: 12, color: 'var(--danger)', fontSize: 14, fontWeight: 600 }}><XCircle size={14} style={{display:'inline',marginRight:4}} /> {err}</div>}
+      </div>
+    </div>
+  );
+}

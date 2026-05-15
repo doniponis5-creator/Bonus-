@@ -1,0 +1,240 @@
+"""
+Sbonus+ — API маршруты клиентов.
+POST   /api/v1/customers/register
+GET    /api/v1/customers/by-phone/{phone}
+GET    /api/v1/customers/by-qr/{qr_code}
+GET    /api/v1/customers/{id}/balance
+GET    /api/v1/customers/{id}/transactions
+"""
+
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.core.database import get_db
+from app.core.security import UserRole, get_current_user, require_role
+from app.models import BonusAccount, Customer, Tier, Transaction
+from app.schemas import BalanceResponse, CustomerRegisterRequest, CustomerResponse
+
+router = APIRouter(prefix="/customers", tags=["Клиенты"])
+
+
+def _generate_qr() -> str:
+    """Генерация уникального QR кода."""
+    return f"SB-{uuid.uuid4().hex[:10].upper()}"
+
+
+def _generate_referral() -> str:
+    """Генерация уникального реферального кода."""
+    return f"REF-{uuid.uuid4().hex[:8].upper()}"
+
+
+def normalize_phone(phone: str) -> str:
+    """Нормализация номера телефона (очистка и приведение к +996...)."""
+    clean = phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+    if clean.startswith('0'):
+        clean = '+996' + clean[1:]
+    elif clean.startswith('996') and not clean.startswith('+'):
+        clean = '+' + clean
+    return clean
+
+
+@router.post("/register", response_model=CustomerResponse, status_code=201)
+async def register_customer(
+    body: CustomerRegisterRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> CustomerResponse:
+    """Регистрация нового клиента в бонусной программе."""
+    normalized_phone = normalize_phone(body.phone)
+    # Проверка дубликата телефона
+    existing = await db.execute(select(Customer).where(Customer.phone == normalized_phone))
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "CUSTOMER_PHONE_EXISTS", "message": "Номер телефона уже зарегистрирован"},
+        )
+
+    # Дефолтный tier (Bronze)
+    tier_result = await db.execute(select(Tier).order_by(Tier.sort_order.asc()).limit(1))
+    default_tier = tier_result.scalar_one_or_none()
+
+    # Обработка реферала
+    referred_by_id = None
+    if body.referred_by_code:
+        ref_result = await db.execute(
+            select(Customer).where(Customer.referral_code == body.referred_by_code)
+        )
+        referrer = ref_result.scalar_one_or_none()
+        if referrer:
+            referred_by_id = referrer.id
+
+    customer = Customer(
+        phone=normalized_phone,
+        full_name=body.full_name,
+        qr_code=_generate_qr(),
+        birth_date=body.birth_date,
+        tier_id=default_tier.id if default_tier else None,
+        referral_code=_generate_referral(),
+        referred_by=referred_by_id,
+    )
+    db.add(customer)
+    await db.flush()
+
+    # Создаём бонусный счёт
+    account = BonusAccount(customer_id=customer.id)
+    db.add(account)
+
+    await db.flush()
+
+    return CustomerResponse(
+        id=customer.id,
+        phone=customer.phone,
+        full_name=customer.full_name,
+        qr_code=customer.qr_code,
+        birth_date=customer.birth_date,
+        tier_name=default_tier.name if default_tier else "Bronze",
+        tier_percent=default_tier.bonus_percent if default_tier else 3,
+        referral_code=customer.referral_code,
+        is_active=customer.is_active,
+        created_at=customer.created_at,
+    )
+
+
+@router.get("/by-phone/{phone}", response_model=CustomerResponse)
+async def get_by_phone(
+    phone: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> CustomerResponse:
+    """Поиск клиента по номеру телефона."""
+    normalized_phone = normalize_phone(phone)
+    result = await db.execute(
+        select(Customer).options(selectinload(Customer.tier)).where(Customer.phone == normalized_phone)
+    )
+    customer = result.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail={"code": "CUSTOMER_NOT_FOUND", "message": "Клиент не найден"})
+
+    return CustomerResponse(
+        id=customer.id, phone=customer.phone, full_name=customer.full_name,
+        qr_code=customer.qr_code, birth_date=customer.birth_date,
+        tier_name=customer.tier.name if customer.tier else None,
+        tier_percent=customer.tier.bonus_percent if customer.tier else None,
+        referral_code=customer.referral_code, is_active=customer.is_active,
+        created_at=customer.created_at,
+    )
+
+
+@router.get("/by-qr/{qr_code}", response_model=CustomerResponse)
+async def get_by_qr(
+    qr_code: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> CustomerResponse:
+    """Поиск клиента по QR коду (кассир сканирует)."""
+    result = await db.execute(
+        select(Customer).options(selectinload(Customer.tier)).where(Customer.qr_code == qr_code)
+    )
+    customer = result.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail={"code": "CUSTOMER_NOT_FOUND", "message": "Клиент не найден"})
+
+    return CustomerResponse(
+        id=customer.id, phone=customer.phone, full_name=customer.full_name,
+        qr_code=customer.qr_code, birth_date=customer.birth_date,
+        tier_name=customer.tier.name if customer.tier else None,
+        tier_percent=customer.tier.bonus_percent if customer.tier else None,
+        referral_code=customer.referral_code, is_active=customer.is_active,
+        created_at=customer.created_at,
+    )
+
+
+@router.get("/{customer_id}/balance", response_model=BalanceResponse)
+async def get_balance(
+    customer_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> BalanceResponse:
+    """Текущий бонусный баланс клиента."""
+    result = await db.execute(
+        select(Customer).options(
+            selectinload(Customer.tier),
+            selectinload(Customer.bonus_account),
+        ).where(Customer.id == customer_id)
+    )
+    customer = result.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail={"code": "CUSTOMER_NOT_FOUND"})
+
+    account = customer.bonus_account
+    tier = customer.tier
+
+    # Следующий уровень
+    next_tier = None
+    next_remaining = None
+    if tier and account:
+        nt_result = await db.execute(
+            select(Tier).where(Tier.min_total_kgs > tier.min_total_kgs, Tier.is_active == True)
+            .order_by(Tier.min_total_kgs.asc()).limit(1)
+        )
+        next_tier_obj = nt_result.scalar_one_or_none()
+        if next_tier_obj:
+            next_tier = next_tier_obj.name
+            next_remaining = max(next_tier_obj.min_total_kgs - account.total_earned, 0)
+
+    return BalanceResponse(
+        customer_id=customer.id,
+        full_name=customer.full_name,
+        phone=customer.phone,
+        qr_code=customer.qr_code,
+        balance=account.balance if account else 0,
+        total_earned=account.total_earned if account else 0,
+        total_spent=account.total_spent if account else 0,
+        tier_name=tier.name if tier else "Bronze",
+        tier_percent=tier.bonus_percent if tier else 3,
+        next_tier_name=next_tier,
+        next_tier_remaining=next_remaining,
+    )
+
+
+@router.get("/{customer_id}/transactions")
+async def get_transactions(
+    customer_id: uuid.UUID,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """История транзакций клиента с пагинацией."""
+    offset = (page - 1) * per_page
+
+    # Подсчёт
+    count_q = await db.execute(
+        select(func.count()).select_from(Transaction).where(Transaction.customer_id == customer_id)
+    )
+    total = count_q.scalar() or 0
+
+    # Выборка
+    result = await db.execute(
+        select(Transaction)
+        .where(Transaction.customer_id == customer_id)
+        .order_by(Transaction.created_at.desc())
+        .offset(offset).limit(per_page)
+    )
+    txns = result.scalars().all()
+
+    items = [
+        {
+            "id": str(t.id), "type": t.type.value, "amount": float(t.amount),
+            "purchase_amount": float(t.purchase_amount) if t.purchase_amount else None,
+            "receipt_number": t.receipt_number, "note": t.note,
+            "created_at": t.created_at.isoformat(),
+        }
+        for t in txns
+    ]
+
+    return {"items": items, "total": total, "page": page, "per_page": per_page}

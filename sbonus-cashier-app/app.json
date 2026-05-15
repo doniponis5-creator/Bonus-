@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "S Bonus — Кассир",
+    "slug": "sbonus-cashier",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "sbonus",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0a0f1a",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "kg.smartcenter.sbonus.cashier",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Для сканирования QR кода клиента"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0f1a"
+      },
+      "package": "kg.smartcenter.sbonus.cashier",
+      "permissions": ["CAMERA"]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Разрешите доступ к камере для сканирования QR кода"
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://192.168.0.121:8000",
+      "eas": {
+        "projectId": "sbonus-cashier"
+      }
+    }
+  }
+}

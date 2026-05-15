@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sbonus+ — Полная Архитектура Системы</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090f;--bg2:#0d1117;--bg3:#111827;
+  --border:#1c2a3a;--border2:#243040;
+  --accent:#00e5a0;--accent2:#00b8d4;--accent3:#7c6fff;
+  --warn:#f59e0b;--danger:#ef4444;
+  --text:#e2eaf6;--text2:#8899aa;--text3:#445566;
+  --mono:'JetBrains Mono',monospace;--sans:'Sora',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(0,229,160,.025)1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.025)1px,transparent 1px);
+  background-size:48px 48px;}
+.glow1{position:fixed;z-index:0;pointer-events:none;width:700px;height:700px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,229,160,.06)0%,transparent 65%);top:-250px;left:-150px;}
+.glow2{position:fixed;z-index:0;pointer-events:none;width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,111,255,.05)0%,transparent 65%);bottom:-150px;right:-50px;}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:48px 24px 100px;}
+
+/* HEADER */
+.header{text-align:center;margin-bottom:56px;animation:slideDown .7s ease both;}
+.logo-row{display:inline-flex;align-items:center;gap:12px;
+  background:linear-gradient(135deg,rgba(0,229,160,.1),rgba(0,184,212,.1));
+  border:1px solid rgba(0,229,160,.25);border-radius:50px;padding:8px 22px 8px 12px;margin-bottom:20px;}
+.logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#00e5a0,#00b8d4);
+  display:flex;align-items:center;justify-content:center;font-size:1rem;}
+.logo-text{font-family:var(--mono);font-size:.8rem;color:var(--accent);letter-spacing:3px;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 8px var(--accent);animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.1;
+  background:linear-gradient(135deg,#fff 20%,var(--accent) 60%,var(--accent2)100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:14px;}
+.header-sub{color:var(--text2);font-size:.9rem;line-height:1.7;max-width:560px;margin:0 auto 20px;}
+.header-tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.htag{padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;font-family:var(--mono);letter-spacing:.5px;}
+.htag-g{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);}
+.htag-b{background:rgba(0,184,212,.1);color:var(--accent2);border:1px solid rgba(0,184,212,.2);}
+.htag-p{background:rgba(124,111,255,.1);color:var(--accent3);border:1px solid rgba(124,111,255,.2);}
+.htag-y{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2);}
+@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+
+/* TABS */
+.tab-nav{display:flex;gap:4px;flex-wrap:wrap;background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:6px;margin-bottom:32px;}
+.tnav{flex:1;min-width:70px;padding:9px 10px;border-radius:10px;font-size:.72rem;font-weight:700;
+  cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:5px;}
+.tnav:hover{color:var(--text2);background:var(--bg3);}
+.tnav.active{background:linear-gradient(135deg,rgba(0,229,160,.15),rgba(0,184,212,.1));
+  color:var(--accent);border:1px solid rgba(0,229,160,.2);}
+.tab-pane{display:none;animation:fadeUp .35s ease;}
+.tab-pane.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* SECTION LABEL */
+.sec-label{font-family:var(--mono);font-size:.62rem;letter-spacing:3px;text-transform:uppercase;
+  color:var(--accent);display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(0,229,160,.3),transparent);}
+.mt24{margin-top:24px;}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px;
+  transition:border-color .25s,box-shadow .25s;}
+.card:hover{border-color:rgba(0,229,160,.2);box-shadow:0 0 30px rgba(0,229,160,.05);}
+.card-title{font-weight:700;font-size:.92rem;color:#fff;margin-bottom:6px;}
+.card-desc{font-size:.78rem;color:var(--text2);line-height:1.7;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.mb16{margin-bottom:16px;}.mb24{margin-bottom:24px;}.mb32{margin-bottom:32px;}
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr;}}
+
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:.69rem;font-weight:700;margin:2px;}
+.pg{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);}
+.pb{background:rgba(0,184,212,.1);color:var(--accent2);border:1px solid rgba(0,184,212,.2);}
+.py{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2);}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+@media(max-width:680px){.kpi-grid{grid-template-columns:1fr 1fr;}}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;}
+.kpi-num{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--accent);}
+.kpi-lbl{font-size:.72rem;color:var(--text3);margin-top:4px;}
+
+/* FLOW */
+.flow-chain{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin-top:20px;}
+.fc-node{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;
+  font-size:.76rem;font-weight:600;color:var(--text);text-align:center;min-width:90px;flex:1;}
+.fc-node.g{border-color:rgba(0,229,160,.4);color:var(--accent);background:rgba(0,229,160,.06);}
+.fc-node.b{border-color:rgba(0,184,212,.4);color:var(--accent2);background:rgba(0,184,212,.06);}
+.fc-node.p{border-color:rgba(124,111,255,.4);color:var(--accent3);background:rgba(124,111,255,.06);}
+.fc-arrow{color:var(--text3);padding:0 8px;font-size:1rem;}
+.fc-sub{font-size:.6rem;color:var(--text3);margin-top:3px;font-family:var(--mono);}
+
+/* OVERVIEW HERO */
+.overview-hero{background:linear-gradient(135deg,rgba(0,229,160,.08),rgba(0,184,212,.05));
+  border:1px solid rgba(0,229,160,.2);border-radius:20px;padding:32px;text-align:center;margin-bottom:28px;position:relative;overflow:hidden;}
+.overview-hero::before{content:'S+';position:absolute;font-size:10rem;font-weight:800;font-family:var(--mono);
+  color:rgba(0,229,160,.04);top:-20px;right:20px;line-height:1;}
+.hero-title{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:8px;}
+.hero-sub{color:var(--text2);font-size:.85rem;max-width:500px;margin:0 auto 20px;line-height:1.7;}
+
+/* ROLE CARDS */
+.role-card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:18px;}
+.role-icon{font-size:1.8rem;margin-bottom:10px;}
+.role-title{font-weight:700;font-size:.88rem;margin-bottom:6px;}
+.role-list{list-style:none;}
+.role-list li{font-size:.76rem;color:var(--text2);padding:3px 0;display:flex;gap:6px;align-items:baseline;}
+.role-list li::before{content:'›';color:var(--accent);font-weight:700;flex-shrink:0;}
+
+/* INTEGRATIONS */
+.int-line{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:12px;margin-bottom:8px;}
+.int-name{font-weight:700;font-size:.85rem;min-width:130px;}
+.int-desc{font-size:.76rem;color:var(--text2);flex:1;}
+.int-status{font-family:var(--mono);font-size:.65rem;padding:3px 8px;border-radius:5px;}
+.is-ready{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);}
+.is-plan{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2);}
+
+/* STACK */
+.stack-row{display:flex;gap:14px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:16px;margin-bottom:10px;transition:border-color .2s;}
+.stack-row:hover{border-color:rgba(0,229,160,.2);}
+.stack-ico{font-size:1.5rem;flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:10px;}
+.stack-name{font-weight:700;font-size:.88rem;color:#fff;margin-bottom:3px;}
+.stack-why{font-size:.76rem;color:var(--text2);line-height:1.6;}
+.stack-tags{margin-top:6px;}
+.stack-badge{font-family:var(--mono);font-size:.6rem;padding:2px 7px;border-radius:4px;margin-right:4px;
+  background:rgba(0,229,160,.08);color:var(--accent);border:1px solid rgba(0,229,160,.15);}
+
+/* DATABASE */
+.db-table{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px;}
+.db-head{background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;
+  font-family:var(--mono);font-size:.72rem;color:var(--accent);display:flex;justify-content:space-between;align-items:center;}
+.db-head span{color:var(--text3);font-size:.65rem;}
+.db-row{display:grid;grid-template-columns:160px 120px 60px 1fr;padding:7px 16px;
+  border-top:1px solid var(--border);font-size:.73rem;gap:8px;align-items:center;}
+.db-row.hd{background:rgba(255,255,255,.02);color:var(--text3);font-family:var(--mono);font-size:.65rem;letter-spacing:1px;}
+.col-n{color:var(--text);font-weight:600;}.col-t{color:var(--accent2);font-family:var(--mono);}
+.col-k{font-size:.6rem;font-family:var(--mono);}.pk{color:var(--warn);}.fk{color:var(--accent3);}
+.col-d{color:var(--text3);font-size:.7rem;}
+
+/* API ENDPOINTS */
+.ep{display:flex;align-items:baseline;gap:12px;padding:9px 14px;border-radius:10px;
+  background:var(--bg2);border:1px solid var(--border);margin-bottom:6px;transition:border-color .2s;}
+.ep:hover{border-color:rgba(0,229,160,.15);}
+.method{font-family:var(--mono);font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:5px;min-width:48px;text-align:center;flex-shrink:0;}
+.mget{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);}
+.mpost{background:rgba(0,184,212,.1);color:var(--accent2);border:1px solid rgba(0,184,212,.2);}
+.mput{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2);}
+.ep-path{font-family:var(--mono);font-size:.74rem;color:#fff;flex:1;}
+.ep-desc{font-size:.7rem;color:var(--text3);}
+
+/* BONUS LOGIC */
+.logic-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:14px;}
+.logic-title{font-weight:700;font-size:.88rem;color:#fff;margin-bottom:12px;}
+.logic-rule{display:grid;grid-template-columns:1fr 28px 1fr;gap:8px;align-items:center;margin-bottom:8px;}
+.lr-if{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:.76rem;color:var(--text2);}
+.lr-arr{text-align:center;color:var(--accent);font-size:1.1rem;font-weight:700;}
+.lr-then{background:rgba(0,229,160,.07);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:8px 12px;font-size:.76rem;color:var(--accent);}
+.tier-row{display:grid;grid-template-columns:120px 1fr 100px 90px;gap:10px;align-items:center;
+  padding:10px 14px;border-radius:10px;margin-bottom:6px;background:var(--bg3);border:1px solid var(--border);}
+.tier-name{font-weight:700;font-size:.85rem;}
+.tier-bar-wrap{background:var(--bg2);border-radius:4px;height:8px;overflow:hidden;}
+.tier-bar{height:100%;border-radius:4px;}
+.tier-pct{font-family:var(--mono);font-size:.8rem;font-weight:700;text-align:right;}
+.tier-range{font-size:.7rem;color:var(--text3);text-align:right;}
+
+/* SECURITY */
+.sec-item{display:flex;gap:14px;padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;}
+.sec-icon{font-size:1.4rem;flex-shrink:0;}
+.sec-title2{font-weight:700;font-size:.85rem;color:#fff;margin-bottom:4px;}
+.sec-desc2{font-size:.76rem;color:var(--text2);line-height:1.65;}
+.sec-code{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin-top:8px;
+  font-family:var(--mono);font-size:.68rem;color:var(--accent2);line-height:1.7;white-space:pre;}
+
+/* PROMPT */
+.prompt-container{background:var(--bg);border:1px solid rgba(0,229,160,.2);border-radius:16px;overflow:hidden;}
+.prompt-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 18px;display:flex;justify-content:space-between;align-items:center;}
+.prompt-title{font-family:var(--mono);font-size:.7rem;color:var(--accent);letter-spacing:2px;}
+.copy-btn{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);color:var(--accent);
+  font-size:.72rem;font-family:var(--mono);padding:5px 12px;border-radius:6px;cursor:pointer;transition:all .2s;}
+.copy-btn:hover{background:rgba(0,229,160,.2);}
+.prompt-body{padding:24px;font-family:var(--mono);font-size:.72rem;line-height:2;color:#8ba09a;white-space:pre-wrap;max-height:600px;overflow-y:auto;}
+.kw{color:var(--accent);font-weight:700;}
+.str-c{color:#e6bd86;}
+.cmt-c{color:var(--text3);font-style:italic;}
+.num-c{color:var(--accent2);}
+.hdr-c{color:#fff;font-size:.78rem;}
+
+/* ROADMAP */
+.roadmap{position:relative;padding-left:32px;}
+.roadmap::before{content:'';position:absolute;left:10px;top:8px;bottom:8px;width:2px;
+  background:linear-gradient(180deg,var(--accent),var(--accent3),transparent);border-radius:2px;}
+.rphase{margin-bottom:32px;position:relative;}
+.rphase::before{content:'';position:absolute;left:-28px;top:6px;width:12px;height:12px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--border2);}
+.rphase.done::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 12px rgba(0,229,160,.5);}
+.rphase.active::before{background:var(--warn);border-color:var(--warn);box-shadow:0 0 12px rgba(245,158,11,.5);animation:blink 1.4s infinite;}
+.rp-label{font-family:var(--mono);font-size:.62rem;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:4px;}
+.rp-title{font-weight:700;font-size:.95rem;color:#fff;margin-bottom:10px;}
+.rp-tasks{display:flex;flex-wrap:wrap;gap:6px;}
+.rp-task{padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:600;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);}
+.rp-task.done-t{background:rgba(0,229,160,.07);border-color:rgba(0,229,160,.2);color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow1"></div>
+<div class="glow2"></div>
+
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo-row">
+    <div class="logo-icon">💎</div>
+    <div class="logo-text">SBONUS+</div>
+    <div class="live-dot"></div>
+  </div>
+  <h1>Полная Бонусная Система<br>Архитектура</h1>
+  <div class="header-sub">Готовое решение 0→100% для магазина бытовой техники. Green API, интеграция 1С, мульти-филиал, валюта KGS.</div>
+  <div class="header-tags">
+    <span class="htag htag-g">🟢 Green API</span>
+    <span class="htag htag-b">🔷 Интеграция 1С</span>
+    <span class="htag htag-p">📱 Android + iOS</span>
+    <span class="htag htag-y">🇰🇬 KGS Сом</span>
+    <span class="htag htag-g">☁️ Мульти-Филиал</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-nav">
+  <button class="tnav active" onclick="showTab('overview',this)">🗺 Обзор</button>
+  <button class="tnav" onclick="showTab('stack',this)">⚙️ Стек</button>
+  <button class="tnav" onclick="showTab('database',this)">🗄 База данных</button>
+  <button class="tnav" onclick="showTab('api',this)">🔌 API</button>
+  <button class="tnav" onclick="showTab('bonus',this)">💰 Бонусы</button>
+  <button class="tnav" onclick="showTab('errors',this)">⚠️ Ошибки</button>
+  <button class="tnav" onclick="showTab('security',this)">🔒 Безопасность</button>
+  <button class="tnav" onclick="showTab('prompt',this)">🤖 Промпт</button>
+  <button class="tnav" onclick="showTab('roadmap',this)">🛣 Дорожная карта</button>
+</div>
+
+<!-- ===== OVERVIEW ===== -->
+<div id="tab-overview" class="tab-pane active">
+  <div class="overview-hero">
+    <div class="hero-title">Sbonus+ — Как это работает?</div>
+    <div class="hero-sub">Клиент делает покупку → бонусы начисляются → проверяет по телефону/QR → использует при следующей покупке. Всё в реальном времени.</div>
+    <div class="flow-chain">
+      <div class="fc-node g">🛒 Покупка<div class="fc-sub">Кассир</div></div>
+      <div class="fc-arrow">→</div>
+      <div class="fc-node">⚡ API<div class="fc-sub">Бэкенд</div></div>
+      <div class="fc-arrow">→</div>
+      <div class="fc-node b">💎 Бонус<div class="fc-sub">Начислен</div></div>
+      <div class="fc-arrow">→</div>
+      <div class="fc-node">📲 WA+SMS<div class="fc-sub">Green API</div></div>
+      <div class="fc-arrow">→</div>
+      <div class="fc-node p">👤 Клиент<div class="fc-sub">Увидел</div></div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-num">3</div><div class="kpi-lbl">Роли (Админ/Кассир/Клиент)</div></div>
+    <div class="kpi"><div class="kpi-num">∞</div><div class="kpi-lbl">Количество филиалов</div></div>
+    <div class="kpi"><div class="kpi-num">2</div><div class="kpi-lbl">Канала (Тел + QR)</div></div>
+    <div class="kpi"><div class="kpi-num">KGS</div><div class="kpi-lbl">Основная валюта</div></div>
+  </div>
+
+  <div class="sec-label mb16">Роли и возможности</div>
+  <div class="g3 mb32">
+    <div class="role-card">
+      <div class="role-icon">👑</div>
+      <div class="role-title" style="color:var(--warn)">Супер Админ</div>
+      <ul class="role-list">
+        <li>Управление всеми филиалами</li>
+        <li>Настройка % бонусов</li>
+        <li>Добавление уровней (tier)</li>
+        <li>SMS/WhatsApp шаблоны</li>
+        <li>Отчёты и статистика</li>
+        <li>Добавление кассиров</li>
+        <li>Синхронизация с 1С</li>
+        <li>Создание промокодов</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-icon">🧑‍💼</div>
+      <div class="role-title" style="color:var(--accent2)">Кассир (Приложение)</div>
+      <ul class="role-list">
+        <li>Поиск клиента по тел/QR</li>
+        <li>Просмотр баланса</li>
+        <li>Начисление бонусов</li>
+        <li>Списание бонусов (оплата)</li>
+        <li>Бонус ко дню рождения</li>
+        <li>История покупок</li>
+        <li>Печать чека</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-icon">👤</div>
+      <div class="role-title" style="color:var(--accent)">Клиент</div>
+      <ul class="role-list">
+        <li>Баланс через WhatsApp</li>
+        <li>SMS уведомления</li>
+        <li>Получение QR кода</li>
+        <li>История покупок</li>
+        <li>Просмотр уровня</li>
+        <li>Реферальная ссылка</li>
+        <li>Ввод промокода</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec-label mb16">Интеграции</div>
+  <div class="int-line"><span class="int-name">🟢 Green API</span><span class="int-desc">Баланс, уведомления, OTP, отправка чека через WhatsApp</span><span class="int-status is-ready">ОСНОВНОЙ</span></div>
+  <div class="int-line"><span class="int-name">📊 1С</span><span class="int-desc">Данные покупок, база товаров, синхронизация кассиров</span><span class="int-status is-ready">WEBHOOK</span></div>
+  <div class="int-line"><span class="int-name">📱 QR Code</span><span class="int-desc">Уникальный QR для каждого клиента, кассир сканирует</span><span class="int-status is-ready">ВСТРОЕНО</span></div>
+  <div class="int-line"><span class="int-name">📨 SMS Шлюз</span><span class="int-desc">PlayMobile.uz или Eskiz.uz для SMS в Кыргызстане</span><span class="int-status is-plan">ДОПОЛН.</span></div>
+  <div class="int-line"><span class="int-name">🖨 Чек-принтер</span><span class="int-desc">Bluetooth термопринтер, печать чека прямо из приложения</span><span class="int-status is-plan">БУДУЩЕЕ</span></div>
+</div>
+
+<!-- ===== STACK ===== -->
+<div id="tab-stack" class="tab-pane">
+  <div class="sec-label mb16">Бэкенд</div>
+  <div class="stack-row">
+    <div class="stack-ico">🐍</div>
+    <div>
+      <div class="stack-name">FastAPI (Python 3.11+)</div>
+      <div class="stack-why">Самый быстрый Python фреймворк. Автоматическая Swagger документация. Async/await — идеально для мульти-филиалов. Отлично подходит для Green API webhook. Мощная валидация через Pydantic v2.</div>
+      <div class="stack-tags"><span class="stack-badge">fastapi</span><span class="stack-badge">pydantic v2</span><span class="stack-badge">sqlalchemy 2.0</span><span class="stack-badge">alembic</span></div>
+    </div>
+  </div>
+  <div class="stack-row">
+    <div class="stack-ico">🐘</div>
+    <div>
+      <div class="stack-name">PostgreSQL 15+</div>
+      <div class="stack-why">Надёжная реляционная БД. ACID транзакции — критично для бонусных операций. UUID primary key. Изоляция схем для мульти-филиалов.</div>
+      <div class="stack-tags"><span class="stack-badge">postgres 15</span><span class="stack-badge">uuid-ossp</span><span class="stack-badge">pg_cron</span></div>
+    </div>
+  </div>
+  <div class="stack-row">
+    <div class="stack-ico">⚡</div>
+    <div>
+      <div class="stack-name">Redis 7+</div>
+      <div class="stack-why">OTP коды (с TTL). Кеш сессий. Rate limiting. Celery очередь задач. Быстрый кеш баланса. Чёрный список токенов.</div>
+      <div class="stack-tags"><span class="stack-badge">redis 7</span><span class="stack-badge">celery</span><span class="stack-badge">otp ttl</span></div>
+    </div>
+  </div>
+  <div class="stack-row">
+    <div class="stack-ico">🔑</div>
+    <div>
+      <div class="stack-name">JWT RS256 + OAuth2</div>
+      <div class="stack-why">Access/refresh токены для админов и кассиров. Контроль доступа по ролям (RBAC). Разрешения по филиалам.</div>
+      <div class="stack-tags"><span class="stack-badge">jwt rs256</span><span class="stack-badge">rbac</span><span class="stack-badge">refresh rotation</span></div>
+    </div>
+  </div>
+
+  <div class="sec-label mb16 mt24">Фронтенд / Мобильное приложение</div>
+  <div class="stack-row">
+    <div class="stack-ico">⚛️</div>
+    <div>
+      <div class="stack-name">React Native (Expo SDK 51) — Приложение кассира</div>
+      <div class="stack-why">Одна кодовая база — Android и iOS. Camera API — QR сканер. Expo Go для быстрого тестирования. Оффлайн режим. Bluetooth принтер в будущем.</div>
+      <div class="stack-tags"><span class="stack-badge">expo sdk 51</span><span class="stack-badge">react query</span><span class="stack-badge">zustand</span><span class="stack-badge">expo-camera</span></div>
+    </div>
+  </div>
+  <div class="stack-row">
+    <div class="stack-ico">🖥</div>
+    <div>
+      <div class="stack-name">Next.js 14 (App Router) — Админ-панель</div>
+      <div class="stack-why">Серверный рендеринг. Tailwind + shadcn/ui для быстрого дизайна. Recharts статистика. Excel экспорт. Мульти-филиальный дашборд.</div>
+      <div class="stack-tags"><span class="stack-badge">next.js 14</span><span class="stack-badge">tailwind</span><span class="stack-badge">shadcn/ui</span><span class="stack-badge">recharts</span></div>
+    </div>
+  </div>
+
+  <div class="sec-label mb16 mt24">Инфраструктура и DevOps</div>
+  <div class="g3">
+    <div class="card"><div class="card-title">🐳 Docker + Compose</div><div class="card-desc">Все сервисы в контейнерах. Локальная разработка = продакшен. Простой деплой и откат.</div></div>
+    <div class="card"><div class="card-title">☁️ VPS (Hetzner CX21)</div><div class="card-desc">2 vCPU, 4GB RAM — достаточно для старта. ~$7/мес. В будущем масштабируется.</div></div>
+    <div class="card"><div class="card-title">🔄 Nginx + SSL</div><div class="card-desc">Обратный прокси. Let's Encrypt бесплатный HTTPS. Rate limiting. В будущем балансировщик.</div></div>
+  </div>
+</div>
+
+<!-- ===== DATABASE ===== -->
+<div id="tab-database" class="tab-pane">
+  <div class="sec-label mb16">Основные таблицы (PostgreSQL)</div>
+
+  <div class="db-table">
+    <div class="db-head">customers — Клиенты <span>Основная таблица</span></div>
+    <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+    <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d">Уникальный идентификатор</span></div>
+    <div class="db-row"><span class="col-n">phone</span><span class="col-t">VARCHAR(20)</span><span class="col-k">UNIQUE</span><span class="col-d">Формат +996XXXXXXXXX</span></div>
+    <div class="db-row"><span class="col-n">full_name</span><span class="col-t">VARCHAR(100)</span><span class="col-k"></span><span class="col-d">Полное имя</span></div>
+    <div class="db-row"><span class="col-n">qr_code</span><span class="col-t">VARCHAR(50)</span><span class="col-k">UNIQUE</span><span class="col-d">Уникальная QR строка</span></div>
+    <div class="db-row"><span class="col-n">birth_date</span><span class="col-t">DATE</span><span class="col-k"></span><span class="col-d">Для бонуса ко дню рождения</span></div>
+    <div class="db-row"><span class="col-n">tier_id</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d">Уровень → таблица tiers</span></div>
+    <div class="db-row"><span class="col-n">referral_code</span><span class="col-t">VARCHAR(20)</span><span class="col-k">UNIQUE</span><span class="col-d">Код приглашения друга</span></div>
+    <div class="db-row"><span class="col-n">referred_by</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d">Кто пригласил</span></div>
+    <div class="db-row"><span class="col-n">is_active</span><span class="col-t">BOOLEAN</span><span class="col-k"></span><span class="col-d">Активен/заблокирован</span></div>
+    <div class="db-row"><span class="col-n">created_at</span><span class="col-t">TIMESTAMPTZ</span><span class="col-k"></span><span class="col-d">Дата регистрации</span></div>
+  </div>
+
+  <div class="db-table">
+    <div class="db-head">bonus_accounts — Бонусный счёт <span>По 1 на клиента</span></div>
+    <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+    <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d"></span></div>
+    <div class="db-row"><span class="col-n">customer_id</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d">Клиент (1-к-1)</span></div>
+    <div class="db-row"><span class="col-n">balance</span><span class="col-t">DECIMAL(12,2)</span><span class="col-k"></span><span class="col-d">Текущий бонус (KGS)</span></div>
+    <div class="db-row"><span class="col-n">total_earned</span><span class="col-t">DECIMAL(12,2)</span><span class="col-k"></span><span class="col-d">Всего начислено (для tier)</span></div>
+    <div class="db-row"><span class="col-n">total_spent</span><span class="col-t">DECIMAL(12,2)</span><span class="col-k"></span><span class="col-d">Всего потрачено</span></div>
+    <div class="db-row"><span class="col-n">updated_at</span><span class="col-t">TIMESTAMPTZ</span><span class="col-k"></span><span class="col-d">Последнее обновление</span></div>
+  </div>
+
+  <div class="db-table">
+    <div class="db-head">transactions — Операции <span>Аудит лог — неизменяемый</span></div>
+    <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+    <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d"></span></div>
+    <div class="db-row"><span class="col-n">customer_id</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d"></span></div>
+    <div class="db-row"><span class="col-n">type</span><span class="col-t">ENUM</span><span class="col-k"></span><span class="col-d">earn / spend / expire / refund / birthday / referral / promo</span></div>
+    <div class="db-row"><span class="col-n">amount</span><span class="col-t">DECIMAL(12,2)</span><span class="col-k"></span><span class="col-d">Сумма KGS</span></div>
+    <div class="db-row"><span class="col-n">purchase_amount</span><span class="col-t">DECIMAL(12,2)</span><span class="col-k"></span><span class="col-d">Сумма покупки</span></div>
+    <div class="db-row"><span class="col-n">branch_id</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d">В каком филиале</span></div>
+    <div class="db-row"><span class="col-n">cashier_id</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d">Какой кассир</span></div>
+    <div class="db-row"><span class="col-n">receipt_number</span><span class="col-t">VARCHAR(50)</span><span class="col-k">UNIQUE</span><span class="col-d">Номер чека 1С (idempotency)</span></div>
+    <div class="db-row"><span class="col-n">created_at</span><span class="col-t">TIMESTAMPTZ</span><span class="col-k"></span><span class="col-d">Неизменяемый (immutable)</span></div>
+  </div>
+
+  <div class="g2">
+    <div class="db-table">
+      <div class="db-head">tiers — Уровни</div>
+      <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+      <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d"></span></div>
+      <div class="db-row"><span class="col-n">name</span><span class="col-t">VARCHAR</span><span class="col-k"></span><span class="col-d">Bronze/Silver/Gold/Platinum</span></div>
+      <div class="db-row"><span class="col-n">min_total_kgs</span><span class="col-t">DECIMAL</span><span class="col-k"></span><span class="col-d">Мин. сумма покупок (KGS)</span></div>
+      <div class="db-row"><span class="col-n">bonus_percent</span><span class="col-t">DECIMAL(5,2)</span><span class="col-k"></span><span class="col-d">Процент бонуса</span></div>
+      <div class="db-row"><span class="col-n">max_spend_pct</span><span class="col-t">DECIMAL(5,2)</span><span class="col-k"></span><span class="col-d">Макс. % при оплате</span></div>
+    </div>
+    <div class="db-table">
+      <div class="db-head">branches — Филиалы</div>
+      <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+      <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d"></span></div>
+      <div class="db-row"><span class="col-n">name</span><span class="col-t">VARCHAR</span><span class="col-k"></span><span class="col-d">Название филиала</span></div>
+      <div class="db-row"><span class="col-n">address</span><span class="col-t">TEXT</span><span class="col-k"></span><span class="col-d">Адрес</span></div>
+      <div class="db-row"><span class="col-n">city</span><span class="col-t">VARCHAR</span><span class="col-k"></span><span class="col-d">Город</span></div>
+      <div class="db-row"><span class="col-n">is_active</span><span class="col-t">BOOLEAN</span><span class="col-k"></span><span class="col-d">Активный статус</span></div>
+    </div>
+  </div>
+
+  <div class="sec-label mb16 mt24">Дополнительные таблицы (НОВЫЕ)</div>
+
+  <div class="g2">
+    <div class="db-table">
+      <div class="db-head">users — Пользователи (Админы/Кассиры) <span>НОВАЯ</span></div>
+      <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+      <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d"></span></div>
+      <div class="db-row"><span class="col-n">email</span><span class="col-t">VARCHAR(100)</span><span class="col-k">UNIQUE</span><span class="col-d">Для админов</span></div>
+      <div class="db-row"><span class="col-n">phone</span><span class="col-t">VARCHAR(20)</span><span class="col-k">UNIQUE</span><span class="col-d">Для кассиров</span></div>
+      <div class="db-row"><span class="col-n">pin_hash</span><span class="col-t">VARCHAR(255)</span><span class="col-k"></span><span class="col-d">PIN кассира (bcrypt)</span></div>
+      <div class="db-row"><span class="col-n">password_hash</span><span class="col-t">VARCHAR(255)</span><span class="col-k"></span><span class="col-d">Пароль админа (bcrypt)</span></div>
+      <div class="db-row"><span class="col-n">role</span><span class="col-t">ENUM</span><span class="col-k"></span><span class="col-d">super_admin / branch_admin / cashier</span></div>
+      <div class="db-row"><span class="col-n">branch_id</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d">Привязка к филиалу</span></div>
+      <div class="db-row"><span class="col-n">is_active</span><span class="col-t">BOOLEAN</span><span class="col-k"></span><span class="col-d">Активен</span></div>
+    </div>
+    <div class="db-table">
+      <div class="db-head">promo_codes — Промокоды <span>НОВАЯ</span></div>
+      <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+      <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d"></span></div>
+      <div class="db-row"><span class="col-n">code</span><span class="col-t">VARCHAR(30)</span><span class="col-k">UNIQUE</span><span class="col-d">Код промо</span></div>
+      <div class="db-row"><span class="col-n">bonus_amount</span><span class="col-t">DECIMAL(12,2)</span><span class="col-k"></span><span class="col-d">Сумма бонуса KGS</span></div>
+      <div class="db-row"><span class="col-n">max_uses</span><span class="col-t">INT</span><span class="col-k"></span><span class="col-d">Лимит использований</span></div>
+      <div class="db-row"><span class="col-n">used_count</span><span class="col-t">INT</span><span class="col-k"></span><span class="col-d">Сколько раз использован</span></div>
+      <div class="db-row"><span class="col-n">expires_at</span><span class="col-t">TIMESTAMPTZ</span><span class="col-k"></span><span class="col-d">Срок действия</span></div>
+      <div class="db-row"><span class="col-n">is_active</span><span class="col-t">BOOLEAN</span><span class="col-k"></span><span class="col-d">Активен</span></div>
+    </div>
+  </div>
+
+  <div class="g2 mb16" style="margin-top:14px">
+    <div class="db-table">
+      <div class="db-head">notifications — Уведомления <span>НОВАЯ</span></div>
+      <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+      <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d"></span></div>
+      <div class="db-row"><span class="col-n">customer_id</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d">Клиент</span></div>
+      <div class="db-row"><span class="col-n">channel</span><span class="col-t">ENUM</span><span class="col-k"></span><span class="col-d">whatsapp / sms</span></div>
+      <div class="db-row"><span class="col-n">status</span><span class="col-t">ENUM</span><span class="col-k"></span><span class="col-d">pending / sent / failed</span></div>
+      <div class="db-row"><span class="col-n">message</span><span class="col-t">TEXT</span><span class="col-k"></span><span class="col-d">Текст сообщения</span></div>
+      <div class="db-row"><span class="col-n">retry_count</span><span class="col-t">INT</span><span class="col-k"></span><span class="col-d">Количество попыток</span></div>
+      <div class="db-row"><span class="col-n">created_at</span><span class="col-t">TIMESTAMPTZ</span><span class="col-k"></span><span class="col-d">Время создания</span></div>
+    </div>
+    <div class="db-table">
+      <div class="db-head">audit_logs — Журнал аудита <span>НОВАЯ</span></div>
+      <div class="db-row hd"><span>СТОЛБЕЦ</span><span>ТИП</span><span>КЛЮЧ</span><span>ОПИСАНИЕ</span></div>
+      <div class="db-row"><span class="col-n">id</span><span class="col-t">UUID</span><span class="col-k pk">PK</span><span class="col-d"></span></div>
+      <div class="db-row"><span class="col-n">user_id</span><span class="col-t">UUID</span><span class="col-k fk">FK</span><span class="col-d">Кто выполнил</span></div>
+      <div class="db-row"><span class="col-n">action</span><span class="col-t">VARCHAR(50)</span><span class="col-k"></span><span class="col-d">login / bonus_earn / tier_change</span></div>
+      <div class="db-row"><span class="col-n">entity_type</span><span class="col-t">VARCHAR(30)</span><span class="col-k"></span><span class="col-d">customer / transaction / promo</span></div>
+      <div class="db-row"><span class="col-n">entity_id</span><span class="col-t">UUID</span><span class="col-k"></span><span class="col-d">ID объекта</span></div>
+      <div class="db-row"><span class="col-n">details</span><span class="col-t">JSONB</span><span class="col-k"></span><span class="col-d">Доп. данные (до/после)</span></div>
+      <div class="db-row"><span class="col-n">ip_address</span><span class="col-t">INET</span><span class="col-k"></span><span class="col-d">IP адрес</span></div>
+      <div class="db-row"><span class="col-n">created_at</span><span class="col-t">TIMESTAMPTZ</span><span class="col-k"></span><span class="col-d">Время</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== API ===== -->
+<div id="tab-api" class="tab-pane">
+  <div class="sec-label mb16">Аутентификация</div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/auth/cashier/login</span><span class="ep-desc">Вход кассира (телефон + PIN)</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/auth/admin/login</span><span class="ep-desc">Вход админа (email + пароль)</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/auth/refresh</span><span class="ep-desc">Обновление access токена</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/auth/logout</span><span class="ep-desc">Добавление токена в чёрный список</span></div>
+
+  <div class="sec-label mb16 mt24">Клиенты</div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/customers/register</span><span class="ep-desc">Регистрация нового клиента</span></div>
+  <div class="ep"><span class="method mget">GET</span><span class="ep-path">/api/v1/customers/by-phone/{phone}</span><span class="ep-desc">Поиск по телефону</span></div>
+  <div class="ep"><span class="method mget">GET</span><span class="ep-path">/api/v1/customers/by-qr/{qr_code}</span><span class="ep-desc">Поиск по QR коду</span></div>
+  <div class="ep"><span class="method mget">GET</span><span class="ep-path">/api/v1/customers/{id}/balance</span><span class="ep-desc">Текущий бонусный баланс</span></div>
+  <div class="ep"><span class="method mget">GET</span><span class="ep-path">/api/v1/customers/{id}/transactions</span><span class="ep-desc">История покупок (с пагинацией)</span></div>
+  <div class="ep"><span class="method mput">PUT</span><span class="ep-path">/api/v1/customers/{id}</span><span class="ep-desc">Обновить данные клиента</span></div>
+
+  <div class="sec-label mb16 mt24">Бонусные операции (КРИТИЧЕСКИЕ)</div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/bonus/earn</span><span class="ep-desc">Начисление бонуса — приходит из 1С webhook</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/bonus/spend</span><span class="ep-desc">Списание бонуса (использовал при оплате)</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/bonus/check-spend</span><span class="ep-desc">Проверка перед списанием (макс. сумма)</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/bonus/birthday</span><span class="ep-desc">Бонус ко дню рождения (авто cron)</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/bonus/referral/apply</span><span class="ep-desc">Применение реферального кода</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/bonus/promo/apply</span><span class="ep-desc">Использование промокода</span></div>
+
+  <div class="sec-label mb16 mt24">Вебхуки 1С + Green API</div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/webhook/1c/purchase</span><span class="ep-desc">Покупка из 1С → бонус начисляется автоматически</span></div>
+  <div class="ep"><span class="method mget">GET</span><span class="ep-path">/api/v1/webhook/1c/customer/{phone}</span><span class="ep-desc">1С запрашивает бонус клиента</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/webhook/greenapi</span><span class="ep-desc">Обработчик входящих сообщений WhatsApp</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/notify/transaction</span><span class="ep-desc">Отправка уведомления о покупке</span></div>
+
+  <div class="sec-label mb16 mt24">Админ-панель</div>
+  <div class="ep"><span class="method mget">GET</span><span class="ep-path">/api/v1/admin/dashboard/stats</span><span class="ep-desc">Общая статистика (KGS, клиенты, бонусы)</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/admin/tiers</span><span class="ep-desc">Добавить/изменить уровень и процент</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/admin/promo-codes</span><span class="ep-desc">Создать промокод (сумма, срок, лимит)</span></div>
+  <div class="ep"><span class="method mget">GET</span><span class="ep-path">/api/v1/admin/reports/export</span><span class="ep-desc">Скачать Excel/CSV отчёт</span></div>
+  <div class="ep"><span class="method mpost">POST</span><span class="ep-path">/api/v1/admin/cashiers</span><span class="ep-desc">Добавить кассира (имя, телефон, PIN, филиал)</span></div>
+  <div class="ep"><span class="method mget">GET</span><span class="ep-path">/api/v1/admin/audit-logs</span><span class="ep-desc">Журнал аудита (с фильтрами)</span></div>
+</div>
+
+<!-- ===== BONUS LOGIC ===== -->
+<div id="tab-bonus" class="tab-pane">
+  <div class="sec-label mb16">Уровни (Tier System) — KGS</div>
+  <div class="tier-row" style="border-color:rgba(176,141,87,.3)">
+    <span class="tier-name" style="color:#cd7f32">🥉 Bronze</span>
+    <div><div class="tier-bar-wrap"><div class="tier-bar" style="width:25%;background:#cd7f32"></div></div></div>
+    <span class="tier-pct" style="color:#cd7f32">3%</span>
+    <span class="tier-range">0 – 4 999 KGS</span>
+  </div>
+  <div class="tier-row" style="border-color:rgba(180,180,180,.3)">
+    <span class="tier-name" style="color:#b0b0b0">🥈 Silver</span>
+    <div><div class="tier-bar-wrap"><div class="tier-bar" style="width:50%;background:#b0b0b0"></div></div></div>
+    <span class="tier-pct" style="color:#b0b0b0">5%</span>
+    <span class="tier-range">5 000 – 19 999 KGS</span>
+  </div>
+  <div class="tier-row" style="border-color:rgba(255,215,0,.3)">
+    <span class="tier-name" style="color:#ffd700">🥇 Gold</span>
+    <div><div class="tier-bar-wrap"><div class="tier-bar" style="width:75%;background:#ffd700"></div></div></div>
+    <span class="tier-pct" style="color:#ffd700">7%</span>
+    <span class="tier-range">20 000 – 49 999 KGS</span>
+  </div>
+  <div class="tier-row" style="border-color:rgba(0,229,160,.3)">
+    <span class="tier-name" style="color:var(--accent)">💎 Platinum</span>
+    <div><div class="tier-bar-wrap"><div class="tier-bar" style="width:100%;background:linear-gradient(90deg,#00e5a0,#00b8d4)"></div></div></div>
+    <span class="tier-pct" style="color:var(--accent)">10%</span>
+    <span class="tier-range">50 000+ KGS</span>
+  </div>
+
+  <div class="sec-label mb16 mt24">Логика начисления бонусов</div>
+  <div class="logic-box">
+    <div class="logic-title">💰 Начисление бонуса</div>
+    <div class="logic-rule"><div class="lr-if">Клиент купил на 1 000 KGS (Gold)</div><div class="lr-arr">→</div><div class="lr-then">+70 KGS бонус (7%)</div></div>
+    <div class="logic-rule"><div class="lr-if">Сумма покупки менее 500 KGS</div><div class="lr-arr">→</div><div class="lr-then">Бонус не начисляется (мин. порог)</div></div>
+    <div class="logic-rule"><div class="lr-if">1С webhook: есть receipt_number</div><div class="lr-arr">→</div><div class="lr-then">Проверка дубликата → один чек = один бонус</div></div>
+    <div class="logic-rule"><div class="lr-if">Бонус начислен, total_earned обновлён</div><div class="lr-arr">→</div><div class="lr-then">Автоматическая проверка повышения уровня</div></div>
+  </div>
+
+  <div class="logic-box">
+    <div class="logic-title">💳 Списание бонуса</div>
+    <div class="logic-rule"><div class="lr-if">Клиент хочет оплатить бонусами</div><div class="lr-arr">→</div><div class="lr-then">Максимум: 30% от суммы покупки</div></div>
+    <div class="logic-rule"><div class="lr-if">Баланс: 200 KGS, покупка: 1 000 KGS</div><div class="lr-arr">→</div><div class="lr-then">Макс. списание: 200 KGS (баланса хватает)</div></div>
+    <div class="logic-rule"><div class="lr-if">Баланс: 500 KGS, покупка: 1 000 KGS</div><div class="lr-arr">→</div><div class="lr-then">Макс. списание: 300 KGS (лимит 30%)</div></div>
+    <div class="logic-rule"><div class="lr-if">Покупка с использованием бонуса</div><div class="lr-arr">→</div><div class="lr-then">Новый бонус не начисляется (смешанная покупка)</div></div>
+  </div>
+
+  <div class="logic-box">
+    <div class="logic-title">🎂 День рождения + 👥 Реферал</div>
+    <div class="logic-rule"><div class="lr-if">Сегодня день рождения клиента</div><div class="lr-arr">→</div><div class="lr-then">+200 KGS подарок + поздравление в WA</div></div>
+    <div class="logic-rule"><div class="lr-if">Клиент А пригласил друга</div><div class="lr-arr">→</div><div class="lr-then">После регистрации друга: +100 KGS для А</div></div>
+    <div class="logic-rule"><div class="lr-if">Новый друг сделал первую покупку</div><div class="lr-arr">→</div><div class="lr-then">Новому клиенту +50 KGS приветственный бонус</div></div>
+  </div>
+</div>
+
+<!-- ===== ERRORS (НОВАЯ СЕКЦИЯ) ===== -->
+<div id="tab-errors" class="tab-pane">
+  <div class="sec-label mb16">Стандартный формат ошибок API</div>
+  <div class="logic-box">
+    <div class="logic-title">📋 Формат ответа об ошибке (JSON)</div>
+    <div class="sec-code">{
+  "success": false,
+  "error": {
+    "code": "BONUS_INSUFFICIENT_BALANCE",
+    "message": "Недостаточно бонусов на счёте",
+    "message_kg": "Бонус эсебинде жетишсиз каражат",
+    "details": { "balance": 150.00, "requested": 300.00 }
+  },
+  "request_id": "uuid-v4"
+}</div>
+  </div>
+
+  <div class="sec-label mb16 mt24">Коды ошибок — Аутентификация</div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">401</span><span class="ep-path">AUTH_INVALID_CREDENTIALS</span><span class="ep-desc">Неверный логин или пароль / PIN</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">401</span><span class="ep-path">AUTH_TOKEN_EXPIRED</span><span class="ep-desc">Срок действия токена истёк</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">403</span><span class="ep-path">AUTH_INSUFFICIENT_ROLE</span><span class="ep-desc">Нет прав для данного действия</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">429</span><span class="ep-path">AUTH_RATE_LIMITED</span><span class="ep-desc">Превышен лимит попыток (заблокировано на 15 мин)</span></div>
+
+  <div class="sec-label mb16 mt24">Коды ошибок — Бонусы</div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">400</span><span class="ep-path">BONUS_BELOW_MIN_PURCHASE</span><span class="ep-desc">Сумма покупки ниже 500 KGS</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">400</span><span class="ep-path">BONUS_INSUFFICIENT_BALANCE</span><span class="ep-desc">Недостаточно бонусов на счёте</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">400</span><span class="ep-path">BONUS_EXCEED_MAX_SPEND</span><span class="ep-desc">Превышен лимит списания (30%)</span></div>
+  <div class="ep"><span class="method" style="background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2)">409</span><span class="ep-path">BONUS_DUPLICATE_RECEIPT</span><span class="ep-desc">Чек уже обработан (idempotency)</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">400</span><span class="ep-path">BONUS_BIRTHDAY_ALREADY_GIVEN</span><span class="ep-desc">Бонус ко дню рождения уже начислен в этом году</span></div>
+
+  <div class="sec-label mb16 mt24">Коды ошибок — Клиенты</div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">404</span><span class="ep-path">CUSTOMER_NOT_FOUND</span><span class="ep-desc">Клиент не найден</span></div>
+  <div class="ep"><span class="method" style="background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2)">409</span><span class="ep-path">CUSTOMER_PHONE_EXISTS</span><span class="ep-desc">Номер телефона уже зарегистрирован</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">400</span><span class="ep-path">CUSTOMER_BLOCKED</span><span class="ep-desc">Клиент заблокирован</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">400</span><span class="ep-path">PROMO_CODE_INVALID</span><span class="ep-desc">Промокод не существует, истёк или исчерпан</span></div>
+
+  <div class="sec-label mb16 mt24">Коды ошибок — Вебхуки</div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">401</span><span class="ep-path">WEBHOOK_INVALID_SIGNATURE</span><span class="ep-desc">Неверная HMAC подпись запроса</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">403</span><span class="ep-path">WEBHOOK_IP_BLOCKED</span><span class="ep-desc">IP адрес не в белом списке</span></div>
+  <div class="ep"><span class="method" style="background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)">500</span><span class="ep-path">NOTIFICATION_SEND_FAILED</span><span class="ep-desc">Ошибка отправки WA/SMS (retry через Celery)</span></div>
+
+  <div class="sec-label mb16 mt24">Стратегия повторных попыток (Retry)</div>
+  <div class="logic-box">
+    <div class="logic-title">🔄 Retry-логика для уведомлений и вебхуков</div>
+    <div class="logic-rule"><div class="lr-if">WhatsApp/SMS отправка не удалась</div><div class="lr-arr">→</div><div class="lr-then">Повтор через 30с, 2мин, 10мин (макс. 3 попытки)</div></div>
+    <div class="logic-rule"><div class="lr-if">Все 3 попытки не удались</div><div class="lr-arr">→</div><div class="lr-then">Статус: failed, уведомление в админ-панель</div></div>
+    <div class="logic-rule"><div class="lr-if">1С webhook таймаут (5с)</div><div class="lr-arr">→</div><div class="lr-then">Ответ 202 Accepted, обработка в фоне через Celery</div></div>
+    <div class="logic-rule"><div class="lr-if">Ошибка БД при бонусной операции</div><div class="lr-arr">→</div><div class="lr-then">Полный откат транзакции (ROLLBACK), ответ 500</div></div>
+  </div>
+</div>
+
+<!-- ===== SECURITY ===== -->
+<div id="tab-security" class="tab-pane">
+  <div class="sec-label mb16">Уровни безопасности</div>
+  <div class="sec-item">
+    <div class="sec-icon">🔑</div>
+    <div>
+      <div class="sec-title2">JWT RS256 + Ротация Refresh Token</div>
+      <div class="sec-desc2">Access токен: 15 минут. Refresh токен: 30 дней. При каждом обновлении refresh токен меняется. Redis чёрный список — после выхода токен не работает.</div>
+      <div class="sec-code">ACCESS_TOKEN_EXPIRE  = 15   # минут
+REFRESH_TOKEN_EXPIRE = 30   # дней
+ALGORITHM            = "RS256"</div>
+    </div>
+  </div>
+  <div class="sec-item">
+    <div class="sec-icon">🛡</div>
+    <div>
+      <div class="sec-title2">RBAC — Контроль доступа по ролям</div>
+      <div class="sec-desc2">Кассир видит только свой филиал. Админ филиала управляет только своим филиалом. Супер админ — видит и управляет всем.</div>
+      <div class="sec-code">super_admin  → ["*"]
+branch_admin → ["branch:{id}:*"]
+cashier      → ["customers:read", "bonus:earn", "bonus:spend"]</div>
+    </div>
+  </div>
+  <div class="sec-item">
+    <div class="sec-icon">⏱</div>
+    <div>
+      <div class="sec-title2">Rate Limiting — Защита от перебора</div>
+      <div class="sec-desc2">Логин: 5 попыток / 15 минут. OTP: 3 попытки / 10 минут. API общий: 100 запросов / минута. Реализовано через Redis счётчики.</div>
+      <div class="sec-code">LOGIN_LIMIT = "5/15min"
+OTP_LIMIT   = "3/10min"
+API_LIMIT   = "100/min"</div>
+    </div>
+  </div>
+  <div class="sec-item">
+    <div class="sec-icon">📝</div>
+    <div>
+      <div class="sec-title2">Неизменяемый журнал аудита</div>
+      <div class="sec-desc2">Каждая бонусная операция записывается в таблицу transactions. Триггер БД не позволяет удалить или изменить. ID кассира, филиал, время, сумма — всё сохраняется.</div>
+    </div>
+  </div>
+  <div class="sec-item">
+    <div class="sec-icon">🔒</div>
+    <div>
+      <div class="sec-title2">Безопасность вебхуков (1С и Green API)</div>
+      <div class="sec-desc2">1С webhook — белый список IP + подпись HMAC-SHA256. Green API webhook — проверка instanceId. Ключ идемпотентности — одна покупка не получит бонус дважды.</div>
+      <div class="sec-code">X-Signature:      HMAC-SHA256(secret, body)
+X-Idempotency-Key: receipt_number</div>
+    </div>
+  </div>
+  <div class="sec-item">
+    <div class="sec-icon">🌐</div>
+    <div>
+      <div class="sec-title2">HTTPS + CORS + Валидация ввода</div>
+      <div class="sec-desc2">Весь трафик через SSL. CORS — только разрешённые домены. Pydantic v2 валидирует все входные данные. SQLAlchemy ORM — нет SQL инъекций. XSS санитизация.</div>
+    </div>
+  </div>
+  <div class="sec-item">
+    <div class="sec-icon">💾</div>
+    <div>
+      <div class="sec-title2">Резервное копирование и восстановление</div>
+      <div class="sec-desc2">Автоматический pg_dump каждые 6 часов. Хранение последних 7 дней бэкапов. Тестовое восстановление раз в неделю. Резервные копии шифруются перед выгрузкой.</div>
+      <div class="sec-code">BACKUP_INTERVAL  = "6h"
+BACKUP_RETENTION = "7d"
+BACKUP_ENCRYPT   = "AES-256-GCM"</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMPT ===== -->
+<div id="tab-prompt" class="tab-pane">
+  <div class="sec-label mb16">Sbonus+ — Системный промпт (чатбот Green API) — РУ + КГ</div>
+  <div class="prompt-container">
+    <div class="prompt-header">
+      <div class="prompt-title">SYSTEM PROMPT — SBONUS+ v1.0 (RU/KG)</div>
+      <button class="copy-btn" onclick="copyPrompt()">📋 КОПИРОВАТЬ</button>
+    </div>
+    <div class="prompt-body" id="promptBody"><span class="hdr-c">═══════════════════════════════════════════════════
+SBONUS+ — БОНУСНАЯ СИСТЕМА МАГАЗИНА БЫТОВОЙ ТЕХНИКИ
+Версия: 1.0 | Языки: Русский / Кыргызский | Валюта: KGS
+═══════════════════════════════════════════════════</span>
+
+<span class="kw">## РОЛЬ</span>
+Ты умный WhatsApp ассистент бонусной системы Sbonus+.
+Отвечай ТОЛЬКО на вопросы о бонусной системе и магазине.
+Определяй язык клиента и отвечай на Русском или Кыргызском.
+
+<span class="kw">## ПАРАМЕТРЫ СИСТЕМЫ</span>
+<span class="str-c">Организация:</span>  Магазин бытовой техники (Кыргызстан)
+<span class="str-c">Валюта:</span>       KGS (Кыргызский Сом)
+<span class="str-c">Режим работы:</span> 09:00–21:00 (Бишкек, UTC+6)
+<span class="str-c">Мин. покупка:</span> 500 KGS (для начисления бонуса)
+
+<span class="kw">## СИСТЕМА УРОВНЕЙ</span>
+<span class="num-c">🥉 Bronze</span>   │ 0–4 999 KGS общие покупки   │ 3% бонус
+<span class="num-c">🥈 Silver</span>   │ 5 000–19 999 KGS            │ 5% бонус
+<span class="num-c">🥇 Gold</span>     │ 20 000–49 999 KGS           │ 7% бонус
+<span class="num-c">💎 Platinum</span> │ 50 000+ KGS                 │ 10% бонус
+
+<span class="kw">## РАСЧЁТ БОНУСА</span>
+earn_amount = purchase_amount × (tier_percent / 100)
+<span class="cmt-c"># Минимум: покупка >= 500 KGS, иначе бонус не начисляется</span>
+
+<span class="kw">## СПИСАНИЕ БОНУСА</span>
+max_spend = MIN(balance, purchase_amount × 0.30)
+<span class="cmt-c"># Макс: оплата бонусами до 30% от суммы покупки</span>
+<span class="cmt-c"># При списании бонуса новый бонус не начисляется</span>
+
+<span class="kw">## СПЕЦИАЛЬНЫЕ БОНУСЫ</span>
+🎂 День рождения   : +200 KGS (автоматически)
+👥 Реферал (кто пригласил): +100 KGS
+👤 Реферал (новый клиент) : +50 KGS приветственный
+🎟 Промокод               : назначает админ
+
+<span class="kw">## ШАБЛОНЫ WHATSAPP (РУССКИЙ)</span>
+
+<span class="cmt-c"># Клиент написал "БАЛАНС":</span>
+💎 Sbonus+ | Ваш баланс:
+━━━━━━━━━━━━━━━━━━
+💰 Бонус: {balance} KGS
+🏆 Уровень: {tier_name}
+📈 До следующего: ещё {next_remaining} KGS покупок
+━━━━━━━━━━━━━━━━━━
+Пригласите друга → +100 KGS бонус!
+
+<span class="cmt-c"># Автоматическое после покупки:</span>
+✅ Покупка подтверждена!
+━━━━━━━━━━━━━━━━━━
+🏪 Магазин: {branch_name}
+🛒 Покупка: {purchase_amount} KGS
+💎 Бонус: +{earned} KGS
+💰 Баланс: {new_balance} KGS
+🏆 Уровень: {tier_name}
+━━━━━━━━━━━━━━━━━━
+Спасибо! Ждём вас снова 🎁
+
+<span class="cmt-c"># Списание бонуса:</span>
+💳 Бонус использован!
+━━━━━━━━━━━━━━━━━━
+➖ Списано: {spent} KGS
+💰 Остаток: {new_balance} KGS
+
+<span class="cmt-c"># День рождения:</span>
+🎂 С днём рождения, {name}!
+━━━━━━━━━━━━━━━━━━
+🎁 Специальный подарок: +200 KGS бонус!
+💰 Новый баланс: {new_balance} KGS
+Приходите к нам! 🛍
+
+<span class="kw">## ШАБЛОНЫ WHATSAPP (КЫРГЫЗСКИЙ)</span>
+
+<span class="cmt-c"># Кардар "БАЛАНС" жазганда:</span>
+💎 Sbonus+ | Балансыңыз:
+━━━━━━━━━━━━━━━━━━
+💰 Бонус: {balance} KGS
+🏆 Деңгээл: {tier_name}
+📈 Кийинки деңгээлге: {next_remaining} KGS сатып алуу керек
+━━━━━━━━━━━━━━━━━━
+Досуңузду чакырыңыз → +100 KGS бонус!
+
+<span class="cmt-c"># Сатып алуудан кийин автоматтык:</span>
+✅ Сатып алуу ырасталды!
+━━━━━━━━━━━━━━━━━━
+🏪 Дүкөн: {branch_name}
+🛒 Сатып алуу: {purchase_amount} KGS
+💎 Бонус: +{earned} KGS
+💰 Баланс: {new_balance} KGS
+🏆 Деңгээл: {tier_name}
+━━━━━━━━━━━━━━━━━━
+Рахмат! Кийинки сатып алууңузду күтөбүз 🎁
+
+<span class="cmt-c"># Бонус колдонулганда:</span>
+💳 Бонус колдонулду!
+━━━━━━━━━━━━━━━━━━
+➖ Чыгарылды: {spent} KGS
+💰 Калган: {new_balance} KGS
+
+<span class="cmt-c"># Туулган күн:</span>
+🎂 Туулган күнүңүз менен, {name}!
+━━━━━━━━━━━━━━━━━━
+🎁 Өзгөчө белек: +200 KGS бонус!
+💰 Жаңы баланс: {new_balance} KGS
+Дүкөнүбүзгө келиңиз! 🛍
+
+<span class="kw">## ФОРМАТ WEBHOOK 1С</span>
+<span class="cmt-c"># POST /api/v1/webhook/1c/purchase из 1С:</span>
+{
+  "receipt_number":  "unique_1c_id",  <span class="cmt-c"># ключ идемпотентности</span>
+  "customer_phone":  "+996XXXXXXXXX",
+  "purchase_amount": 5000.00,         <span class="cmt-c"># KGS</span>
+  "branch_id":       "uuid",
+  "cashier_id":      "uuid",
+  "timestamp":       "2025-01-01T10:00:00Z"
+}
+<span class="cmt-c"># При повторном запросе: возвращается 409 Conflict</span>
+
+<span class="kw">## ПРАВИЛА КАССИРА</span>
+1. Сначала НАЙТИ клиента: телефон ИЛИ QR сканер
+2. Не найден: зарегистрировать (имя, тел, дата рождения)
+3. Покупка → webhook приходит → бонус автоматически
+4. Списание бонуса: ПРОВЕРКА → подтверждение → списание
+5. После каждой операции отправляется WA уведомление
+
+<span class="kw">## ВОЗМОЖНОСТИ АДМИНА</span>
+✓ Изменение процентов уровней
+✓ Создание промокодов (сумма + срок + лимит)
+✓ Добавление / отключение / активация филиалов
+✓ Добавление кассиров, выдача PIN
+✓ Редактирование WA шаблонов
+✓ Скачивание Excel / CSV отчётов
+✓ Настройка суммы бонуса ко дню рождения
+
+<span class="kw">## БЕЗОПАСНОСТЬ</span>
+- JWT токен: действует 15 минут
+- Кассир работает только со своим филиалом
+- Бонусная операция не удаляется (записывается refund)
+- 5 неудачных попыток входа → блокировка на 15 мин
+
+<span class="kw">## ФОРМАТ ОТВЕТА</span>
+- Кратко, точно, профессионально
+- Числа: формат 1 000 KGS
+- Ошибка: причина + решение
+- Неясная ситуация: «Обратитесь к администратору»
+- На кыргызском: «Администраторго кайрылыңыз»
+
+<span class="hdr-c">═══════════════════════════════════════════════════
+ВАЖНО: НЕ отвечай на вопросы вне системы.
+Конфиденциальные данные (код, пароль) НЕ ЗАПРАШИВАЙ и НЕ ВЫДАВАЙ.
+═══════════════════════════════════════════════════</span></div>
+  </div>
+  <div style="margin-top:12px;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:.76rem;color:var(--text2);">
+    💡 <strong style="color:#fff">Использование:</strong> Этот промпт используется в FastAPI бэкенде как <code style="color:var(--accent2)">system_message</code> в обработчике Green API webhook. Когда клиент пишет в WhatsApp, Claude/GPT отвечает на основе этого промпта — на Русском или Кыргызском языке.
+  </div>
+</div>
+
+<div id="tab-roadmap" class="tab-pane">
+  <div class="sec-label mb16">Дорожная карта разработки (12 недель)</div>
+  <div class="roadmap">
+    <div class="rphase done">
+      <div class="rp-label">Этап 1 — Неделя 1–2</div>
+      <div class="rp-title">🏗 Фундамент</div>
+      <div class="rp-tasks">
+        <span class="rp-task done-t">✓ PostgreSQL схема</span>
+        <span class="rp-task done-t">✓ Структура FastAPI</span>
+        <span class="rp-task done-t">✓ JWT авторизация</span>
+        <span class="rp-task done-t">✓ Docker Compose</span>
+        <span class="rp-task done-t">✓ Интеграция Redis</span>
+        <span class="rp-task done-t">✓ Миграции Alembic</span>
+      </div>
+    </div>
+    <div class="rphase active">
+      <div class="rp-label">Этап 2 — Неделя 3–4</div>
+      <div class="rp-title">⚡ Ядро бонусного движка</div>
+      <div class="rp-tasks">
+        <span class="rp-task">CRUD API клиентов</span>
+        <span class="rp-task">Логика начисления / списания</span>
+        <span class="rp-task">Логика повышения уровня</span>
+        <span class="rp-task">Идемпотентность (1С)</span>
+        <span class="rp-task">Система аудит-логов</span>
+        <span class="rp-task">Генерация QR кода</span>
+      </div>
+    </div>
+    <div class="rphase">
+      <div class="rp-label">Этап 3 — Неделя 5–6</div>
+      <div class="rp-title">📱 Мобильное приложение кассира</div>
+      <div class="rp-tasks">
+        <span class="rp-task">React Native Expo</span>
+        <span class="rp-task">Вход (PIN)</span>
+        <span class="rp-task">Поиск клиента</span>
+        <span class="rp-task">Регистрация</span>
+        <span class="rp-task">Бонусный UI</span>
+        <span class="rp-task">QR сканер (камера)</span>
+      </div>
+    </div>
+    <div class="rphase">
+      <div class="rp-label">Этап 4 — Неделя 7–8</div>
+      <div class="rp-title">🟢 Green API + SMS</div>
+      <div class="rp-tasks">
+        <span class="rp-task">Green API webhook</span>
+        <span class="rp-task">WA уведомления</span>
+        <span class="rp-task">Чатбот баланса</span>
+        <span class="rp-task">SMS (PlayMobile)</span>
+        <span class="rp-task">Система шаблонов</span>
+        <span class="rp-task">Очередь Celery</span>
+      </div>
+    </div>
+    <div class="rphase">
+      <div class="rp-label">Этап 5 — Неделя 9–10</div>
+      <div class="rp-title">🖥 Админ-панель</div>
+      <div class="rp-tasks">
+        <span class="rp-task">Next.js 14</span>
+        <span class="rp-task">Дашборд статистики</span>
+        <span class="rp-task">Филиалы</span>
+        <span class="rp-task">Настройка уровней</span>
+        <span class="rp-task">Промокоды</span>
+        <span class="rp-task">Excel отчёты</span>
+      </div>
+    </div>
+    <div class="rphase">
+      <div class="rp-label">Этап 6 — Неделя 11–12</div>
+      <div class="rp-title">🔗 1С + Деплой + Запуск</div>
+      <div class="rp-tasks">
+        <span class="rp-task">Интеграция webhook 1С</span>
+        <span class="rp-task">Cron дня рождения</span>
+        <span class="rp-task">Реферальная система</span>
+        <span class="rp-task">Деплой VPS (Nginx+SSL)</span>
+        <span class="rp-task">Нагрузочное тестирование</span>
+        <span class="rp-task">🚀 ЗАПУСК!</span>
+      </div>
+    </div>
+    <div class="rphase">
+      <div class="rp-label">v2.0 — Будущее</div>
+      <div class="rp-title">🌟 Расширения</div>
+      <div class="rp-tasks">
+        <span class="rp-task">Мобильное приложение клиента</span>
+        <span class="rp-task">Push уведомления</span>
+        <span class="rp-task">Срок действия бонусов</span>
+        <span class="rp-task">Акции и кампании</span>
+        <span class="rp-task">AI рекомендации</span>
+        <span class="rp-task">Bluetooth чек-принтер</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label mb16" style="margin-top:8px">Ежемесячные расходы</div>
+  <div class="g3">
+    <div class="card"><div class="card-title">☁️ Сервер — Hetzner CX21</div><div class="card-desc">2 vCPU, 4GB RAM, 40GB SSD. Достаточно для старта, масштабируется.</div><div style="margin-top:10px"><span class="pill pg">~$7/мес</span></div></div>
+    <div class="card"><div class="card-title">🟢 Green API</div><div class="card-desc">WhatsApp Business API. 1 экземпляр, много сообщений. greenapi.com</div><div style="margin-top:10px"><span class="pill pb">~$15/мес</span></div></div>
+    <div class="card"><div class="card-title">📨 SMS Шлюз</div><div class="card-desc">PlayMobile.uz — для операторов КГ. 100 SMS/день достаточно для начала.</div><div style="margin-top:10px"><span class="pill py">~$10/мес</span></div></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tnav').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+function copyPrompt() {
+  const text = document.getElementById('promptBody').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ СКОПИРОВАНО!';
+    setTimeout(() => btn.textContent = '📋 КОПИРОВАТЬ', 2000);
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  # ─── PostgreSQL 15 ───────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sbonus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sbonus_secret_2025}
+      POSTGRES_DB: ${POSTGRES_DB:-sbonus_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sbonus} -d ${POSTGRES_DB:-sbonus_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Redis 7 ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── FastAPI Backend ──────────────────────────────────
+  api:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app                        # dev: hot reload
+      - sbonus_keys:/app/keys         # RSA ключи persist между перезапусками
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  pgdata:
+  redisdata:
+  sbonus_keys:
