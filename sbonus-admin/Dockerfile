@@ -10,6 +10,9 @@ RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 # Copy source and build
 COPY . .
 
+# Ensure public/ exists even if empty (Next.js standalone runtime needs it)
+RUN mkdir -p public
+
 # Production build env (replaced at runtime in standalone, but kept for safety)
 ARG NEXT_PUBLIC_API_URL=https://api.smartcentr.store
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
