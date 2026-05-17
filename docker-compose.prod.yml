@@ -101,6 +101,22 @@ services:
     depends_on:
       - api
 
+  # ─── POS / Cashier web (Expo Web static) ──────────────
+  pos:
+    build:
+      context: ./sbonus-cashier-app
+      dockerfile: Dockerfile.web
+      args:
+        EXPO_PUBLIC_API_URL: ${POS_API_URL}
+    container_name: sbonus_pos
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18803:3000"
+    networks:
+      - sbonus_net
+    depends_on:
+      - api
+
 volumes:
   sbonus_pgdata:
     name: sbonus_pgdata

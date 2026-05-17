@@ -26,6 +26,12 @@
       "package": "kg.smartcenter.sbonus.cashier",
       "permissions": ["CAMERA"]
     },
+    "web": {
+      "favicon": "./assets/icon.png",
+      "bundler": "metro",
+      "name": "S Bonus — Кассир",
+      "shortName": "Кассир"
+    },
     "plugins": [
       [
         "expo-camera",
