@@ -38,9 +38,24 @@ class TransactionType(str, enum.Enum):
     SPEND = "spend"
     EXPIRE = "expire"
     REFUND = "refund"
-    BIRTHDAY = "birthday"
+    BIRTHDAY = "birthday"  # deprecated — kept for historical records
     REFERRAL = "referral"
     PROMO = "promo"
+    CAMPAIGN = "campaign"
+
+
+class CampaignTargetType(str, enum.Enum):
+    """Тип целевой аудитории кампании."""
+    ALL = "all"
+    INDIVIDUAL = "individual"
+
+
+class CampaignStatus(str, enum.Enum):
+    """Статус бонусной кампании."""
+    PENDING = "pending"
+    PROCESSING = "processing"
+    SENT = "sent"
+    CANCELLED = "cancelled"
 
 
 class UserRoleEnum(str, enum.Enum):
@@ -255,6 +270,64 @@ class CustomerAuthToken(Base):
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BonusCampaign(Base):
+    """Бонусная кампания — отправка бонусов по выбранной дате."""
+    __tablename__ = "bonus_campaigns"
+    __table_args__ = (
+        Index("ix_bonus_campaigns_bonus_date", "bonus_date"),
+        Index("ix_bonus_campaigns_status", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    bonus_date: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    message_template: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_type: Mapped[CampaignTargetType] = mapped_column(
+        SAEnum(CampaignTargetType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=CampaignTargetType.ALL,
+    )
+    status: Mapped[CampaignStatus] = mapped_column(
+        SAEnum(CampaignStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=CampaignStatus.PENDING,
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    recipients: Mapped[list["BonusCampaignRecipient"]] = relationship(
+        back_populates="campaign", cascade="all, delete-orphan"
+    )
+
+
+class BonusCampaignRecipient(Base):
+    """Получатель бонусной кампании (для individual или для отслеживания общей рассылки)."""
+    __tablename__ = "bonus_campaign_recipients"
+    __table_args__ = (
+        Index("ix_bonus_campaign_recipients_campaign_id", "campaign_id"),
+        Index("ix_bonus_campaign_recipients_customer_id", "customer_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bonus_campaigns.id", ondelete="CASCADE"), nullable=False
+    )
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    campaign: Mapped["BonusCampaign"] = relationship(back_populates="recipients")
+    customer: Mapped["Customer"] = relationship()
 
 
 class CustomerDebt(Base):

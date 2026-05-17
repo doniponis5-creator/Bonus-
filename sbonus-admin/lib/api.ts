@@ -63,6 +63,23 @@ export const adminAPI = {
   // Reports
   exportReport: (format: string, days: number) =>
     api.get(`/api/v1/admin/reports/export?format=${format}&days=${days}`, { responseType: 'blob' }),
+
+  // Bonus campaigns
+  campaigns: (statusFilter?: string) =>
+    api.get(`/api/v1/admin/campaigns${statusFilter ? `?status=${statusFilter}` : ''}`),
+  campaign: (id: string) => api.get(`/api/v1/admin/campaigns/${id}`),
+  createCampaign: (d: {
+    name: string;
+    bonus_date: string;
+    amount: number;
+    reason?: string;
+    message_template?: string;
+    target_type: 'all' | 'individual';
+    customer_ids?: string[];
+  }) => api.post('/api/v1/admin/campaigns', d),
+  sendCampaign: (id: string) => api.post(`/api/v1/admin/campaigns/${id}/send`),
+  cancelCampaign: (id: string) => api.post(`/api/v1/admin/campaigns/${id}/cancel`),
+  deleteCampaign: (id: string) => api.delete(`/api/v1/admin/campaigns/${id}`),
 };
 
 export const customersAPI = {

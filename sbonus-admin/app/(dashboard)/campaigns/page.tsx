@@ -1,0 +1,293 @@
+'use client';
+import { Gift, Loader2, Plus, XCircle, CheckCircle2, Send, Trash2, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { adminAPI, customersAPI } from '@/lib/api';
+
+const STATUS_LABEL: Record<string, { text: string; color: string; bg: string }> = {
+  pending:    { text: 'Ожидает',     color: '#ffb347', bg: '#ffb34718' },
+  processing: { text: 'Обработка',   color: '#00b8d4', bg: '#00b8d418' },
+  sent:       { text: 'Отправлено',  color: '#00e5a0', bg: '#00e5a018' },
+  cancelled:  { text: 'Отменено',    color: '#ff4d4d', bg: '#ff4d4d18' },
+};
+
+export default function CampaignsPage() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Form state
+  const [name, setName] = useState('');
+  const [bonusDate, setBonusDate] = useState('');
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  const [template, setTemplate] = useState('Здравствуйте, {name}! Вам начислен бонус +{amount} KGS. Баланс: {balance} KGS.');
+  const [targetType, setTargetType] = useState<'all' | 'individual'>('all');
+  const [search, setSearch] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selected, setSelected] = useState<{ id: string; name: string; phone: string }[]>([]);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data } = await adminAPI.campaigns();
+      setItems(data || []);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const doSearch = async () => {
+    if (!search.trim()) return;
+    setSearching(true);
+    try {
+      const { data } = await customersAPI.list(search.trim(), 1, 20);
+      setSearchResults(data.items || []);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const addSelected = (c: any) => {
+    if (selected.find(s => s.id === c.id)) return;
+    setSelected([...selected, { id: c.id, name: c.full_name, phone: c.phone }]);
+  };
+  const removeSelected = (id: string) => setSelected(selected.filter(s => s.id !== id));
+
+  const onCreate = async (e: any) => {
+    e.preventDefault();
+    if (!name || !bonusDate || !amount) return;
+    if (targetType === 'individual' && selected.length === 0) {
+      setMsg('error:Выберите хотя бы одного клиента');
+      return;
+    }
+    setSaving(true); setMsg('');
+    try {
+      await adminAPI.createCampaign({
+        name,
+        bonus_date: bonusDate,
+        amount: Number(amount),
+        reason: reason || undefined,
+        message_template: template || undefined,
+        target_type: targetType,
+        customer_ids: targetType === 'individual' ? selected.map(s => s.id) : undefined,
+      });
+      setMsg('success:Кампания создана');
+      setName(''); setBonusDate(''); setAmount(''); setReason('');
+      setSelected([]); setSearch(''); setSearchResults([]);
+      load();
+    } catch (er: any) {
+      setMsg('error:' + (er?.response?.data?.detail?.message || 'Ошибка'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onSendNow = async (id: string, n: string) => {
+    if (!confirm(`Отправить кампанию "${n}" немедленно?`)) return;
+    try {
+      await adminAPI.sendCampaign(id);
+      load();
+    } catch (er: any) {
+      alert(er?.response?.data?.detail?.message || 'Ошибка отправки');
+    }
+  };
+
+  const onCancel = async (id: string) => {
+    if (!confirm('Отменить кампанию?')) return;
+    try {
+      await adminAPI.cancelCampaign(id);
+      load();
+    } catch (er: any) {
+      alert(er?.response?.data?.detail?.message || 'Ошибка');
+    }
+  };
+
+  const onDelete = async (id: string) => {
+    if (!confirm('Удалить кампанию?')) return;
+    try {
+      await adminAPI.deleteCampaign(id);
+      load();
+    } catch (er: any) {
+      alert(er?.response?.data?.detail?.message || 'Ошибка');
+    }
+  };
+
+  return (
+    <div>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800, marginBottom: 24 }}>
+        <Gift size={24} /> Бонусные кампании
+      </h1>
+
+      {/* Список */}
+      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead>
+            <tr>
+              {['Название', 'Дата', 'Сумма', 'Цель', 'Получатели', 'Статус', 'Действия'].map(h => (
+                <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>
+                <Loader2 className="animate-spin" style={{ marginRight: 8, display: 'inline' }} size={16} /> Загрузка...
+              </td></tr>
+            )}
+            {!loading && items.length === 0 && (
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Кампаний пока нет</td></tr>
+            )}
+            {!loading && items.map(c => {
+              const st = STATUS_LABEL[c.status] || STATUS_LABEL.pending;
+              return (
+                <tr key={c.id}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 600, color: '#e2eaf6' }}>
+                    <Link href={`/campaigns/${c.id}`} style={{ color: '#00e5a0' }}>{c.name}</Link>
+                  </td>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6' }}>
+                    {new Date(c.bonus_date).toLocaleDateString('ru-RU')}
+                  </td>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#00e5a0' }}>
+                    +{Number(c.amount).toLocaleString('ru-RU')} KGS
+                  </td>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                    {c.target_type === 'all' ? 'Все клиенты' : 'Индивидуально'}
+                  </td>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6' }}>
+                    {c.sent_count} / {c.recipients_count || '—'}
+                  </td>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                    <span style={{ background: st.bg, color: st.color, padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700 }}>
+                      {st.text}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {c.status === 'pending' && (
+                        <>
+                          <button onClick={() => onSendNow(c.id, c.name)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Send size={12} /> Сейчас
+                          </button>
+                          <button onClick={() => onCancel(c.id)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 12, color: '#ff4d4d' }}>
+                            Отменить
+                          </button>
+                        </>
+                      )}
+                      {(c.status === 'pending' || c.status === 'cancelled') && (
+                        <button onClick={() => onDelete(c.id)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: 12, color: '#ff4d4d' }}>
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Создание */}
+      <div className="card" style={{ maxWidth: 720 }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 700, marginBottom: 20 }}>
+          <Plus size={16} /> Создать кампанию
+        </h3>
+        <form onSubmit={onCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Название *</label>
+            <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Новогодний бонус 2026" required />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Дата начисления *</label>
+              <input className="input" type="date" value={bonusDate} onChange={e => setBonusDate(e.target.value)} required />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (KGS) *</label>
+              <input className="input" type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="200" required />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сабаб / Повод (для админ-инфо)</label>
+            <input className="input" value={reason} onChange={e => setReason(e.target.value)} placeholder="Новый год / 8 марта / Юбилей" />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>
+              WhatsApp шаблон (плейсхолдеры: {'{name} {amount} {balance}'})
+            </label>
+            <textarea className="input" value={template} onChange={e => setTemplate(e.target.value)} rows={3} style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Цель *</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" onClick={() => setTargetType('all')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'all' ? 'rgba(0,229,160,0.15)' : undefined, color: targetType === 'all' ? '#00e5a0' : undefined, fontWeight: 700 }}>
+                Все клиенты
+              </button>
+              <button type="button" onClick={() => setTargetType('individual')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'individual' ? 'rgba(0,229,160,0.15)' : undefined, color: targetType === 'individual' ? '#00e5a0' : undefined, fontWeight: 700 }}>
+                Индивидуально
+              </button>
+            </div>
+          </div>
+
+          {targetType === 'individual' && (
+            <div style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 12, padding: 12 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <input className="input" placeholder="Поиск: ФИО или телефон" value={search} onChange={e => setSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } }}
+                  style={{ flex: 1 }} />
+                <button type="button" onClick={doSearch} className="btn btn-secondary" disabled={searching}>
+                  <Search size={14} /> {searching ? '...' : 'Найти'}
+                </button>
+              </div>
+
+              {searchResults.length > 0 && (
+                <div style={{ marginBottom: 12, maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {searchResults.map(c => (
+                    <div key={c.id} onClick={() => addSelected(c)} style={{ padding: '8px 10px', borderRadius: 8, fontSize: 13, color: '#e2eaf6', background: '#1c2a3a', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{c.full_name}</span>
+                      <span style={{ color: '#8899aa' }}>{c.phone}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Выбрано: {selected.length}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {selected.map(s => (
+                  <div key={s.id} style={{ background: 'rgba(0,229,160,0.12)', color: '#00e5a0', padding: '4px 10px', borderRadius: 100, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {s.name}
+                    <button type="button" onClick={() => removeSelected(s.id)} style={{ background: 'none', border: 'none', color: '#00e5a0', cursor: 'pointer', padding: 0 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button className="btn btn-primary" type="submit" disabled={saving} style={{ marginTop: 4 }}>
+            {saving ? 'Создание...' : 'Создать кампанию'}
+          </button>
+        </form>
+
+        {msg && (
+          <div style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: msg.startsWith('error:') ? 'var(--danger)' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {msg.startsWith('error:') ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
+            {msg.replace(/^(success|error):/, '')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

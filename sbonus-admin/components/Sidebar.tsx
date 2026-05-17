@@ -1,12 +1,13 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, CreditCard, Store, Briefcase, Trophy, Ticket, Settings, LogOut, FileSearch } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Store, Briefcase, Trophy, Ticket, Settings, LogOut, FileSearch, Gift } from 'lucide-react';
 
 const NAV = [
   { href: '/', icon: <LayoutDashboard size={20} />, label: 'Дашборд' },
   { href: '/customers', icon: <Users size={20} />, label: 'Клиенты' },
   { href: '/transactions', icon: <CreditCard size={20} />, label: 'Транзакции' },
+  { href: '/campaigns', icon: <Gift size={20} />, label: 'Бонус-кампании' },
   { href: '/branches', icon: <Store size={20} />, label: 'Филиалы' },
   { href: '/cashiers', icon: <Briefcase size={20} />, label: 'Кассиры' },
   { href: '/tiers', icon: <Trophy size={20} />, label: 'Уровни' },

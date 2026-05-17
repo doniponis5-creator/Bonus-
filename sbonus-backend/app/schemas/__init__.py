@@ -360,6 +360,51 @@ class CustomerCabinetMe(BaseModel):
     recent_transactions: list[CustomerCabinetTransaction] = []
 
 
+# ═══════════════════════════════════════════
+# БОНУСНЫЕ КАМПАНИИ
+# ═══════════════════════════════════════════
+
+class BonusCampaignCreateRequest(BaseModel):
+    """Создать бонусную кампанию."""
+    name: str = Field(..., min_length=2, max_length=150, example="Новогодний бонус 2026")
+    bonus_date: date = Field(..., description="Дата начисления бонуса (YYYY-MM-DD)")
+    amount: Decimal = Field(..., gt=0, description="Сумма бонуса в KGS")
+    reason: Optional[str] = Field(None, max_length=500, description="Сабаб / Повод бонуса (для админ-инфо)")
+    message_template: Optional[str] = Field(None, max_length=1000, description="WhatsApp шаблон ({amount}, {balance}, {name})")
+    target_type: str = Field("all", description="all | individual")
+    customer_ids: Optional[list[uuid.UUID]] = Field(None, description="UUID клиентов для individual")
+
+
+class BonusCampaignResponse(BaseModel):
+    """Бонусная кампания."""
+    id: uuid.UUID
+    name: str
+    bonus_date: date
+    amount: Decimal
+    reason: Optional[str] = None
+    message_template: Optional[str] = None
+    target_type: str
+    status: str
+    sent_count: int
+    recipients_count: int = 0
+    created_at: datetime
+    sent_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class BonusCampaignRecipientResponse(BaseModel):
+    """Получатель кампании."""
+    customer_id: uuid.UUID
+    customer_name: str
+    customer_phone: str
+    status: str
+    sent_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class Webhook1CDebtUpdateRequest(BaseModel):
     """Обновление задолженности клиента из 1С."""
     phone: str = Field(..., description="Телефон клиента")

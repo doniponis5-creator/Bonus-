@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.core.database import Base, engine
 from app.seeds.defaults import seed_default_data
 from app.seeds.tiers import seed_tiers
-from app.tasks.birthday import process_birthday_bonuses
+from app.tasks.campaigns import process_due_campaigns
 
 settings = get_settings()
 scheduler = AsyncIOScheduler(timezone=settings.shop_timezone)
@@ -48,15 +48,15 @@ async def lifespan(app: FastAPI):
         await seed_tiers(db)
         await seed_default_data(db)
 
-    # Cron: бонус ко дню рождения — каждый день 09:00
+    # Cron: обработка бонусных кампаний — каждый день 09:00
     scheduler.add_job(
-        process_birthday_bonuses,
+        process_due_campaigns,
         CronTrigger(hour=9, minute=0),
-        id="birthday_bonus",
+        id="bonus_campaigns",
         replace_existing=True,
     )
     scheduler.start()
-    print("  ⏰ Cron: бонус ко дню рождения — 09:00 ежедневно")
+    print("  ⏰ Cron: бонусные кампании — 09:00 ежедневно")
     print("  ✅ Сервер запущен! Swagger: http://localhost:8000/docs")
     print("=" * 50)
 

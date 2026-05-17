@@ -1,10 +1,11 @@
 /**
  * Register — Регистрация нового клиента.
+ * Поля: ФИО + телефон (день рождения больше не запрашиваем).
  */
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Cake, CheckCircle2, Phone, User } from 'lucide-react-native';
+import { CheckCircle2, Phone, User } from 'lucide-react-native';
 import { customersAPI } from '@/api/client';
 import { COLORS } from '@/constants/theme';
 
@@ -12,7 +13,6 @@ export default function RegisterScreen() {
   const navigation = useNavigation<any>();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('+996');
-  const [birth, setBirth] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
@@ -20,8 +20,8 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       const { data } = await customersAPI.register({
-        full_name: name, phone,
-        birth_date: birth || undefined,
+        full_name: name,
+        phone,
       });
       Alert.alert('Готово!', `${name} зарегистрирован в S Bonus`, [
         { text: 'Открыть карточку', onPress: () => navigation.replace('Customer', { id: data.id }) },
@@ -48,12 +48,6 @@ export default function RegisterScreen() {
           <Text style={s.l}>Телефон</Text>
         </View>
         <TextInput style={s.i} value={phone} onChangeText={setPhone} placeholder="+996557100505" placeholderTextColor={COLORS.text3} keyboardType="phone-pad" maxLength={13} />
-
-        <View style={[s.labelRow, { marginTop: 16 }]}>
-          <Cake size={14} color={COLORS.text2} />
-          <Text style={s.l}>Дата рождения (опционально)</Text>
-        </View>
-        <TextInput style={s.i} value={birth} onChangeText={setBirth} placeholder="1990-05-15" placeholderTextColor={COLORS.text3} />
 
         <TouchableOpacity style={[s.btn, (!name || phone.length < 9) && s.bd]} onPress={handleRegister} disabled={loading || !name || phone.length < 9} activeOpacity={0.7}>
           {loading ? (
