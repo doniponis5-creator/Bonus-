@@ -3,9 +3,10 @@
  */
 
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, CheckCircle2, User, XCircle } from 'lucide-react-native';
 import { bonusAPI } from '@/api/client';
 import SuccessModal from '@/components/SuccessModal';
 import { useAuthStore } from '@/store/auth';
@@ -43,7 +44,10 @@ export default function EarnScreen() {
     <>
       <View style={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.customer}>👤 {customerName}</Text>
+          <View style={styles.customerRow}>
+            <User size={18} color={COLORS.text} />
+            <Text style={styles.customer}>{customerName}</Text>
+          </View>
           <Text style={styles.hint}>Текущий процент: {pct}%</Text>
 
           <Text style={styles.label}>Сумма покупки (KGS)</Text>
@@ -66,13 +70,19 @@ export default function EarnScreen() {
           )}
 
           {purchaseNum < 500 && purchaseNum > 0 && (
-            <Text style={styles.warning}>⚠️ Минимум 500 KGS для начисления бонуса</Text>
+            <View style={styles.warningRow}>
+              <AlertTriangle size={14} color={COLORS.warn} />
+              <Text style={styles.warning}>Минимум 500 KGS для начисления бонуса</Text>
+            </View>
           )}
 
           {mutation.error && (
-            <Text style={styles.error}>
-              ❌ {(mutation.error as any)?.response?.data?.detail?.message || 'Ошибка'}
-            </Text>
+            <View style={styles.errorRow}>
+              <XCircle size={14} color={COLORS.danger} />
+              <Text style={styles.error}>
+                {(mutation.error as any)?.response?.data?.detail?.message || 'Ошибка'}
+              </Text>
+            </View>
           )}
 
           <TouchableOpacity
@@ -81,9 +91,14 @@ export default function EarnScreen() {
             disabled={purchaseNum < 500 || mutation.isPending}
             activeOpacity={0.7}
           >
-            <Text style={styles.btnText}>
-              {mutation.isPending ? '⏳ Обработка...' : '✅ Подтвердить начисление'}
-            </Text>
+            {mutation.isPending ? (
+              <ActivityIndicator color={COLORS.bg} />
+            ) : (
+              <View style={styles.btnRow}>
+                <CheckCircle2 size={18} color={COLORS.bg} />
+                <Text style={styles.btnText}>Подтвердить начисление</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -107,7 +122,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card, borderRadius: 20, padding: 24,
     borderWidth: 1, borderColor: COLORS.cardBorder,
   },
-  customer: { color: COLORS.text, fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  customerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  customer: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
   hint: { color: COLORS.text2, fontSize: 13, marginBottom: 24 },
   label: { color: COLORS.text2, fontSize: 13, fontWeight: '600', marginBottom: 8 },
   input: {
@@ -122,9 +138,12 @@ const styles = StyleSheet.create({
   },
   previewLabel: { color: COLORS.text2, fontSize: 14 },
   previewValue: { color: COLORS.accent, fontSize: 22, fontWeight: '800' },
-  warning: { color: COLORS.warn, fontSize: 13, marginTop: 12 },
-  error: { color: COLORS.danger, fontSize: 13, marginTop: 12 },
+  warningRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  warning: { color: COLORS.warn, fontSize: 13 },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  error: { color: COLORS.danger, fontSize: 13 },
   btn: { marginTop: 24, backgroundColor: COLORS.accent, paddingVertical: 18, borderRadius: 16, alignItems: 'center' },
   btnDisabled: { opacity: 0.4 },
+  btnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   btnText: { color: COLORS.bg, fontSize: 16, fontWeight: '800' },
 });

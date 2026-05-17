@@ -225,6 +225,15 @@ class AdminCustomerUpdateRequest(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2, max_length=100)
     phone: Optional[str] = Field(None)
     birth_date: Optional[date] = None
+    is_active: Optional[bool] = None
+
+
+class AdminCashierUpdateRequest(BaseModel):
+    """Обновление данных кассира администратором (блокировка / разблокировка / переименование)."""
+    full_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    branch_id: Optional[uuid.UUID] = None
+    is_active: Optional[bool] = None
+    pin: Optional[str] = Field(None, min_length=4, max_length=8, description="Новый PIN (если нужно сбросить)")
 
 
 class AdminBonusAdjustmentRequest(BaseModel):
@@ -272,3 +281,88 @@ class Webhook1CRegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100, description="ФИО покупателя")
     birth_date: Optional[date] = Field(None, description="Дата рождения (YYYY-MM-DD)")
     referred_by_code: Optional[str] = Field(None, description="Реферальный код пригласителя")
+
+
+# ═══════════════════════════════════════════
+# ЛИЧНЫЙ КАБИНЕТ КЛИЕНТА
+# ═══════════════════════════════════════════
+
+class CustomerMagicLinkRequest(BaseModel):
+    """Запрос magic-link для входа в кабинет."""
+    phone: str = Field(..., example="+996700123456")
+
+    @field_validator("phone")
+    @classmethod
+    def phone_stripped(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Телефон не может быть пустым")
+        return v
+
+
+class CustomerMagicLinkVerifyRequest(BaseModel):
+    """Верификация magic-link токена."""
+    token: str = Field(..., min_length=16, max_length=64)
+
+
+class CustomerTokenResponse(BaseModel):
+    """JWT клиента после успешной верификации."""
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int = Field(..., description="Время жизни токена в секундах")
+    customer_id: str
+
+
+class CustomerDebtItem(BaseModel):
+    """Запись задолженности из 1С."""
+    amount: Decimal
+    source: str
+    reference: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CustomerCabinetTransaction(BaseModel):
+    """Транзакция для отображения в кабинете."""
+    id: uuid.UUID
+    type: str
+    amount: Decimal
+    purchase_amount: Optional[Decimal] = None
+    note: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CustomerCabinetMe(BaseModel):
+    """Полные данные для дашборда личного кабинета."""
+    customer_id: uuid.UUID
+    full_name: str
+    phone: str
+    qr_code: str
+    referral_code: str
+    birth_date: Optional[date] = None
+
+    balance: Decimal
+    total_earned: Decimal
+    total_spent: Decimal
+
+    tier_name: str
+    tier_percent: Decimal
+    next_tier_name: Optional[str] = None
+    next_tier_remaining: Optional[Decimal] = None
+    tier_progress_percent: Decimal = Field(default=Decimal("0"), description="Прогресс до следующего уровня, %")
+
+    debt_amount: Decimal = Field(default=Decimal("0"), description="Задолженность из 1С (0 если нет долга)")
+    debt_updated_at: Optional[datetime] = None
+
+    recent_transactions: list[CustomerCabinetTransaction] = []
+
+
+class Webhook1CDebtUpdateRequest(BaseModel):
+    """Обновление задолженности клиента из 1С."""
+    phone: str = Field(..., description="Телефон клиента")
+    amount: Decimal = Field(..., ge=0, description="Текущая задолженность в KGS (0 если погашена)")
+    reference: Optional[str] = Field(None, max_length=100, description="Номер документа в 1С")
+    note: Optional[str] = Field(None, max_length=255)

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { CreditCard, PlusCircle, TrendingUp, Wallet } from 'lucide-react-native';
 import { COLORS, formatKGS, TIER_COLORS } from '@/constants/theme';
 import TierBadge from './TierBadge';
 
@@ -45,13 +46,19 @@ export default function CustomerCard({
       {/* Баланс */}
       <View style={styles.balanceRow}>
         <View style={styles.balanceBlock}>
-          <Text style={styles.balanceLabel}>💰 Баланс</Text>
+          <View style={styles.balanceLabelRow}>
+            <Wallet size={12} color={COLORS.text2} />
+            <Text style={styles.balanceLabel}>Баланс</Text>
+          </View>
           <Text style={[styles.balanceValue, { color: COLORS.accent }]}>
             {formatKGS(balance)}
           </Text>
         </View>
         <View style={styles.balanceBlock}>
-          <Text style={styles.balanceLabel}>📈 Всего накоплено</Text>
+          <View style={styles.balanceLabelRow}>
+            <TrendingUp size={12} color={COLORS.text2} />
+            <Text style={styles.balanceLabel}>Всего накоплено</Text>
+          </View>
           <Text style={styles.balanceValue2}>{formatKGS(totalEarned)}</Text>
         </View>
       </View>
@@ -76,12 +83,14 @@ export default function CustomerCard({
         <View style={styles.actions}>
           {onEarn && (
             <TouchableOpacity style={[styles.btn, styles.btnEarn]} onPress={onEarn} activeOpacity={0.7}>
-              <Text style={styles.btnText}>💰 Начислить</Text>
+              <PlusCircle size={16} color={COLORS.text} />
+              <Text style={styles.btnText}>Начислить</Text>
             </TouchableOpacity>
           )}
           {onSpend && (
             <TouchableOpacity style={[styles.btn, styles.btnSpend]} onPress={onSpend} activeOpacity={0.7}>
-              <Text style={styles.btnText}>💳 Списать</Text>
+              <CreditCard size={16} color={COLORS.text} />
+              <Text style={styles.btnText}>Списать</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -115,7 +124,8 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: COLORS.bg2, borderRadius: 14, padding: 14,
     borderWidth: 1, borderColor: COLORS.cardBorder,
   },
-  balanceLabel: { color: COLORS.text2, fontSize: 12, marginBottom: 6 },
+  balanceLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  balanceLabel: { color: COLORS.text2, fontSize: 12 },
   balanceValue: { fontSize: 22, fontWeight: '800' },
   balanceValue2: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
 
@@ -130,6 +140,7 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1, paddingVertical: 14, borderRadius: 14,
     justifyContent: 'center', alignItems: 'center',
+    flexDirection: 'row', gap: 8,
   },
   btnEarn: { backgroundColor: 'rgba(0,229,160,0.15)', borderWidth: 1, borderColor: 'rgba(0,229,160,0.3)' },
   btnSpend: { backgroundColor: 'rgba(124,111,255,0.15)', borderWidth: 1, borderColor: 'rgba(124,111,255,0.3)' },

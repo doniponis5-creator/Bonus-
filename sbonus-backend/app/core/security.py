@@ -103,6 +103,20 @@ def create_refresh_token(user_id: str) -> str:
     return jwt.encode(payload, get_private_key(), algorithm="RS256")
 
 
+def create_customer_token(customer_id: str, days: int = 30) -> str:
+    """Создать JWT для клиентского личного кабинета (RS256, по умолчанию 30 дней)."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": customer_id,
+        "role": "customer",
+        "type": "access",
+        "jti": str(uuid.uuid4()),
+        "iat": now,
+        "exp": now + timedelta(days=days),
+    }
+    return jwt.encode(payload, get_private_key(), algorithm="RS256")
+
+
 def decode_token(token: str) -> dict:
     """
     Декодировать и верифицировать JWT токен.
@@ -139,6 +153,32 @@ async def get_current_user(
         )
 
     # Проверяем blacklist
+    jti = payload.get("jti")
+    if jti and await is_token_blacklisted(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "AUTH_TOKEN_REVOKED", "message": "Токен отозван"},
+        )
+
+    return payload
+
+
+async def get_current_customer(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> dict:
+    """
+    Dependency — извлечь текущего клиента (личный кабинет) из JWT.
+    Проверяет роль "customer" и blacklist в Redis.
+    """
+    token = credentials.credentials
+    payload = decode_token(token)
+
+    if payload.get("type") != "access" or payload.get("role") != "customer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "AUTH_INVALID_TOKEN_TYPE", "message": "Требуется клиентский токен"},
+        )
+
     jti = payload.get("jti")
     if jti and await is_token_blacklisted(jti):
         raise HTTPException(

@@ -1,16 +1,17 @@
 'use client';
-import { Trophy, Loader2, XCircle, CheckCircle2 } from 'lucide-react';
+import { Trophy, Loader2, XCircle, CheckCircle2, Plus, Medal, Award, Gem, Star } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { adminAPI } from '@/lib/api';
 
-const TIER_META: Record<string, { emoji: string; color: string }> = {
-  Bronze:   { emoji: '🥉', color: '#cd7f32' },
-  Silver:   { emoji: '🥈', color: '#b0b0b0' },
-  Gold:     { emoji: '🥇', color: '#ffd700' },
-  Platinum: { emoji: '💎', color: '#00e5a0' },
+const TIER_META: Record<string, { Icon: LucideIcon; color: string }> = {
+  Bronze:   { Icon: Medal,  color: '#cd7f32' },
+  Silver:   { Icon: Award,  color: '#b0b0b0' },
+  Gold:     { Icon: Trophy, color: '#ffd700' },
+  Platinum: { Icon: Gem,    color: '#00e5a0' },
 };
 
-const DEFAULT_META = { emoji: '⭐', color: '#60a5fa' };
+const DEFAULT_META = { Icon: Star, color: '#60a5fa' };
 
 export default function TiersPage() {
   const [tiers, setTiers] = useState<any[]>([]);
@@ -43,9 +44,12 @@ export default function TiersPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
           {tiers.map(t => {
             const meta = TIER_META[t.name] || DEFAULT_META;
+            const Icon = meta.Icon;
             return (
               <div className="card" key={t.id} style={{ textAlign: 'center', borderColor: `${meta.color}30` }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>{meta.emoji}</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                  <Icon size={40} color={meta.color} />
+                </div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: meta.color }}>{t.name}</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: meta.color, margin: '8px 0' }}>
                   {t.bonus_percent}%
@@ -67,7 +71,7 @@ export default function TiersPage() {
 
       {/* Форма добавления / обновления */}
       <div className="card" style={{ maxWidth: 520 }}>
-        <h3 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 16, fontWeight: 700, marginBottom: 20 }}>➕ Добавить / обновить уровень</h3>
+        <h3 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 16, fontWeight: 700, marginBottom: 20 }}><Plus size={16} /> Добавить / обновить уровень</h3>
         <form
           onSubmit={async e => {
             e.preventDefault();

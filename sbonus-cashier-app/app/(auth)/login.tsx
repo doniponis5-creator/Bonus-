@@ -7,7 +7,8 @@ import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { KeyRound, Phone, XCircle } from 'lucide-react-native';
 import { useAuthStore } from '@/store/auth';
 import { COLORS } from '@/constants/theme';
 
@@ -39,7 +40,10 @@ export default function LoginScreen() {
 
         {/* Форма */}
         <View style={styles.form}>
-          <Text style={styles.label}>📱 Номер телефона</Text>
+          <View style={styles.labelRow}>
+            <Phone size={14} color={COLORS.text2} />
+            <Text style={styles.label}>Номер телефона</Text>
+          </View>
           <TextInput
             style={styles.input}
             value={phone}
@@ -50,7 +54,10 @@ export default function LoginScreen() {
             maxLength={13}
           />
 
-          <Text style={[styles.label, { marginTop: 20 }]}>🔑 PIN код</Text>
+          <View style={[styles.labelRow, { marginTop: 20 }]}>
+            <KeyRound size={14} color={COLORS.text2} />
+            <Text style={styles.label}>PIN код</Text>
+          </View>
           <TextInput
             style={styles.input}
             value={pin}
@@ -64,7 +71,8 @@ export default function LoginScreen() {
 
           {error && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>❌ {error}</Text>
+              <XCircle size={14} color={COLORS.danger} />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
@@ -101,7 +109,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: COLORS.text2, marginBottom: 40 },
 
   form: { width: '100%' },
-  label: { color: COLORS.text2, fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  label: { color: COLORS.text2, fontSize: 13, fontWeight: '600' },
   input: {
     backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.cardBorder,
     borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18,
@@ -110,6 +119,7 @@ const styles = StyleSheet.create({
   errorBox: {
     marginTop: 16, backgroundColor: 'rgba(239,68,68,0.1)',
     borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
   },
   errorText: { color: COLORS.danger, fontSize: 13, fontWeight: '600' },
 

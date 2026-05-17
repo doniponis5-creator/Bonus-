@@ -115,11 +115,11 @@ export default function PromoCodesPage() {
                 max_uses: Number(fd.get('max')) || 100,
                 expires_at: fd.get('expires') || undefined,
               });
-              setMsg(`<CheckCircle2 size={14} style={{display:'inline',marginRight:4}} /> Промокод "${code}" создан`);
+              setMsg(`success:Промокод "${code}" создан`);
               (e.target as HTMLFormElement).reset();
               load(1); setPage(1);
             } catch (er: any) {
-              setMsg('<XCircle size={14} style={{display:'inline',marginRight:4}} /> ' + (er?.response?.data?.detail?.message || 'Ошибка'));
+              setMsg('error:' + (er?.response?.data?.detail?.message || 'Ошибка'));
             } finally {
               setSaving(false);
             }
@@ -149,8 +149,9 @@ export default function PromoCodesPage() {
           </button>
         </form>
         {msg && (
-          <div style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: msg.includes('<CheckCircle2 size={14} style={{display:'inline',marginRight:4}} />') ? 'var(--accent)' : 'var(--danger)' }}>
-            {msg}
+          <div style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: msg.startsWith('error:') ? 'var(--danger)' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {msg.startsWith('error:') ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
+            {msg.replace(/^(success|error):/, '')}
           </div>
         )}
       </div>

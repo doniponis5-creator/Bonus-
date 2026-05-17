@@ -62,8 +62,13 @@ class Settings(BaseSettings):
     greenapi_api_token: str = ""
     enable_whatsapp_notifications: bool = False
 
+    # ─── Личный кабинет клиента ───
+    customer_cabinet_base_url: str = "http://localhost:3001"
+    customer_token_expire_days: int = 30
+    customer_magic_link_expire_minutes: int = 15
+
     # ─── CORS ───
-    cors_origins: str = "http://localhost:3000,http://localhost:8080"
+    cors_origins: str = "http://localhost:3000,http://localhost:3001,http://localhost:8080"
 
     # ─── Приложение ───
     app_env: str = "development"

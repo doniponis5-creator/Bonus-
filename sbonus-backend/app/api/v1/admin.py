@@ -38,6 +38,7 @@ from app.schemas import (
     TierCreateRequest,
     SettingsUpdateRequest,
     AdminCustomerUpdateRequest,
+    AdminCashierUpdateRequest,
     AdminBonusAdjustmentRequest,
     BonusResult,
 )
@@ -308,7 +309,39 @@ async def create_cashier(
         pin_hash=hash_password(body.pin),
     )
     db.add(cashier)
+    await db.commit()
     return SuccessResponse(message=f"Кассир '{body.full_name}' добавлен")
+
+
+@router.patch(
+    "/cashiers/{cashier_id}",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def update_cashier(
+    cashier_id: uuid.UUID,
+    body: AdminCashierUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> SuccessResponse:
+    """Обновить кассира (блокировка, переименование, сброс PIN, перевод в другой филиал)."""
+    result = await db.execute(
+        select(User).where(User.id == cashier_id, User.role == UserRoleEnum.CASHIER)
+    )
+    cashier = result.scalar_one_or_none()
+    if not cashier:
+        raise HTTPException(status_code=404, detail={"message": "Кассир не найден"})
+
+    if body.full_name is not None:
+        cashier.full_name = body.full_name
+    if body.branch_id is not None:
+        cashier.branch_id = body.branch_id
+    if body.is_active is not None:
+        cashier.is_active = body.is_active
+    if body.pin is not None:
+        cashier.pin_hash = hash_password(body.pin)
+
+    await db.commit()
+    return SuccessResponse(message="Данные кассира обновлены")
 
 
 @router.get(
@@ -412,6 +445,7 @@ async def get_customers(
             "phone": customer.phone,
             "tier_name": tier.name if tier else "Bronze",
             "balance": float(account.balance) if account else 0.0,
+            "is_active": customer.is_active,
             "created_at": customer.created_at.isoformat()
         })
         
@@ -442,6 +476,7 @@ async def update_customer(
     if body.full_name is not None: customer.full_name = body.full_name
     if body.phone is not None: customer.phone = body.phone
     if body.birth_date is not None: customer.birth_date = body.birth_date
+    if body.is_active is not None: customer.is_active = body.is_active
 
     await db.commit()
     return SuccessResponse(message="Данные клиента обновлены")
@@ -621,7 +656,8 @@ async def update_settings(
             setting.value = str(value)
         else:
             db.add(Setting(key=key, value=str(value)))
-    
+
+    await db.commit()
     return SuccessResponse(message="Настройки успешно сохранены")
 
 

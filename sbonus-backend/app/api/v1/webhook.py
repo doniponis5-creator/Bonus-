@@ -29,12 +29,13 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models import BonusAccount, Customer, Tier, Transaction, TransactionType
+from app.models import BonusAccount, Customer, CustomerDebt, Tier, Transaction, TransactionType
 from app.schemas import (
     Webhook1CPurchaseRequest,
     Webhook1CSpendRequest,
     Webhook1CRefundRequest,
     Webhook1CRegisterRequest,
+    Webhook1CDebtUpdateRequest,
 )
 from app.services.bonus import BonusService
 
@@ -497,7 +498,51 @@ async def webhook_1c_check_spend(
 
 
 # ═══════════════════════════════════════════
-# 7. GREEN API — входящие WhatsApp
+# 7. DEBT UPDATE — обновление задолженности из 1С
+# ═══════════════════════════════════════════
+
+@router.post("/1c/debt-update", status_code=201)
+async def webhook_1c_debt_update(
+    body: Webhook1CDebtUpdateRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_signature: str = Header(None, alias="X-Signature"),
+) -> dict:
+    """
+    **Обновление задолженности клиента из 1С.**
+
+    Каждое обновление сохраняется как отдельная запись (история задолженности).
+    Личный кабинет показывает самую свежую запись.
+
+    Если `amount = 0` — это означает, что долг погашен.
+    """
+    await _security_check(request, x_signature)
+
+    phone = _normalize_phone(body.phone)
+    customer = await _get_customer_or_404(phone, db)
+
+    debt = CustomerDebt(
+        customer_id=customer.id,
+        amount=body.amount,
+        source="1c",
+        reference=body.reference,
+        note=body.note,
+    )
+    db.add(debt)
+    await db.commit()
+
+    return {
+        "success": True,
+        "event": "debt_update",
+        "customer_id": str(customer.id),
+        "customer_name": customer.full_name,
+        "debt_amount": float(body.amount),
+        "reference": body.reference,
+    }
+
+
+# ═══════════════════════════════════════════
+# 8. GREEN API — входящие WhatsApp
 # ═══════════════════════════════════════════
 
 @router.post("/greenapi")

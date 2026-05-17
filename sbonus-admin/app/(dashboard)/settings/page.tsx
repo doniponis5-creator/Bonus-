@@ -1,5 +1,5 @@
 "use client";
-import { Settings } from 'lucide-react';
+import { Settings, AlertTriangle } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -440,8 +440,8 @@ export default function SettingsPage() {
           </button>
         </div>
         {settings.ENABLE_WHATSAPP_NOTIFICATIONS !== "true" && (
-          <div style={{ color: "#f59e0b", fontSize: "13px", marginTop: "12px" }}>
-            ⚠️ Для тестирования необходимо включить уведомления и сохранить настройки.
+          <div style={{ color: "#f59e0b", fontSize: "13px", marginTop: "12px", display: "flex", alignItems: "center", gap: 6 }}>
+            <AlertTriangle size={14} /> Для тестирования необходимо включить уведомления и сохранить настройки.
           </div>
         )}
       </div>

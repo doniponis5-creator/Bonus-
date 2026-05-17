@@ -1,5 +1,5 @@
 'use client';
-import { Briefcase, Loader2, XCircle, Plus, CheckCircle2 } from 'lucide-react';
+import { Briefcase, Loader2, XCircle, Plus, CheckCircle2, Lock, Unlock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { adminAPI } from '@/lib/api';
 
@@ -38,6 +38,17 @@ export default function CashiersPage() {
 
   useEffect(() => { load(); }, []);
 
+  const toggleActive = async (c: any) => {
+    const action = c.is_active ? 'заблокировать' : 'разблокировать';
+    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} кассира «${c.full_name}»?`)) return;
+    try {
+      await adminAPI.updateCashier(c.id, { is_active: !c.is_active });
+      load();
+    } catch (er: any) {
+      alert(er?.response?.data?.detail?.message || 'Ошибка');
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(''); setErr('');
@@ -45,7 +56,7 @@ export default function CashiersPage() {
     setSaving(true);
     try {
       await adminAPI.createCashier({ phone, full_name: name, pin, branch_id: branchId });
-      setMsg(`<CheckCircle2 size={14} style={{display:'inline',marginRight:4}} /> Кассир "${name}" добавлен`);
+      setMsg(`success:Кассир "${name}" добавлен`);
       setName(''); setPhone('+996'); setPin('');
       load();
     } catch (er: any) {
@@ -64,17 +75,17 @@ export default function CashiersPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
-              {['#', 'ФИО', 'Телефон', 'Филиал', 'Статус', 'Добавлен'].map(h => (
+              {['#', 'ФИО', 'Телефон', 'Филиал', 'Статус', 'Добавлен', 'Действия'].map(h => (
                 <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}><Loader2 className="animate-spin" style={{marginRight: 8, display: 'inline'}} size={16} /> Загрузка...</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}><Loader2 className="animate-spin" style={{marginRight: 8, display: 'inline'}} size={16} /> Загрузка...</td></tr>
             )}
             {!loading && cashiers.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Кассиры не найдены</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Кассиры не найдены</td></tr>
             )}
             {!loading && cashiers.map((c, i) => (
               <tr key={c.id}>
@@ -93,6 +104,25 @@ export default function CashiersPage() {
                 </td>
                 <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
                   {new Date(c.created_at).toLocaleDateString('ru-RU')}
+                </td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', textAlign: 'right' }}>
+                  <button
+                    onClick={() => toggleActive(c)}
+                    style={{
+                      background: 'none',
+                      border: '1px solid ' + (c.is_active ? '#f59e0b' : '#00e5a0'),
+                      color: c.is_active ? '#f59e0b' : '#00e5a0',
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    {c.is_active ? <><Lock size={12} /> Блокир.</> : <><Unlock size={12} /> Разблок.</>}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -129,7 +159,12 @@ export default function CashiersPage() {
             {saving ? 'Добавление...' : 'Добавить кассира'}
           </button>
         </form>
-        {msg && <div style={{ marginTop: 12, color: 'var(--accent)', fontSize: 14, fontWeight: 600 }}>{msg}</div>}
+        {msg && (
+          <div style={{ marginTop: 12, color: msg.startsWith('error:') ? 'var(--danger)' : 'var(--accent)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {msg.startsWith('error:') ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
+            {msg.replace(/^(success|error):/, '')}
+          </div>
+        )}
         {err && <div style={{ marginTop: 12, color: 'var(--danger)', fontSize: 14, fontWeight: 600 }}><XCircle size={14} style={{display:'inline',marginRight:4}} /> {err}</div>}
       </div>
     </div>

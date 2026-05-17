@@ -7,18 +7,28 @@ import {
   TouchableOpacity, View,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import {
+  Clock,
+  CreditCard,
+  Gift,
+  PlusCircle,
+  RefreshCcw,
+  Ticket,
+  Users,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { customersAPI } from '@/api/client';
 import { COLORS, formatKGS } from '@/constants/theme';
 
-const TYPE_LABELS: Record<string, { emoji: string; label: string; color: string }> = {
-  earn:     { emoji: '💰', label: 'Начисление',    color: COLORS.accent },
-  spend:    { emoji: '💳', label: 'Списание',       color: COLORS.accent3 },
-  birthday: { emoji: '🎂', label: 'День рождения', color: COLORS.warn },
-  referral: { emoji: '👥', label: 'Реферал',       color: COLORS.accent2 },
-  promo:    { emoji: '🎟', label: 'Промокод',       color: COLORS.warn },
-  refund:   { emoji: '↩️', label: 'Возврат',        color: COLORS.danger },
-  expire:   { emoji: '⏳', label: 'Истёк',          color: COLORS.text3 },
+const TYPE_LABELS: Record<string, { Icon: LucideIcon; label: string; color: string }> = {
+  earn:     { Icon: PlusCircle, label: 'Начисление',    color: COLORS.accent },
+  spend:    { Icon: CreditCard, label: 'Списание',       color: COLORS.accent3 },
+  birthday: { Icon: Gift,       label: 'День рождения', color: COLORS.warn },
+  referral: { Icon: Users,      label: 'Реферал',       color: COLORS.accent2 },
+  promo:    { Icon: Ticket,     label: 'Промокод',       color: COLORS.warn },
+  refund:   { Icon: RefreshCcw, label: 'Возврат',        color: COLORS.danger },
+  expire:   { Icon: Clock,      label: 'Истёк',          color: COLORS.text3 },
 };
 
 const EARN_TYPES = new Set(['earn', 'birthday', 'referral', 'promo']);
@@ -28,11 +38,11 @@ export default function HistoryScreen() {
   const { customerId } = route.params || {};
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching } = useQuery<any>({
     queryKey: ['transactions', customerId, page],
     queryFn: () => customersAPI.transactions(customerId!, page).then(r => r.data),
     enabled: !!customerId,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const items = data?.items || [];
@@ -41,12 +51,13 @@ export default function HistoryScreen() {
   const totalPages = Math.ceil(total / perPage);
 
   const renderItem = useCallback(({ item }: { item: any }) => {
-    const info = TYPE_LABELS[item.type] || { emoji: '📋', label: item.type, color: COLORS.text2 };
+    const info = TYPE_LABELS[item.type] || { Icon: Clock, label: item.type, color: COLORS.text2 };
+    const Icon = info.Icon;
     const isEarn = EARN_TYPES.has(item.type);
     return (
       <View style={s.item}>
         <View style={[s.iconBox, { backgroundColor: `${info.color}15` }]}>
-          <Text style={s.emoji}>{info.emoji}</Text>
+          <Icon size={22} color={info.color} />
         </View>
         <View style={s.info}>
           <Text style={s.label}>{info.label}</Text>
@@ -132,7 +143,6 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 12,
     justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
-  emoji: { fontSize: 20 },
   info: { flex: 1 },
   label: { color: COLORS.text, fontSize: 14, fontWeight: '600' },
   date: { color: COLORS.text3, fontSize: 11, marginTop: 2 },

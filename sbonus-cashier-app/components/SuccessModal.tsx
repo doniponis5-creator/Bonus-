@@ -4,6 +4,7 @@
 
 import React, { useEffect } from 'react';
 import { Animated, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { CheckCircle2, Wallet, XCircle } from 'lucide-react-native';
 import { COLORS, formatKGS } from '@/constants/theme';
 
 interface Props {
@@ -37,7 +38,11 @@ export default function SuccessModal({ visible, type, title, message, amount, ne
         <Animated.View style={[styles.card, { transform: [{ scale }], opacity }]}>
           {/* Иконка */}
           <View style={[styles.iconCircle, { backgroundColor: isSuccess ? 'rgba(0,229,160,0.15)' : 'rgba(239,68,68,0.15)' }]}>
-            <Text style={styles.icon}>{isSuccess ? '✅' : '❌'}</Text>
+            {isSuccess ? (
+              <CheckCircle2 size={44} color={COLORS.accent} />
+            ) : (
+              <XCircle size={44} color={COLORS.danger} />
+            )}
           </View>
 
           {/* Заголовок */}
@@ -58,7 +63,10 @@ export default function SuccessModal({ visible, type, title, message, amount, ne
 
           {newBalance != null && (
             <View style={styles.amountRow}>
-              <Text style={styles.amountLabel}>💰 Новый баланс</Text>
+              <View style={styles.amountLabelWrap}>
+                <Wallet size={14} color={COLORS.text2} />
+                <Text style={styles.amountLabel}>Новый баланс</Text>
+              </View>
               <Text style={styles.balanceValue}>{formatKGS(newBalance)}</Text>
             </View>
           )}
@@ -85,7 +93,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.cardBorder,
   },
   iconCircle: { width: 72, height: 72, borderRadius: 36, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  icon: { fontSize: 36 },
   title: { fontSize: 22, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
   message: { color: COLORS.text2, fontSize: 14, textAlign: 'center', marginBottom: 20, lineHeight: 20 },
   amountRow: {
@@ -93,6 +100,7 @@ const styles = StyleSheet.create({
     width: '100%', backgroundColor: COLORS.bg2, borderRadius: 12, padding: 14, marginBottom: 8,
   },
   amountLabel: { color: COLORS.text2, fontSize: 13 },
+  amountLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   amountValue: { fontSize: 18, fontWeight: '800' },
   balanceValue: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
   btn: { width: '100%', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 12 },

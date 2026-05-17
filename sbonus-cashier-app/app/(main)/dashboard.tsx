@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { ChevronRight, LogOut, Search, UserPlus, Hand } from 'lucide-react-native';
 import { useAuthStore } from '@/store/auth';
 import { COLORS } from '@/constants/theme';
 import api from '@/api/client';
@@ -45,13 +46,13 @@ export default function DashboardScreen() {
             </View>
           </View>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={styles.logoutText}>🚪</Text>
+            <LogOut size={22} color={COLORS.text2} />
           </TouchableOpacity>
         </View>
 
         {/* Приветствие */}
         <View style={styles.welcomeCard}>
-          <Text style={styles.welcomeEmoji}>👋</Text>
+          <Hand size={36} color={COLORS.accent} style={{ marginBottom: 8 }} />
           <Text style={styles.welcomeTitle}>Добро пожаловать!</Text>
           <Text style={styles.welcomeSub}>
             Филиал: {branchName}{'\n'}
@@ -66,13 +67,13 @@ export default function DashboardScreen() {
           activeOpacity={0.7}
         >
           <View style={[styles.btnIcon, { backgroundColor: 'rgba(0,229,160,0.12)' }]}>
-            <Text style={styles.btnEmoji}>🔍</Text>
+            <Search size={22} color={COLORS.accent} />
           </View>
           <View style={styles.btnInfo}>
             <Text style={styles.btnTitle}>Найти клиента</Text>
             <Text style={styles.btnDesc}>По телефону или QR коду</Text>
           </View>
-          <Text style={styles.arrow}>›</Text>
+          <ChevronRight size={22} color={COLORS.text3} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -81,13 +82,13 @@ export default function DashboardScreen() {
           activeOpacity={0.7}
         >
           <View style={[styles.btnIcon, { backgroundColor: 'rgba(124,111,255,0.12)' }]}>
-            <Text style={styles.btnEmoji}>➕</Text>
+            <UserPlus size={22} color={COLORS.accent3} />
           </View>
           <View style={styles.btnInfo}>
             <Text style={styles.btnTitle}>Новый клиент</Text>
             <Text style={styles.btnDesc}>Зарегистрировать в S Bonus</Text>
           </View>
-          <Text style={styles.arrow}>›</Text>
+          <ChevronRight size={22} color={COLORS.text3} />
         </TouchableOpacity>
       </View>
     </>
@@ -107,13 +108,11 @@ const styles = StyleSheet.create({
   shopName: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
   bonusName: { color: COLORS.text2, fontSize: 12 },
   logoutBtn: { padding: 10 },
-  logoutText: { fontSize: 24 },
 
   welcomeCard: {
     backgroundColor: COLORS.card, borderRadius: 20, padding: 28,
     borderWidth: 1, borderColor: COLORS.cardBorder, marginBottom: 24, alignItems: 'center',
   },
-  welcomeEmoji: { fontSize: 40, marginBottom: 8 },
   welcomeTitle: { color: COLORS.text, fontSize: 22, fontWeight: '800', marginBottom: 8 },
   welcomeSub: { color: COLORS.text2, fontSize: 14, textAlign: 'center', lineHeight: 22 },
 
@@ -123,9 +122,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.cardBorder, marginBottom: 12,
   },
   btnIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  btnEmoji: { fontSize: 22 },
   btnInfo: { flex: 1, marginLeft: 14 },
   btnTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
   btnDesc: { color: COLORS.text2, fontSize: 12, marginTop: 3 },
-  arrow: { color: COLORS.text3, fontSize: 24, fontWeight: '300' },
 });

@@ -48,6 +48,7 @@ export const adminAPI = {
   // Cashiers
   cashiers: () => api.get('/api/v1/admin/cashiers'),
   createCashier: (d: any) => api.post('/api/v1/admin/cashiers', d),
+  updateCashier: (id: string, d: any) => api.patch(`/api/v1/admin/cashiers/${id}`, d),
 
   // Branches
   branches: () => api.get('/api/v1/admin/branches'),

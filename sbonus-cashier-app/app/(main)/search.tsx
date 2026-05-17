@@ -4,7 +4,8 @@
 
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { Camera, Phone } from 'lucide-react-native';
 import { customersAPI } from '@/api/client';
 import QRScanner from '@/components/QRScanner';
 import { COLORS } from '@/constants/theme';
@@ -53,7 +54,10 @@ export default function SearchScreen() {
       <View style={styles.container}>
         {/* По телефону */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📱 По номеру телефона</Text>
+          <View style={styles.titleRow}>
+            <Phone size={16} color={COLORS.text} />
+            <Text style={styles.cardTitle}>По номеру телефона</Text>
+          </View>
           <TextInput
             style={styles.input}
             value={phone}
@@ -86,7 +90,7 @@ export default function SearchScreen() {
 
         {/* QR код */}
         <TouchableOpacity style={styles.qrBtn} onPress={() => setShowQR(true)} activeOpacity={0.7}>
-          <Text style={styles.qrEmoji}>📷</Text>
+          <Camera size={36} color={COLORS.accent} style={{ marginBottom: 12 }} />
           <Text style={styles.qrTitle}>Сканировать QR код</Text>
           <Text style={styles.qrDesc}>Наведите камеру на QR карточки клиента</Text>
         </TouchableOpacity>
@@ -101,7 +105,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card, borderRadius: 20, padding: 24,
     borderWidth: 1, borderColor: COLORS.cardBorder,
   },
-  cardTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700', marginBottom: 16 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  cardTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
   input: {
     backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.cardBorder,
     borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18,
@@ -118,7 +123,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card, borderRadius: 20, padding: 28,
     borderWidth: 1, borderColor: 'rgba(0,229,160,0.2)', alignItems: 'center',
   },
-  qrEmoji: { fontSize: 40, marginBottom: 12 },
   qrTitle: { color: COLORS.text, fontSize: 17, fontWeight: '700', marginBottom: 6 },
   qrDesc: { color: COLORS.text2, fontSize: 13, textAlign: 'center' },
 });

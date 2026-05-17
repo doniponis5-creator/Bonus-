@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Camera, Smartphone, X } from 'lucide-react-native';
 import { COLORS } from '@/constants/theme';
 
 interface Props {
@@ -23,7 +24,8 @@ export default function QRScanner({ onScan, onClose }: Props) {
   if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <Text style={styles.text}>📷 Нужен доступ к камере</Text>
+        <Camera size={48} color={COLORS.accent} style={{ marginBottom: 16 }} />
+        <Text style={styles.text}>Нужен доступ к камере</Text>
         <Text style={styles.subText}>Для сканирования QR кода клиента</Text>
         <TouchableOpacity style={styles.btn} onPress={requestPermission}>
           <Text style={styles.btnText}>Разрешить камеру</Text>
@@ -62,9 +64,13 @@ export default function QRScanner({ onScan, onClose }: Props) {
           <View style={styles.sideOverlay} />
         </View>
         <View style={styles.bottomOverlay}>
-          <Text style={styles.scanText}>📱 Наведите камеру на QR код клиента</Text>
+          <View style={styles.scanTextRow}>
+            <Smartphone size={16} color={COLORS.text} />
+            <Text style={styles.scanText}>Наведите камеру на QR код клиента</Text>
+          </View>
           <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-            <Text style={styles.cancelBtnText}>✕ Закрыть</Text>
+            <X size={16} color={COLORS.danger} />
+            <Text style={styles.cancelBtnText}>Закрыть</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -93,10 +99,12 @@ const styles = StyleSheet.create({
   sideOverlay: { flex: 1, backgroundColor: COLORS.overlay },
   scanFrame: { width: FRAME_SIZE, height: FRAME_SIZE },
   bottomOverlay: { flex: 1, backgroundColor: COLORS.overlay, alignItems: 'center', paddingTop: 30 },
+  scanTextRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   scanText: { color: COLORS.text, fontSize: 14, fontWeight: '600' },
   cancelBtn: {
     marginTop: 20, paddingVertical: 12, paddingHorizontal: 28,
     backgroundColor: 'rgba(239,68,68,0.2)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
   },
   cancelBtnText: { color: COLORS.danger, fontSize: 14, fontWeight: '700' },
 

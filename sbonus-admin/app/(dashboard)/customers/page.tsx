@@ -1,5 +1,5 @@
 'use client';
-import { Users, XCircle, PlusCircle, MinusCircle } from 'lucide-react';
+import { Users, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { customersAPI } from '@/lib/api';
 
@@ -20,10 +20,10 @@ export default function CustomersPage() {
   // Form states
   const [formData, setFormData] = useState({ full_name: '', phone: '', birth_date: '', amount: '', note: '' });
 
-  const loadCustomers = async (p = page) => {
+  const loadCustomers = async (p = page, q = search) => {
     setLoading(true); setError('');
     try {
-      const { data } = await customersAPI.list(search, p, limit);
+      const { data } = await customersAPI.list(q, p, limit);
       setCustomers(data.items || []);
       setTotal(data.total || 0);
     } catch {
@@ -32,6 +32,8 @@ export default function CustomersPage() {
       setLoading(false);
     }
   };
+
+  const goToPage = (p: number) => { setPage(p); loadCustomers(p); };
 
   useEffect(() => { loadCustomers(1); setPage(1); }, []);
 
@@ -64,9 +66,20 @@ export default function CustomersPage() {
         await customersAPI.adminSpend(selectedCustomer.id, Number(formData.amount), formData.note);
       }
       setModalOpen(false);
-      loadCustomers();
+      loadCustomers(page);
     } catch (err: any) {
       alert(err?.response?.data?.detail?.message || 'Ошибка выполнения операции');
+    }
+  };
+
+  const toggleActive = async (c: any) => {
+    const action = c.is_active ? 'заблокировать' : 'разблокировать';
+    if (!confirm(`Вы уверены что хотите ${action} клиента «${c.full_name}»?`)) return;
+    try {
+      await customersAPI.update(c.id, { is_active: !c.is_active });
+      loadCustomers(page);
+    } catch (err: any) {
+      alert(err?.response?.data?.detail?.message || 'Ошибка');
     }
   };
 
@@ -88,9 +101,9 @@ export default function CustomersPage() {
           value={search} 
           onChange={e=>setSearch(e.target.value)} 
           placeholder="Поиск по имени или телефону..." 
-          onKeyDown={e => e.key === 'Enter' && loadCustomers()}
+          onKeyDown={e => e.key === 'Enter' && goToPage(1)}
         />
-        <button className="btn btn-primary" onClick={() => { setPage(1); loadCustomers(1); }} disabled={loading}>
+        <button className="btn btn-primary" onClick={() => goToPage(1)} disabled={loading}>
           {loading ? 'Загрузка...' : 'Найти'}
         </button>
       </div>
@@ -129,12 +142,18 @@ export default function CustomersPage() {
                 </td>
                 <td style={{padding: '16px', color: '#00e5a0', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700}}>
                   {Number(c.balance).toLocaleString('ru-RU')} KGS
+                  {c.is_active === false && (
+                    <span style={{ display: 'block', fontSize: 10, color: '#ff4d4d', fontWeight: 600, marginTop: 2 }}>Заблокирован</span>
+                  )}
                 </td>
                 <td style={{padding: '16px', borderBottom: '1px solid #1c2a3a', textAlign: 'right'}}>
-                  <div style={{display: 'flex', gap: 8, justifyContent: 'flex-end'}}>
-                    <button onClick={() => openModal('edit', c)} style={{background: 'none', border: '1px solid #1c2a3a', color: '#8899aa', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12}}>✏️ Изм.</button>
-                    <button onClick={() => openModal('earn', c)} style={{background: 'none', border: '1px solid #00e5a0', color: '#00e5a0', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12}}>➕ Бонус</button>
-                    <button onClick={() => openModal('spend', c)} style={{background: 'none', border: '1px solid #ff4d4d', color: '#ff4d4d', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12}}>➖ Списать</button>
+                  <div style={{display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap'}}>
+                    <button onClick={() => openModal('edit', c)} style={{background: 'none', border: '1px solid #1c2a3a', color: '#8899aa', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}><Pencil size={12} /> Изм.</button>
+                    <button onClick={() => openModal('earn', c)} style={{background: 'none', border: '1px solid #00e5a0', color: '#00e5a0', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}><PlusCircle size={12} /> Бонус</button>
+                    <button onClick={() => openModal('spend', c)} style={{background: 'none', border: '1px solid #ff4d4d', color: '#ff4d4d', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}><MinusCircle size={12} /> Списать</button>
+                    <button onClick={() => toggleActive(c)} style={{background: 'none', border: '1px solid ' + (c.is_active === false ? '#00e5a0' : '#f59e0b'), color: c.is_active === false ? '#00e5a0' : '#f59e0b', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}>
+                      {c.is_active === false ? <><Unlock size={12} /> Разблок.</> : <><Lock size={12} /> Блокир.</>}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -155,9 +174,9 @@ export default function CustomersPage() {
             Показано {(page - 1) * limit + 1}–{Math.min(page * limit, total)} из {total}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-secondary" disabled={page <= 1} onClick={() => { setPage(p => p - 1); loadCustomers(page - 1); }}>← Назад</button>
+            <button className="btn btn-secondary" disabled={page <= 1} onClick={() => goToPage(page - 1)}>← Назад</button>
             <span style={{ padding: '10px 16px', color: 'var(--text2)', fontSize: 13 }}>{page} / {totalPages}</span>
-            <button className="btn btn-secondary" disabled={page >= totalPages} onClick={() => { setPage(p => p + 1); loadCustomers(page + 1); }}>Далее →</button>
+            <button className="btn btn-secondary" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>Далее →</button>
           </div>
         </div>
       )}
@@ -166,10 +185,10 @@ export default function CustomersPage() {
       {modalOpen && (
         <div style={{position:'fixed', top:0, left:0, right:0, bottom:0, background: 'rgba(0,0,0,0.8)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000}}>
           <div style={{background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px'}}>
-            <h2 style={{fontSize: 20, fontWeight: 700, marginBottom: 24, color: '#e2eaf6'}}>
-              {modalType === 'edit' ? '✏️ Редактирование клиента' : 
-               modalType === 'earn' ? '<PlusCircle size={14} /> Начисление бонуса' : 
-               '<MinusCircle size={14} /> Списание бонуса'}
+            <h2 style={{fontSize: 20, fontWeight: 700, marginBottom: 24, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8}}>
+              {modalType === 'edit' ? <><Pencil size={18} /> Редактирование клиента</> :
+               modalType === 'earn' ? <><PlusCircle size={18} /> Начисление бонуса</> :
+               <><MinusCircle size={18} /> Списание бонуса</>}
             </h2>
             
             <div style={{display:'flex', flexDirection:'column', gap: 16}}>

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import StatsCard from '@/components/StatsCard';
 import ExportButton from '@/components/ExportButton';
 import { adminAPI } from '@/lib/api';
-import { LayoutDashboard, Users, Coins, CreditCard, Landmark, Calendar, Trophy } from 'lucide-react';
+import { LayoutDashboard, Users, Coins, CreditCard, Landmark, Calendar, Trophy, Loader2, XCircle } from 'lucide-react';
 
 interface Stats {
   total_customers: number; active_customers: number;
@@ -22,8 +22,8 @@ export default function DashboardPage() {
     adminAPI.stats().then(r => setStats(r.data)).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{textAlign:'center',padding:60,color:'var(--text2)'}}>⏳ Загрузка...</div>;
-  if (!stats) return <div style={{textAlign:'center',padding:60,color:'var(--danger)'}}>❌ Ошибка загрузки</div>;
+  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:60,color:'var(--text2)'}}><Loader2 size={16} className="animate-spin" /> Загрузка...</div>;
+  if (!stats) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:60,color:'var(--danger)'}}><XCircle size={16} /> Ошибка загрузки</div>;
 
   return (
     <div>

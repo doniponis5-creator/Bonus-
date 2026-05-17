@@ -7,11 +7,18 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 import Constants from 'expo-constants';
 
-// Priority: EXPO_PUBLIC_API_URL env → app.json extra.apiBaseUrl → fallback
+// Priority: EXPO_PUBLIC_API_URL env → app.json extra.apiBaseUrl → dev fallback
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   Constants.expoConfig?.extra?.apiBaseUrl ||
-  'http://192.168.0.121:8000';
+  (__DEV__ ? 'http://localhost:8000' : '');
+
+if (!process.env.EXPO_PUBLIC_API_URL && !Constants.expoConfig?.extra?.apiBaseUrl) {
+  console.warn(
+    '[S Bonus] EXPO_PUBLIC_API_URL не задан. Используется fallback:',
+    BASE_URL || '(пусто — API будет недоступен)',
+  );
+}
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -100,6 +107,20 @@ export const bonusAPI = {
 
   checkSpend: (customerId: string, purchaseAmount: number) =>
     api.post('/api/v1/bonus/check-spend', { customer_id: customerId, purchase_amount: purchaseAmount }),
+
+  birthday: (customerId: string) =>
+    api.post(`/api/v1/bonus/birthday?customer_id=${customerId}`),
+
+  applyPromo: (customerId: string, code: string) =>
+    api.post('/api/v1/bonus/promo/apply', { customer_id: customerId, promo_code: code }),
+
+  applyReferral: (customerId: string, code: string) =>
+    api.post('/api/v1/bonus/referral/apply', { customer_id: customerId, referral_code: code }),
+};
+
+export const customerAuthAPI = {
+  sendCabinetLink: (customerId: string) =>
+    api.post(`/api/v1/customer-auth/send-link-by-cashier/${customerId}`),
 };
 
 export default api;

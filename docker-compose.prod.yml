@@ -1,0 +1,115 @@
+# S Bonus production stack — VPS deploy
+#
+# Принципы:
+#   • Все порты слушают ТОЛЬКО на 127.0.0.1 — снаружи доступ ТОЛЬКО через Nginx
+#   • Изолированная сеть sbonus_net, не пересекается с другими проектами
+#   • Все контейнеры с префиксом sbonus_*, чтобы не конфликтовать с erp-*
+#   • Persistent volumes для PostgreSQL и RSA ключей JWT
+#
+# Запуск:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Логи:
+#   docker compose -f docker-compose.prod.yml logs -f api
+
+services:
+  # ─── PostgreSQL 15 ───────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: sbonus_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - sbonus_pgdata:/var/lib/postgresql/data
+    networks:
+      - sbonus_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Redis 7 ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sbonus_redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - sbonus_redisdata:/data
+    networks:
+      - sbonus_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── FastAPI Backend ──────────────────────────────────
+  api:
+    build:
+      context: ./sbonus-backend
+    container_name: sbonus_api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "127.0.0.1:18800:8000"   # ⚠️ Только локальный bind — наружу через Nginx
+    volumes:
+      - sbonus_keys:/app/keys     # RSA ключи для JWT
+    networks:
+      - sbonus_net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ─── Admin panel (Next.js) ─────────────────────────────
+  admin:
+    build:
+      context: ./sbonus-admin
+      args:
+        NEXT_PUBLIC_API_URL: ${ADMIN_API_URL}
+    container_name: sbonus_admin
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18801:3000"
+    networks:
+      - sbonus_net
+    depends_on:
+      - api
+
+  # ─── Client cabinet (Next.js) ──────────────────────────
+  client:
+    build:
+      context: ./sbonus-client
+      args:
+        NEXT_PUBLIC_API_URL: ${CLIENT_API_URL}
+    container_name: sbonus_client
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18802:3000"
+    networks:
+      - sbonus_net
+    depends_on:
+      - api
+
+volumes:
+  sbonus_pgdata:
+    name: sbonus_pgdata
+  sbonus_redisdata:
+    name: sbonus_redisdata
+  sbonus_keys:
+    name: sbonus_keys
+
+networks:
+  sbonus_net:
+    name: sbonus_net
+    driver: bridge

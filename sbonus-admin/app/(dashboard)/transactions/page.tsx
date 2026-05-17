@@ -4,14 +4,16 @@ import { useEffect, useState } from 'react';
 import ExportButton from '@/components/ExportButton';
 import { adminAPI } from '@/lib/api';
 
-const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  earn:     { label: '<PlusCircle size={14} /> Начисление',  color: '#00e5a0' },
-  spend:    { label: '<MinusCircle size={14} /> Списание',     color: '#ff4d4d' },
-  birthday: { label: '<Gift size={14} /> День рождения', color: '#ffd700' },
-  referral: { label: '<Users size={14} /> Реферал',     color: '#60a5fa' },
-  promo:    { label: '<Ticket size={14} /> Промокод',    color: '#c084fc' },
-  expire:   { label: '<Clock size={14} /> Истёк',       color: '#8899aa' },
-  refund:   { label: '<RefreshCcw size={14} /> Возврат',     color: '#fb923c' },
+type TxMeta = { label: string; color: string; Icon: typeof PlusCircle };
+
+const TYPE_LABELS: Record<string, TxMeta> = {
+  earn:     { label: 'Начисление',    color: '#00e5a0', Icon: PlusCircle },
+  spend:    { label: 'Списание',      color: '#ff4d4d', Icon: MinusCircle },
+  birthday: { label: 'День рождения', color: '#ffd700', Icon: Gift },
+  referral: { label: 'Реферал',       color: '#60a5fa', Icon: Users },
+  promo:    { label: 'Промокод',      color: '#c084fc', Icon: Ticket },
+  expire:   { label: 'Истёк',         color: '#8899aa', Icon: Clock },
+  refund:   { label: 'Возврат',       color: '#fb923c', Icon: RefreshCcw },
 };
 
 const TX_TYPES = ['', 'earn', 'spend', 'birthday', 'referral', 'promo', 'expire', 'refund'];
@@ -85,17 +87,20 @@ export default function TransactionsPage() {
               <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Транзакций нет</td></tr>
             )}
             {!loading && items.map(t => {
-              const meta = TYPE_LABELS[t.type] || { label: t.type, color: '#8899aa' };
+              const meta = TYPE_LABELS[t.type];
+              const label = meta?.label ?? t.type;
+              const color = meta?.color ?? '#8899aa';
+              const Icon = meta?.Icon;
               return (
                 <tr key={t.id} style={{ transition: 'background 0.15s' }}>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a' }}>
-                    <span style={{ background: `${meta.color}18`, color: meta.color, padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                      {meta.label}
+                    <span style={{ background: `${color}18`, color, padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {Icon && <Icon size={14} />} {label}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, fontWeight: 600, color: '#e2eaf6' }}>{t.customer_name}</td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{t.customer_phone}</td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, fontWeight: 700, color: meta.color }}>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, fontWeight: 700, color }}>
                     {t.type === 'spend' ? '−' : '+'}{Number(t.amount).toLocaleString('ru-RU')} KGS
                   </td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
