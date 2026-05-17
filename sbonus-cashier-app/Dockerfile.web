@@ -14,6 +14,9 @@ ENV EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL
 # Expo web static export → dist/
 RUN npx expo export --platform web --output-dir dist
 
+# Expo SDK 54 bundle uses import.meta — inject type="module" into script tags
+RUN sed -i 's|<script src=|<script type="module" src=|g' dist/index.html
+
 # ─── 2. Runtime: Nginx serve static ───────────────────
 FROM nginx:1.27-alpine AS runner
 
