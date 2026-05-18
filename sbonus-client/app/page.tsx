@@ -5,16 +5,17 @@ import { useRouter } from 'next/navigation';
 import {
   LogOut, QrCode, Loader2, RefreshCw, Home, History, User, Gift,
   PlusCircle, MinusCircle, Clock, Users, Ticket, RefreshCcw,
-  Pencil, Share2, Copy, Check, ChevronLeft, ChevronRight,
+  Pencil, Share2, Copy, Check, ChevronLeft, ChevronRight, Disc3,
 } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import DebtCard from '@/components/DebtCard';
 import QRModal from '@/components/QRModal';
 import TransactionList from '@/components/TransactionList';
+import BonusWheel from '@/components/BonusWheel';
 import { customerAPI, type CabinetMe } from '@/lib/api';
 import { clearToken, getToken, isTokenValid } from '@/lib/auth';
 
-type Tab = 'home' | 'history' | 'profile' | 'promo';
+type Tab = 'home' | 'history' | 'wheel' | 'promo' | 'profile';
 
 const TX_META: Record<string, { label: string; color: string; sign: '+' | '-' }> = {
   earn:     { label: 'Начисление',    color: '#FFE600', sign: '+' },
@@ -417,6 +418,8 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {tab === 'wheel' && <BonusWheel />}
+
       {/* QR Modal */}
       <QRModal open={qrOpen} qrCode={data.qr_code} fullName={data.full_name} onClose={() => setQrOpen(false)} />
 
@@ -430,6 +433,7 @@ export default function DashboardPage() {
       }}>
         {([
           { id: 'home', icon: Home, label: 'Главная' },
+          { id: 'wheel', icon: Disc3, label: 'Удача' },
           { id: 'history', icon: History, label: 'История' },
           { id: 'promo', icon: Gift, label: 'Бонусы' },
           { id: 'profile', icon: User, label: 'Профиль' },

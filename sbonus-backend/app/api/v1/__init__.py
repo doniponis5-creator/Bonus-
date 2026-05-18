@@ -12,6 +12,7 @@ from app.api.v1.customer import router as customer_cabinet_router
 from app.api.v1.customer_auth import router as customer_auth_router
 from app.api.v1.customers import router as customers_router
 from app.api.v1.webhook import router as webhook_router
+from app.api.v1.wheel import router as wheel_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -23,3 +24,4 @@ api_router.include_router(admin_router)
 api_router.include_router(campaigns_router)
 api_router.include_router(customer_auth_router)
 api_router.include_router(customer_cabinet_router)
+api_router.include_router(wheel_router)

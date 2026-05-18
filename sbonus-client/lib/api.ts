@@ -83,4 +83,10 @@ export const customerAPI = {
     api.get('/api/v1/customer/referral'),
 };
 
+export const wheelAPI = {
+  config: () => api.get('/api/v1/wheel/config'),
+  spin: () => api.post('/api/v1/wheel/spin'),
+  status: () => api.get('/api/v1/wheel/status'),
+};
+
 export default api;
