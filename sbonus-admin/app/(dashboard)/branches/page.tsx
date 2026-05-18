@@ -36,7 +36,7 @@ export default function BranchesPage() {
     setSaving(true);
     try {
       await adminAPI.createBranch(name, address, city, phone);
-      setMsg(`<CheckCircle2 size={14} style={{display:'inline',marginRight:4}} /> Филиал "${name}" добавлен`);
+      setMsg(`success:Филиал "${name}" успешно добавлен`);
       setName(''); setAddress(''); setCity(''); setPhone('');
       load();
     } catch (er: any) {
@@ -118,7 +118,12 @@ export default function BranchesPage() {
             {saving ? 'Сохранение...' : 'Добавить филиал'}
           </button>
         </form>
-        {msg && <div style={{ marginTop: 12, color: 'var(--accent)', fontSize: 14, fontWeight: 600 }}>{msg}</div>}
+        {msg && (
+          <div style={{ marginTop: 12, color: msg.startsWith('error:') ? 'var(--danger)' : 'var(--accent)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {msg.startsWith('error:') ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
+            {msg.replace(/^(success|error):/, '')}
+          </div>
+        )}
         {err && <div style={{ marginTop: 12, color: 'var(--danger)', fontSize: 14, fontWeight: 600 }}><XCircle size={14} style={{display:'inline',marginRight:4}} /> {err}</div>}
       </div>
     </div>

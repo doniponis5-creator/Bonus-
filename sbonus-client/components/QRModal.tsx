@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { X } from 'lucide-react';
 
@@ -11,6 +12,16 @@ interface Props {
 }
 
 export default function QRModal({ open, qrCode, fullName, onClose }: Props) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (open) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div

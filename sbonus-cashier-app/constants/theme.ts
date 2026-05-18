@@ -45,11 +45,11 @@ export const TIER_COLORS: Record<string, string> = {
   Platinum: COLORS.platinum,
 };
 
-export const TIER_EMOJI: Record<string, string> = {
-  Bronze: '🥉',
-  Silver: '🥈',
-  Gold: '🥇',
-  Platinum: '💎',
+export const TIER_SYMBOL: Record<string, string> = {
+  Bronze: 'B',
+  Silver: 'S',
+  Gold: 'G',
+  Platinum: 'P',
 };
 
 /**

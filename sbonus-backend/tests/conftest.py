@@ -146,3 +146,39 @@ async def cashier_token(client: AsyncClient, cashier: User) -> str:
 @pytest_asyncio.fixture
 def auth_headers(cashier_token: str) -> dict:
     return {"Authorization": f"Bearer {cashier_token}"}
+
+
+# ─── Admin фикстуры ───────────────────────────────────────────────
+
+@pytest_asyncio.fixture
+async def super_admin(db: AsyncSession, branch: Branch) -> User:
+    """Тестовый суперадмин."""
+    from app.core.security import hash_password
+    u = User(
+        phone="+996700888777",
+        full_name="Тест Суперадмин",
+        email="admin@sbonus.kg",
+        role=UserRoleEnum.SUPER_ADMIN,
+        branch_id=branch.id,
+        password_hash=hash_password("secret123"),
+    )
+    db.add(u)
+    await db.commit()
+    await db.refresh(u)
+    return u
+
+
+@pytest_asyncio.fixture
+async def admin_token(client: AsyncClient, super_admin: User) -> str:
+    """JWT access token суперадмина."""
+    resp = await client.post("/api/v1/auth/admin/login", json={
+        "email": super_admin.email,
+        "password": "secret123",
+    })
+    assert resp.status_code == 200
+    return resp.json()["access_token"]
+
+
+@pytest_asyncio.fixture
+def admin_headers(admin_token: str) -> dict:
+    return {"Authorization": f"Bearer {admin_token}"}

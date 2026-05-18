@@ -2,8 +2,10 @@
 import { Briefcase, Loader2, XCircle, Plus, CheckCircle2, Lock, Unlock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { adminAPI } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 export default function CashiersPage() {
+  const { toast, confirm } = useToast();
   const [cashiers, setCashiers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [branches, setBranches] = useState<any[]>([]);
@@ -40,12 +42,12 @@ export default function CashiersPage() {
 
   const toggleActive = async (c: any) => {
     const action = c.is_active ? 'заблокировать' : 'разблокировать';
-    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} кассира «${c.full_name}»?`)) return;
+    if (!await confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} кассира «${c.full_name}»?`)) return;
     try {
       await adminAPI.updateCashier(c.id, { is_active: !c.is_active });
       load();
     } catch (er: any) {
-      alert(er?.response?.data?.detail?.message || 'Ошибка');
+      toast('error', er?.response?.data?.detail?.message || 'Ошибка');
     }
   };
 

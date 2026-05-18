@@ -13,8 +13,9 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,35 +56,31 @@ router = APIRouter(prefix="/admin", tags=["Админ-панель"])
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
 )
 async def dashboard_stats(db: AsyncSession = Depends(get_db)) -> DashboardStatsResponse:
-    """Общая статистика дашборда (KGS, клиенты, бонусы)."""
+    """Общая статистика дашборда — оптимизированная версия."""
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # Клиенты
-    total_customers = (await db.execute(select(func.count()).select_from(Customer))).scalar() or 0
-    active_customers = (await db.execute(
-        select(func.count()).select_from(Customer).where(Customer.is_active == True)
-    )).scalar() or 0
+    # Single query for all customer + bonus stats
+    stats_q = await db.execute(
+        select(
+            func.count(Customer.id).label("total"),
+            func.count(Customer.id).filter(Customer.is_active == True).label("active"),
+            func.coalesce(func.sum(BonusAccount.total_earned), 0).label("earned"),
+            func.coalesce(func.sum(BonusAccount.total_spent), 0).label("spent"),
+            func.coalesce(func.sum(BonusAccount.balance), 0).label("balance"),
+        ).outerjoin(BonusAccount, Customer.id == BonusAccount.customer_id)
+    )
+    row = stats_q.one()
 
-    # Бонусы
-    total_earned = (await db.execute(
-        select(func.coalesce(func.sum(BonusAccount.total_earned), 0))
-    )).scalar() or 0
-    total_spent = (await db.execute(
-        select(func.coalesce(func.sum(BonusAccount.total_spent), 0))
-    )).scalar() or 0
-    total_balance = (await db.execute(
-        select(func.coalesce(func.sum(BonusAccount.balance), 0))
-    )).scalar() or 0
-
-    # Транзакции
-    txn_today = (await db.execute(
-        select(func.count()).select_from(Transaction).where(Transaction.created_at >= today_start)
-    )).scalar() or 0
-    txn_month = (await db.execute(
-        select(func.count()).select_from(Transaction).where(Transaction.created_at >= month_start)
-    )).scalar() or 0
+    # Single query for transaction counts
+    txn_q = await db.execute(
+        select(
+            func.count(Transaction.id).filter(Transaction.created_at >= today_start).label("today"),
+            func.count(Transaction.id).filter(Transaction.created_at >= month_start).label("month"),
+        )
+    )
+    txn_row = txn_q.one()
 
     # Распределение по уровням
     tier_dist_q = await db.execute(
@@ -94,13 +91,13 @@ async def dashboard_stats(db: AsyncSession = Depends(get_db)) -> DashboardStatsR
     tier_distribution = {name: count for name, count in tier_dist_q.all()}
 
     return DashboardStatsResponse(
-        total_customers=total_customers,
-        active_customers=active_customers,
-        total_bonus_issued=Decimal(str(total_earned)),
-        total_bonus_spent=Decimal(str(total_spent)),
-        total_balance=Decimal(str(total_balance)),
-        transactions_today=txn_today,
-        transactions_month=txn_month,
+        total_customers=row.total,
+        active_customers=row.active,
+        total_bonus_issued=Decimal(str(row.earned)),
+        total_bonus_spent=Decimal(str(row.spent)),
+        total_balance=Decimal(str(row.balance)),
+        transactions_today=txn_row.today,
+        transactions_month=txn_row.month,
         tier_distribution=tier_distribution,
     )
 
@@ -239,24 +236,28 @@ async def get_branches(db: AsyncSession = Depends(get_db)):
     ]
 
 
+class BranchCreateRequest(BaseModel):
+    name: str
+    address: str | None = None
+    city: str | None = None
+    phone: str | None = None
+
+
 @router.post(
     "/branches",
     response_model=SuccessResponse,
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
 )
 async def create_branch(
-    name: str = Query(..., min_length=2, max_length=100),
-    address: str = Query(None),
-    city: str = Query(None),
-    phone: str = Query(None),
+    body: BranchCreateRequest,
     db: AsyncSession = Depends(get_db),
 ) -> SuccessResponse:
     """Добавить новый филиал."""
     from app.models import Branch
-    branch = Branch(name=name, address=address, city=city, phone=phone)
+    branch = Branch(name=body.name, address=body.address, city=body.city, phone=body.phone)
     db.add(branch)
     await db.flush()
-    return SuccessResponse(message=f"Филиал '{name}' добавлен")
+    return SuccessResponse(message=f"Филиал '{body.name}' добавлен")
 
 
 @router.get(
@@ -353,32 +354,39 @@ async def export_report(
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    """Скачать отчёт по транзакциям в CSV или Excel."""
+    """Скачать отчёт по транзакциям в CSV (стриминг) или Excel."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
 
-    result = await db.execute(
-        select(Transaction)
-        .where(Transaction.created_at >= since)
-        .order_by(Transaction.created_at.desc())
-    )
-    txns = result.scalars().all()
-
     if format == "csv":
-        lines = ["id,customer_id,type,amount,purchase_amount,receipt_number,created_at"]
-        for t in txns:
-            lines.append(
-                f"{t.id},{t.customer_id},{t.type.value},{t.amount},"
-                f"{t.purchase_amount or ''},{t.receipt_number or ''},{t.created_at.isoformat()}"
+        async def csv_generator():
+            yield "id,customer_id,type,amount,purchase_amount,receipt_number,created_at\n"
+            # Use server-side cursor with streaming to avoid loading all into memory
+            result = await db.stream(
+                select(Transaction)
+                .where(Transaction.created_at >= since)
+                .order_by(Transaction.created_at.desc())
             )
-        content = "\n".join(lines)
+            async for t in result.scalars():
+                yield (
+                    f"{t.id},{t.customer_id},{t.type.value},{t.amount},"
+                    f"{t.purchase_amount or ''},{t.receipt_number or ''},{t.created_at.isoformat()}\n"
+                )
         return StreamingResponse(
-            io.BytesIO(content.encode("utf-8")),
+            csv_generator(),
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename=sbonus_report_{days}d.csv"},
         )
     else:
-        # Excel export
+        # Excel export — limited to 10 000 rows to prevent OOM
         import openpyxl
+        result = await db.execute(
+            select(Transaction)
+            .where(Transaction.created_at >= since)
+            .order_by(Transaction.created_at.desc())
+            .limit(10000)
+        )
+        txns = result.scalars().all()
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Транзакции"
@@ -430,10 +438,14 @@ async def get_customers(
         select(Customer, BonusAccount, Tier)
         .outerjoin(BonusAccount, Customer.id == BonusAccount.customer_id)
         .outerjoin(Tier, Customer.tier_id == Tier.id)
-        .order_by(Customer.created_at.desc())
-        .offset(offset)
-        .limit(limit)
     )
+    if search:
+        search_term = f"%{search}%"
+        stmt = stmt.where(
+            (Customer.phone.ilike(search_term)) |
+            (Customer.full_name.ilike(search_term))
+        )
+    stmt = stmt.order_by(Customer.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     rows = result.all()
     

@@ -5,6 +5,7 @@ Sbonus+ — JWT RS256 авторизация + RBAC + пароли.
 import uuid
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
@@ -40,11 +41,13 @@ def _load_key(path: str) -> str:
     return key_path.read_text()
 
 
+@lru_cache
 def get_private_key() -> str:
     """Получить приватный RSA ключ для подписи JWT."""
     return _load_key(settings.jwt_private_key_path)
 
 
+@lru_cache
 def get_public_key() -> str:
     """Получить публичный RSA ключ для верификации JWT."""
     return _load_key(settings.jwt_public_key_path)

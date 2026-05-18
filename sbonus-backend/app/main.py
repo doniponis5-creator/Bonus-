@@ -15,12 +15,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
 from app.core.config import get_settings
+from app.core.logging import setup_logging, get_logger
 from app.core.database import Base, engine
 from app.seeds.defaults import seed_default_data
 from app.seeds.tiers import seed_tiers
 from app.tasks.campaigns import process_due_campaigns
 
 settings = get_settings()
+logger = get_logger("main")
 scheduler = AsyncIOScheduler(timezone=settings.shop_timezone)
 
 
@@ -32,15 +34,17 @@ async def lifespan(app: FastAPI):
     - Seed дефолтных данных
     - Запуск cron задач
     """
-    print("=" * 50)
-    print(f"🚀 {settings.shop_name} — {settings.shop_bonus_name}")
-    print(f"📍 {settings.shop_address}")
-    print(f"📱 {settings.shop_phone}")
-    print(f"💰 Валюта: {settings.shop_currency}")
-    print("=" * 50)
+    setup_logging()
+
+    logger.info("=" * 50)
+    logger.info("%s — %s", settings.shop_name, settings.shop_bonus_name)
+    logger.info("Address: %s", settings.shop_address)
+    logger.info("Phone: %s", settings.shop_phone)
+    logger.info("Currency: %s", settings.shop_currency)
+    logger.info("=" * 50)
 
     # Таблицы создаются через Alembic (entrypoint.sh → alembic upgrade head)
-    print("  📦 Таблицы управляются через Alembic миграции")
+    logger.info("Tables managed via Alembic migrations")
 
     # Seed
     from app.core.database import async_session
@@ -55,17 +59,18 @@ async def lifespan(app: FastAPI):
         id="bonus_campaigns",
         replace_existing=True,
     )
+
     scheduler.start()
-    print("  ⏰ Cron: бонусные кампании — 09:00 ежедневно")
-    print("  ✅ Сервер запущен! Swagger: http://localhost:8000/docs")
-    print("=" * 50)
+    logger.info("Cron: bonus campaigns scheduled at 09:00 daily")
+    logger.info("Server started! Swagger: http://localhost:8000/docs")
+    logger.info("=" * 50)
 
     yield
 
     # Shutdown
     scheduler.shutdown()
     await engine.dispose()
-    print("  🛑 Сервер остановлен")
+    logger.info("Server stopped")
 
 
 app = FastAPI(

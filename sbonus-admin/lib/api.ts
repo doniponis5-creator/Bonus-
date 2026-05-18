@@ -15,13 +15,37 @@ api.interceptors.request.use((c) => {
   return c;
 });
 
-api.interceptors.response.use((r) => r, async (err) => {
-  if (err.response?.status === 401 && typeof window !== 'undefined') {
-    localStorage.removeItem('admin_token');
-    window.location.href = '/login';
+api.interceptors.response.use(
+  (r) => r,
+  async (err) => {
+    const originalRequest = err.config;
+    if (err.response?.status === 401 && typeof window !== 'undefined' && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const refreshToken = localStorage.getItem('admin_refresh');
+        if (refreshToken) {
+          const { data } = await axios.post(
+            `${API}/api/v1/auth/refresh`,
+            { refresh_token: refreshToken }
+          );
+          localStorage.setItem('admin_token', data.access_token);
+          if (data.refresh_token) {
+            localStorage.setItem('admin_refresh', data.refresh_token);
+          }
+          originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // Refresh failed, fall through to logout
+      }
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_refresh');
+      localStorage.removeItem('admin_user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(err);
   }
-  return Promise.reject(err);
-});
+);
 
 export const authAPI = {
   login: (email: string, password: string) => api.post('/api/v1/auth/admin/login', { email, password }),
@@ -52,13 +76,8 @@ export const adminAPI = {
 
   // Branches
   branches: () => api.get('/api/v1/admin/branches'),
-  createBranch: (name: string, address?: string, city?: string, phone?: string) => {
-    const params = new URLSearchParams({ name });
-    if (address) params.append('address', address);
-    if (city) params.append('city', city);
-    if (phone) params.append('phone', phone);
-    return api.post(`/api/v1/admin/branches?${params}`);
-  },
+  createBranch: (name: string, address?: string, city?: string, phone?: string) =>
+    api.post('/api/v1/admin/branches', { name, address, city, phone }),
 
   // Reports
   exportReport: (format: string, days: number) =>

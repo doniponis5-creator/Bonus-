@@ -18,6 +18,7 @@ from app.core.database import get_db
 from app.core.security import UserRole, get_current_user, require_role
 from app.models import BonusAccount, Customer, Tier, Transaction
 from app.schemas import BalanceResponse, CustomerRegisterRequest, CustomerResponse
+from app.utils import normalize_phone
 
 router = APIRouter(prefix="/customers", tags=["Клиенты"])
 
@@ -31,15 +32,6 @@ def _generate_referral() -> str:
     """Генерация уникального реферального кода."""
     return f"REF-{uuid.uuid4().hex[:8].upper()}"
 
-
-def normalize_phone(phone: str) -> str:
-    """Нормализация номера телефона (очистка и приведение к +996...)."""
-    clean = phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
-    if clean.startswith('0'):
-        clean = '+996' + clean[1:]
-    elif clean.startswith('996') and not clean.startswith('+'):
-        clean = '+' + clean
-    return clean
 
 
 @router.post("/register", response_model=CustomerResponse, status_code=201)

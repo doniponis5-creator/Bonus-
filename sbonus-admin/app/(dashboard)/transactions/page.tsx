@@ -40,8 +40,8 @@ export default function TransactionsPage() {
     }
   };
 
-  useEffect(() => { load(1, txType); setPage(1); }, [txType]);
-  useEffect(() => { load(page, txType); }, [page]);
+  useEffect(() => { setPage(1); load(1, txType); }, [txType]);
+  useEffect(() => { if (page > 1) load(page, txType); }, [page]);
 
   const totalPages = Math.ceil(total / perPage);
 

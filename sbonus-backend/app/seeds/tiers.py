@@ -8,7 +8,10 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import get_logger
 from app.models import Tier
+
+logger = get_logger("seeds.tiers")
 
 DEFAULT_TIERS = [
     {"name": "Bronze", "min_total_kgs": Decimal("0"), "bonus_percent": Decimal("3"), "sort_order": 1},
@@ -35,6 +38,6 @@ async def seed_tiers(db: AsyncSession) -> None:
                 sort_order=tier_data["sort_order"],
             )
             db.add(tier)
-            print(f"  ✅ Создан уровень: {tier_data['name']} ({tier_data['bonus_percent']}%)")
+            logger.info("Created tier: %s (%s%%)", tier_data["name"], tier_data["bonus_percent"])
     await db.commit()
-    print("  🏆 Seed уровней завершён")
+    logger.info("Tiers seed completed")

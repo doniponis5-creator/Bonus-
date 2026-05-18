@@ -4,10 +4,12 @@ Sbonus+ — Бонусный движок.
 Все операции внутри PostgreSQL транзакции.
 """
 
+import time
 import uuid
 from decimal import Decimal
 from typing import Optional
 
+from fastapi import HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +25,11 @@ from app.models import (
 from app.schemas import BonusResult
 
 settings = get_settings()
+
+# Simple TTL cache for WhatsApp settings
+_wa_cache: dict = {}
+_wa_cache_ttl: float = 0
+_WA_CACHE_SECONDS = 60
 
 
 class BonusService:
@@ -65,7 +72,6 @@ class BonusService:
         """
         # Проверка минимальной покупки
         if purchase_amount < settings.min_purchase_for_bonus:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
@@ -81,7 +87,6 @@ class BonusService:
                 select(Transaction).where(Transaction.receipt_number == receipt_number)
             )
             if existing.scalar_one_or_none():
-                from fastapi import HTTPException, status
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail={
@@ -176,12 +181,12 @@ class BonusService:
         tier = await self._get_tier(customer.tier_id)
 
         # Расчёт максимума
-        max_by_percent = (purchase_amount * settings.max_spend_percent / Decimal("100")).quantize(Decimal("0.01"))
+        max_spend_pct = tier.max_spend_pct if hasattr(tier, 'max_spend_pct') and tier.max_spend_pct else settings.max_spend_percent
+        max_by_percent = (purchase_amount * max_spend_pct / Decimal("100")).quantize(Decimal("0.01"))
         max_spend = min(account.balance, max_by_percent)
 
         # Проверки
         if spend_amount > account.balance:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
@@ -193,7 +198,6 @@ class BonusService:
             )
 
         if spend_amount > max_spend:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
@@ -245,14 +249,17 @@ class BonusService:
     ) -> dict:
         """Проверка максимальной суммы списания (preview)."""
         account = await self._get_or_create_account(customer_id)
-        max_by_percent = (purchase_amount * settings.max_spend_percent / Decimal("100")).quantize(Decimal("0.01"))
+        customer = await self._get_customer(customer_id)
+        tier = await self._get_tier(customer.tier_id)
+        max_spend_pct = tier.max_spend_pct if hasattr(tier, 'max_spend_pct') and tier.max_spend_pct else settings.max_spend_percent
+        max_by_percent = (purchase_amount * max_spend_pct / Decimal("100")).quantize(Decimal("0.01"))
         max_spend = min(account.balance, max_by_percent)
         return {
             "customer_id": str(customer_id),
             "balance": account.balance,
             "purchase_amount": purchase_amount,
             "max_spend": max_spend,
-            "max_spend_percent": settings.max_spend_percent,
+            "max_spend_percent": max_spend_pct,
         }
 
     async def admin_adjustment(
@@ -268,7 +275,6 @@ class BonusService:
         customer = await self._get_customer(customer_id)
 
         if type == TransactionType.SPEND and amount > account.balance:
-            from fastapi import HTTPException, status
             raise HTTPException(status_code=400, detail={"message": "Недостаточно бонусов"})
 
         if type == TransactionType.EARN:
@@ -342,7 +348,6 @@ class BonusService:
         )
         inviter = result.scalar_one_or_none()
         if not inviter:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"code": "REFERRAL_CODE_INVALID", "message": "Реферальный код не найден"},
@@ -350,7 +355,6 @@ class BonusService:
 
         customer = await self._get_customer(customer_id)
         if customer.referred_by:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"code": "REFERRAL_ALREADY_USED", "message": "Реферальный код уже использован"},
@@ -408,21 +412,32 @@ class BonusService:
         promo = result.scalar_one_or_none()
 
         if not promo:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"code": "PROMO_CODE_INVALID", "message": "Промокод не найден или неактивен"},
             )
 
+        # Check if customer already used this promo code
+        used_check = await self.db.execute(
+            select(Transaction).where(
+                Transaction.customer_id == customer_id,
+                Transaction.type == TransactionType.PROMO,
+                Transaction.note.contains(promo_code),
+            )
+        )
+        if used_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "PROMO_ALREADY_USED", "message": "Вы уже использовали этот промокод"},
+            )
+
         if promo.expires_at and promo.expires_at < datetime.now(timezone.utc):
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"code": "PROMO_CODE_EXPIRED", "message": "Промокод истёк"},
             )
 
         if promo.used_count >= promo.max_uses:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"code": "PROMO_CODE_EXHAUSTED", "message": "Лимит промокода исчерпан"},
@@ -465,7 +480,6 @@ class BonusService:
         result = await self.db.execute(select(Customer).where(Customer.id == customer_id))
         customer = result.scalar_one_or_none()
         if not customer:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"code": "CUSTOMER_NOT_FOUND", "message": "Клиент не найден"},
@@ -475,7 +489,9 @@ class BonusService:
     async def _get_or_create_account(self, customer_id: uuid.UUID) -> BonusAccount:
         """Получить или создать бонусный счёт."""
         result = await self.db.execute(
-            select(BonusAccount).where(BonusAccount.customer_id == customer_id)
+            select(BonusAccount)
+            .where(BonusAccount.customer_id == customer_id)
+            .with_for_update()
         )
         account = result.scalar_one_or_none()
         if not account:
@@ -514,30 +530,37 @@ class BonusService:
         return False, None
 
     async def _notify_whatsapp(self, phone: str, template_key: str, amount: Decimal, balance: Decimal):
-        """Отправка WhatsApp уведомления, если включено."""
+        """Отправка WhatsApp уведомления с кешированием настроек."""
+        import asyncio
         from app.models import Setting
         from app.services.whatsapp import send_whatsapp_message
-        import asyncio
-        
-        result = await self.db.execute(select(Setting).where(Setting.key.in_([
-            "ENABLE_WHATSAPP_NOTIFICATIONS", 
-            "GREENAPI_INSTANCE_ID", 
-            "GREENAPI_API_TOKEN", 
-            template_key
-        ])))
-        settings_dict = {s.key: s.value for s in result.scalars().all()}
-        
-        if settings_dict.get("ENABLE_WHATSAPP_NOTIFICATIONS") == "true":
-            instance_id = settings_dict.get("GREENAPI_INSTANCE_ID")
-            api_token = settings_dict.get("GREENAPI_API_TOKEN")
-            template = settings_dict.get(template_key)
-            
-            if instance_id and api_token and template:
-                msg = template.replace("{amount}", str(amount)).replace("{balance}", str(balance))
-                # Запускаем отправку в фоне, чтобы не блокировать API
-                asyncio.create_task(send_whatsapp_message(
-                    phone=phone,
-                    message=msg,
-                    instance_id=instance_id,
-                    api_token=api_token
-                ))
+        global _wa_cache, _wa_cache_ttl
+
+        now = time.monotonic()
+        if now > _wa_cache_ttl:
+            result = await self.db.execute(select(Setting).where(Setting.key.in_([
+                "ENABLE_WHATSAPP_NOTIFICATIONS",
+                "GREENAPI_INSTANCE_ID",
+                "GREENAPI_API_TOKEN",
+            ])))
+            _wa_cache = {s.key: s.value for s in result.scalars().all()}
+            _wa_cache_ttl = now + _WA_CACHE_SECONDS
+
+        if _wa_cache.get("ENABLE_WHATSAPP_NOTIFICATIONS") != "true":
+            return
+
+        instance_id = _wa_cache.get("GREENAPI_INSTANCE_ID")
+        api_token = _wa_cache.get("GREENAPI_API_TOKEN")
+        if not instance_id or not api_token:
+            return
+
+        # Fetch template (not cached - may change often)
+        result = await self.db.execute(select(Setting).where(Setting.key == template_key))
+        tmpl_row = result.scalar_one_or_none()
+        if not tmpl_row or not tmpl_row.value:
+            return
+
+        msg = tmpl_row.value.replace("{amount}", str(amount)).replace("{balance}", str(balance))
+        asyncio.create_task(send_whatsapp_message(
+            phone=phone, message=msg, instance_id=instance_id, api_token=api_token
+        ))

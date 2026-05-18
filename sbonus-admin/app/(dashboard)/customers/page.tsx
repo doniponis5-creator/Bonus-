@@ -2,8 +2,10 @@
 import { Users, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { customersAPI } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 export default function CustomersPage() {
+  const { toast, confirm } = useToast();
   const [search, setSearch] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,9 +57,9 @@ export default function CustomersPage() {
   const handleAction = async () => {
     if (modalType === 'earn' || modalType === 'spend') {
       const amt = Number(formData.amount);
-      if (!amt || amt <= 0) { alert('Введите сумму больше 0'); return; }
+      if (!amt || amt <= 0) { toast('warning', 'Введите сумму больше 0'); return; }
       if (!formData.note || formData.note.trim().length < 2) {
-        alert('Причина обязательна (минимум 2 символа)');
+        toast('warning', 'Причина обязательна (минимум 2 символа)');
         return;
       }
     }
@@ -78,18 +80,18 @@ export default function CustomersPage() {
     } catch (err: any) {
       const d = err?.response?.data?.detail;
       const msg = typeof d === 'string' ? d : (d?.message || (Array.isArray(d) ? d.map((e:any)=>e.msg).join('; ') : 'Ошибка выполнения операции'));
-      alert(msg);
+      toast('error', msg);
     }
   };
 
   const toggleActive = async (c: any) => {
     const action = c.is_active ? 'заблокировать' : 'разблокировать';
-    if (!confirm(`Вы уверены что хотите ${action} клиента «${c.full_name}»?`)) return;
+    if (!await confirm(`Вы уверены что хотите ${action} клиента «${c.full_name}»?`)) return;
     try {
       await customersAPI.update(c.id, { is_active: !c.is_active });
       loadCustomers(page);
     } catch (err: any) {
-      alert(err?.response?.data?.detail?.message || 'Ошибка');
+      toast('error', err?.response?.data?.detail?.message || 'Ошибка');
     }
   };
 

@@ -2,7 +2,7 @@
  * SuccessModal — Красивое модальное окно успеха/ошибки.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CheckCircle2, Wallet, XCircle } from 'lucide-react-native';
 import { COLORS, formatKGS } from '@/constants/theme';
@@ -18,17 +18,19 @@ interface Props {
 }
 
 export default function SuccessModal({ visible, type, title, message, amount, newBalance, onClose }: Props) {
-  const scale = new Animated.Value(0.8);
-  const opacity = new Animated.Value(0);
+  const scale = useRef(new Animated.Value(0.8)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
+      scale.setValue(0.8);
+      opacity.setValue(0);
       Animated.parallel([
         Animated.spring(scale, { toValue: 1, friction: 6, useNativeDriver: true }),
         Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, scale, opacity]);
 
   const isSuccess = type === 'success';
 

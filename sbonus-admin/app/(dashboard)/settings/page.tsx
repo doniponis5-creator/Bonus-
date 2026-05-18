@@ -1,8 +1,9 @@
 "use client";
-import { Settings, AlertTriangle } from 'lucide-react';
+import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { useToast } from '@/components/Toast';
 
 // ─── Кастомный Toggle ───
 const CustomToggle = ({ isEnabled, onToggle }: { isEnabled: boolean; onToggle: () => void }) => (
@@ -36,6 +37,7 @@ const CustomToggle = ({ isEnabled, onToggle }: { isEnabled: boolean; onToggle: (
 );
 
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -70,10 +72,10 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       await api.post("/api/v1/admin/settings", settings);
-      alert("Настройки успешно сохранены!");
+      toast('success', 'Настройки успешно сохранены!');
     } catch (err) {
       console.error(err);
-      alert("Ошибка при сохранении настроек");
+      toast('error', 'Ошибка при сохранении настроек');
     } finally {
       setSaving(false);
     }
@@ -81,7 +83,7 @@ export default function SettingsPage() {
 
   const handleTestWhatsApp = async () => {
     if (!testPhone || testPhone === "+996") {
-      alert("Введите корректный номер телефона");
+      toast('warning', 'Введите корректный номер телефона');
       return;
     }
     setTesting(true);
@@ -89,10 +91,10 @@ export default function SettingsPage() {
       await api.post(
         `/api/v1/admin/settings/test-whatsapp?phone=${encodeURIComponent(testPhone)}`
       );
-      alert("Тестовое сообщение успешно отправлено!");
+      toast('success', 'Тестовое сообщение успешно отправлено!');
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.detail?.message || "Ошибка при отправке тестового сообщения");
+      toast('error', err.response?.data?.detail?.message || 'Ошибка при отправке тестового сообщения');
     } finally {
       setTesting(false);
     }
@@ -272,7 +274,7 @@ export default function SettingsPage() {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardTitleWrapper}>
-            <span style={{ fontSize: "24px" }}>📊</span>
+            <BarChart3 size={24} color={colors.accent} />
             <div>
               <h2 style={styles.cardTitle}>Интеграция 1С</h2>
               <p style={styles.cardDesc}>Автоматическое начисление при покупке</p>
@@ -284,7 +286,10 @@ export default function SettingsPage() {
               color: settings.ENABLE_1C_WEBHOOK === "true" ? colors.accent : colors.textMuted,
             }}
           >
-            {settings.ENABLE_1C_WEBHOOK === "true" ? "🟢 Включено" : "🔴 Отключено"}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: settings.ENABLE_1C_WEBHOOK === "true" ? colors.accent : "#ff4d4d", display: "inline-block" }} />
+              {settings.ENABLE_1C_WEBHOOK === "true" ? "Включено" : "Отключено"}
+            </span>
           </div>
         </div>
 
@@ -316,7 +321,7 @@ export default function SettingsPage() {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardTitleWrapper}>
-            <span style={{ fontSize: "24px" }}>💬</span>
+            <MessageSquare size={24} color={colors.accent} />
             <div>
               <h2 style={styles.cardTitle}>WhatsApp (Green API)</h2>
               <p style={styles.cardDesc}>Уведомления клиентам об операциях</p>
@@ -328,7 +333,10 @@ export default function SettingsPage() {
               color: settings.ENABLE_WHATSAPP_NOTIFICATIONS === "true" ? colors.accent : colors.textMuted,
             }}
           >
-            {settings.ENABLE_WHATSAPP_NOTIFICATIONS === "true" ? "🟢 Включено" : "🔴 Отключено"}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: settings.ENABLE_WHATSAPP_NOTIFICATIONS === "true" ? colors.accent : "#ff4d4d", display: "inline-block" }} />
+              {settings.ENABLE_WHATSAPP_NOTIFICATIONS === "true" ? "Включено" : "Отключено"}
+            </span>
           </div>
         </div>
 
@@ -373,7 +381,7 @@ export default function SettingsPage() {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardTitleWrapper}>
-            <span style={{ fontSize: "24px" }}>📝</span>
+            <FileText size={24} color={colors.accent} />
             <div>
               <h2 style={styles.cardTitle}>Шаблоны сообщений</h2>
               <p style={styles.cardDesc}>
@@ -408,7 +416,7 @@ export default function SettingsPage() {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardTitleWrapper}>
-            <span style={{ fontSize: "24px" }}>🧪</span>
+            <FlaskConical size={24} color={colors.accent} />
             <div>
               <h2 style={styles.cardTitle}>Тест подключения</h2>
               <p style={styles.cardDesc}>Проверьте работу WhatsApp интеграции</p>
@@ -457,7 +465,7 @@ export default function SettingsPage() {
           onClick={handleSave}
           disabled={saving}
         >
-          <span style={{ fontSize: "20px" }}>💾</span>
+          <Save size={20} />
           {saving ? "Сохранение..." : "Сохранить все изменения"}
         </button>
       </div>

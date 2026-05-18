@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { COLORS, TIER_COLORS, TIER_EMOJI } from '@/constants/theme';
+import { COLORS, TIER_COLORS, TIER_SYMBOL } from '@/constants/theme';
 
 interface Props {
   tierName: string;
@@ -13,15 +13,19 @@ interface Props {
 
 export default function TierBadge({ tierName, size = 'md' }: Props) {
   const color = TIER_COLORS[tierName] || COLORS.text2;
-  const emoji = TIER_EMOJI[tierName] || '🏷';
+  const symbol = TIER_SYMBOL[tierName] || '*';
   const fontSize = size === 'lg' ? 16 : size === 'md' ? 13 : 11;
+  const dotSize = size === 'lg' ? 10 : size === 'md' ? 8 : 6;
   const padding = size === 'lg' ? 10 : size === 'md' ? 7 : 5;
 
   return (
     <View style={[styles.badge, { borderColor: color + '40', paddingVertical: padding, paddingHorizontal: padding * 2 }]}>
-      <Text style={[styles.text, { color, fontSize }]}>
-        {emoji} {tierName}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={{ width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: color }} />
+        <Text style={[styles.text, { color, fontSize }]}>
+          {tierName}
+        </Text>
+      </View>
     </View>
   );
 }

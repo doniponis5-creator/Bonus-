@@ -80,62 +80,84 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
     wa_instance = wa_cfg.get("GREENAPI_INSTANCE_ID")
     wa_token = wa_cfg.get("GREENAPI_API_TOKEN")
 
+    # Filter out already-sent recipients
+    pending = [r for r in recipients if r.status != "sent"]
+
     sent_count = 0
-    for rec in recipients:
-        if rec.status == "sent":
-            continue
-        try:
-            customer_result = await db.execute(
-                select(Customer).where(Customer.id == rec.customer_id, Customer.is_active == True)
+    BATCH_SIZE = 100
+    txn_note = f"Кампания: {campaign.name}" + (f" — {campaign.reason}" if campaign.reason else "")
+
+    for i in range(0, len(pending), BATCH_SIZE):
+        batch = pending[i : i + BATCH_SIZE]
+        batch_customer_ids = [r.customer_id for r in batch]
+
+        # Batch-load customers
+        cust_result = await db.execute(
+            select(Customer).where(
+                Customer.id.in_(batch_customer_ids),
+                Customer.is_active == True,
             )
-            customer = customer_result.scalar_one_or_none()
-            if not customer:
-                rec.status = "failed"
-                rec.error = "customer_not_found_or_inactive"
-                continue
+        )
+        customers_by_id = {c.id: c for c in cust_result.scalars().all()}
 
-            account_result = await db.execute(
-                select(BonusAccount).where(BonusAccount.customer_id == customer.id)
+        # Batch-load bonus accounts
+        acct_result = await db.execute(
+            select(BonusAccount).where(
+                BonusAccount.customer_id.in_(batch_customer_ids)
             )
-            account = account_result.scalar_one_or_none()
-            if not account:
-                account = BonusAccount(customer_id=customer.id)
-                db.add(account)
-                await db.flush()
+        )
+        accounts_by_cid = {a.customer_id: a for a in acct_result.scalars().all()}
 
-            account.balance += campaign.amount
-            account.total_earned += campaign.amount
+        for rec in batch:
+            try:
+                customer = customers_by_id.get(rec.customer_id)
+                if not customer:
+                    rec.status = "failed"
+                    rec.error = "customer_not_found_or_inactive"
+                    continue
 
-            txn = Transaction(
-                customer_id=customer.id,
-                type=TransactionType.CAMPAIGN,
-                amount=campaign.amount,
-                note=f"Кампания: {campaign.name}" + (f" — {campaign.reason}" if campaign.reason else ""),
-            )
-            db.add(txn)
-            await db.flush()
+                account = accounts_by_cid.get(customer.id)
+                if not account:
+                    account = BonusAccount(customer_id=customer.id)
+                    db.add(account)
+                    await db.flush()
+                    accounts_by_cid[customer.id] = account
 
-            rec.status = "sent"
-            rec.sent_at = datetime.now(timezone.utc)
-            sent_count += 1
+                account.balance += campaign.amount
+                account.total_earned += campaign.amount
 
-            if wa_enabled and wa_instance and wa_token and campaign.message_template:
-                msg = (
-                    campaign.message_template
-                    .replace("{amount}", str(campaign.amount))
-                    .replace("{balance}", str(account.balance))
-                    .replace("{name}", customer.full_name)
+                txn = Transaction(
+                    customer_id=customer.id,
+                    type=TransactionType.CAMPAIGN,
+                    amount=campaign.amount,
+                    note=txn_note,
                 )
-                from app.services.whatsapp import send_whatsapp_message
-                asyncio.create_task(send_whatsapp_message(
-                    phone=customer.phone,
-                    message=msg,
-                    instance_id=wa_instance,
-                    api_token=wa_token,
-                ))
-        except Exception as e:
-            rec.status = "failed"
-            rec.error = str(e)[:500]
+                db.add(txn)
+
+                rec.status = "sent"
+                rec.sent_at = datetime.now(timezone.utc)
+                sent_count += 1
+
+                if wa_enabled and wa_instance and wa_token and campaign.message_template:
+                    msg = (
+                        campaign.message_template
+                        .replace("{amount}", str(campaign.amount))
+                        .replace("{balance}", str(account.balance))
+                        .replace("{name}", customer.full_name)
+                    )
+                    from app.services.whatsapp import send_whatsapp_message
+                    asyncio.create_task(send_whatsapp_message(
+                        phone=customer.phone,
+                        message=msg,
+                        instance_id=wa_instance,
+                        api_token=wa_token,
+                    ))
+            except Exception as e:
+                rec.status = "failed"
+                rec.error = str(e)[:500]
+
+        # Flush each batch to keep memory usage bounded
+        await db.flush()
 
     campaign.sent_count = sent_count
     campaign.sent_at = datetime.now(timezone.utc)

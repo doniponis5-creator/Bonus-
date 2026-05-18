@@ -27,24 +27,13 @@ from app.schemas import (
     SuccessResponse,
 )
 from app.services.whatsapp import send_whatsapp_message
+from app.utils import normalize_phone
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 router = APIRouter(prefix="/customer-auth", tags=["Клиент: Авторизация"])
 
-
-def _normalize_phone(phone: str) -> str:
-    """Привести телефон к виду +996XXXXXXXXX."""
-    p = phone.strip().replace(" ", "").replace("-", "")
-    if not p.startswith("+"):
-        if p.startswith("996"):
-            p = "+" + p
-        elif p.startswith("0"):
-            p = "+996" + p[1:]
-        else:
-            p = "+" + p
-    return p
 
 
 async def _get_whatsapp_credentials(db: AsyncSession) -> tuple[str | None, str | None, bool]:
@@ -75,7 +64,7 @@ async def request_magic_link(
     Для безопасности возвращает одинаковый ответ независимо от того,
     существует клиент с таким телефоном или нет (защита от phone enumeration).
     """
-    phone = _normalize_phone(body.phone)
+    phone = normalize_phone(body.phone)
     ip = request.client.host if request.client else "unknown"
 
     # Rate limit: 1 запрос в минуту с одного IP по одному телефону

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, QrCode, Loader2 } from 'lucide-react';
+import { LogOut, QrCode, Loader2, RefreshCw } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import DebtCard from '@/components/DebtCard';
 import QRModal from '@/components/QRModal';
@@ -15,16 +15,29 @@ export default function DashboardPage() {
   const [data, setData] = useState<CabinetMe | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const fetchData = () => {
     if (!isTokenValid(getToken())) {
       router.replace('/login');
       return;
     }
+    setRefreshing(true);
     customerAPI
       .me()
-      .then((res) => setData(res.data))
-      .catch(() => setError('Не удалось загрузить данные. Попробуйте обновить страницу.'));
+      .then((res) => {
+        setData(res.data);
+        setError(null);
+      })
+      .catch(() => setError('Не удалось загрузить данные. Попробуйте обновить страницу.'))
+      .finally(() => setRefreshing(false));
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 60_000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const handleLogout = () => {
@@ -64,20 +77,39 @@ export default function DashboardPage() {
         }}
       >
         <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--accent)' }}>S Bonus</div>
-        <button
-          onClick={handleLogout}
-          aria-label="Выйти"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text2)',
-            cursor: 'pointer',
-            padding: 8,
-            display: 'flex',
-          }}
-        >
-          <LogOut size={20} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button
+            onClick={fetchData}
+            disabled={refreshing}
+            aria-label="Обновить"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text2)',
+              cursor: 'pointer',
+              padding: 8,
+              display: 'flex',
+              opacity: refreshing ? 0.4 : 1,
+              animation: refreshing ? 'spin 1s linear infinite' : 'none',
+            }}
+          >
+            <RefreshCw size={18} />
+          </button>
+          <button
+            onClick={handleLogout}
+            aria-label="Выйти"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text2)',
+              cursor: 'pointer',
+              padding: 8,
+              display: 'flex',
+            }}
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
       </header>
 
       <BalanceCard

@@ -33,17 +33,16 @@ async def is_token_blacklisted(jti: str) -> bool:
 async def check_rate_limit(key: str, max_attempts: int, window_seconds: int) -> bool:
     """
     Проверка rate limit. Возвращает True если лимит НЕ превышен.
-    
+
+    Использует атомарный INCR-first паттерн для устранения TOCTOU race condition.
+
     Args:
         key: уникальный ключ (например, ip:login:192.168.1.1)
         max_attempts: макс. количество попыток
         window_seconds: окно времени в секундах
     """
-    current = await redis_client.get(f"rate:{key}")
-    if current and int(current) >= max_attempts:
-        return False
-    pipe = redis_client.pipeline()
-    pipe.incr(f"rate:{key}")
-    pipe.expire(f"rate:{key}", window_seconds)
-    await pipe.execute()
-    return True
+    full_key = f"rate:{key}"
+    current = await redis_client.incr(full_key)
+    if current == 1:
+        await redis_client.expire(full_key, window_seconds)
+    return current <= max_attempts

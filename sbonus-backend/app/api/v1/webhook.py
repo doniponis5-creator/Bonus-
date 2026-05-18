@@ -19,6 +19,7 @@ Endpoints:
 
 import hashlib
 import hmac
+import ipaddress
 import uuid
 from decimal import Decimal
 
@@ -38,6 +39,7 @@ from app.schemas import (
     Webhook1CDebtUpdateRequest,
 )
 from app.services.bonus import BonusService
+from app.utils import normalize_phone
 
 settings = get_settings()
 router = APIRouter(prefix="/webhook", tags=["Вебхуки 1С"])
@@ -58,14 +60,19 @@ def _check_ip_whitelist(client_ip: str) -> bool:
     allowed = settings.webhook_1c_ip_list
     if not allowed or allowed == [""]:
         return True
+    try:
+        ip = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return False
     for allowed_ip in allowed:
-        if "/" in allowed_ip:
-            prefix = allowed_ip.split("/")[0]
-            bits = int(allowed_ip.split("/")[1])
-            if client_ip.startswith(prefix.rsplit(".", 4 - bits // 8)[0]):
+        try:
+            if "/" in allowed_ip:
+                if ip in ipaddress.ip_network(allowed_ip, strict=False):
+                    return True
+            elif client_ip == allowed_ip:
                 return True
-        elif client_ip == allowed_ip:
-            return True
+        except ValueError:
+            continue
     return False
 
 
@@ -84,7 +91,12 @@ async def _security_check(request: Request, x_signature: str | None) -> None:
             detail={"code": "WEBHOOK_IP_BLOCKED", "message": f"IP {client_ip} не в белом списке"},
         )
 
-    if x_signature:
+    if settings.webhook_1c_secret and settings.webhook_1c_secret != "your_hmac_secret_here":
+        if not x_signature:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"code": "WEBHOOK_MISSING_SIGNATURE", "message": "Требуется HMAC-SHA256 подпись (X-Signature)"},
+            )
         raw_body = await request.body()
         if not _verify_hmac_signature(raw_body, x_signature, settings.webhook_1c_secret):
             raise HTTPException(
@@ -106,15 +118,6 @@ async def _get_customer_or_404(phone: str, db: AsyncSession) -> Customer:
         )
     return customer
 
-
-def _normalize_phone(phone: str) -> str:
-    """Нормализация номера телефона."""
-    clean = phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    if clean.startswith("0"):
-        clean = "+996" + clean[1:]
-    elif clean.startswith("996") and not clean.startswith("+"):
-        clean = "+" + clean
-    return clean
 
 
 # ═══════════════════════════════════════════
@@ -138,7 +141,7 @@ async def webhook_1c_purchase(
     """
     await _security_check(request, x_signature)
 
-    phone = _normalize_phone(body.customer_phone)
+    phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
 
     svc = BonusService(db)
@@ -188,7 +191,7 @@ async def webhook_1c_spend(
     """
     await _security_check(request, x_signature)
 
-    phone = _normalize_phone(body.customer_phone)
+    phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
 
     svc = BonusService(db)
@@ -237,7 +240,7 @@ async def webhook_1c_refund(
     """
     await _security_check(request, x_signature)
 
-    phone = _normalize_phone(body.customer_phone)
+    phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
 
     # Находим оригинальную earn транзакцию
@@ -325,7 +328,7 @@ async def webhook_1c_register(
     """
     await _security_check(request, x_signature)
 
-    phone = _normalize_phone(body.phone)
+    phone = normalize_phone(body.phone)
 
     # Проверить дубликат
     existing = await db.execute(
@@ -419,7 +422,14 @@ async def webhook_1c_get_customer(
     if not settings.enable_1c_webhook:
         raise HTTPException(status_code=503, detail={"code": "WEBHOOK_DISABLED"})
 
-    phone = _normalize_phone(phone)
+    client_ip = request.client.host if request.client else "0.0.0.0"
+    if not _check_ip_whitelist(client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "WEBHOOK_IP_BLOCKED", "message": f"IP {client_ip} не в белом списке"},
+        )
+
+    phone = normalize_phone(phone)
     customer = await _get_customer_or_404(phone, db)
 
     acc_result = await db.execute(
@@ -466,7 +476,14 @@ async def webhook_1c_check_spend(
     if not settings.enable_1c_webhook:
         raise HTTPException(status_code=503, detail={"code": "WEBHOOK_DISABLED"})
 
-    phone = _normalize_phone(phone)
+    client_ip = request.client.host if request.client else "0.0.0.0"
+    if not _check_ip_whitelist(client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "WEBHOOK_IP_BLOCKED", "message": f"IP {client_ip} не в белом списке"},
+        )
+
+    phone = normalize_phone(phone)
     customer = await _get_customer_or_404(phone, db)
 
     acc_result = await db.execute(
@@ -518,7 +535,7 @@ async def webhook_1c_debt_update(
     """
     await _security_check(request, x_signature)
 
-    phone = _normalize_phone(body.phone)
+    phone = normalize_phone(body.phone)
     customer = await _get_customer_or_404(phone, db)
 
     debt = CustomerDebt(
