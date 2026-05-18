@@ -90,6 +90,12 @@ async def seed_default_data(db: AsyncSession) -> None:
             "📱 Личный кабинет: {link}\n"
             "🛒 Смарт Центр"
         ),
+        "WHATSAPP_TEMPLATE_BALANCE_REMINDER": (
+            "👋 {name}, у вас {balance} KGS бонусов на счету!\n"
+            "Не забудьте использовать при следующей покупке 🛍\n\n"
+            "📱 Проверить баланс: {link}\n"
+            "🛒 Смарт Центр"
+        ),
     }
     for key, value in _wa_templates.items():
         result = await db.execute(select(Setting).where(Setting.key == key))

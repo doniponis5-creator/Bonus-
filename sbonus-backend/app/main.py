@@ -23,6 +23,7 @@ from app.tasks.campaigns import process_due_campaigns
 from app.tasks.expiration import expire_old_bonuses, warn_expiring_bonuses
 from app.tasks.notification_retry import retry_failed_notifications
 from app.tasks.weekly_report import send_weekly_report
+from app.tasks.balance_reminder import send_balance_reminders
 
 settings = get_settings()
 logger = get_logger("main")
@@ -95,12 +96,21 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
+    # Cron: напоминание о бонусах неактивным — каждый день 12:00
+    scheduler.add_job(
+        send_balance_reminders,
+        CronTrigger(hour=12, minute=0),
+        id="balance_reminder",
+        replace_existing=True,
+    )
+
     scheduler.start()
     logger.info("Cron: bonus campaigns scheduled at 09:00 daily")
     logger.info("Cron: bonus expiration scheduled at 02:00 daily")
     logger.info("Cron: expiration warnings scheduled at 10:00 daily")
     logger.info("Cron: notification retry scheduled every 15 min")
     logger.info("Cron: weekly report scheduled at Mon 08:00")
+    logger.info("Cron: balance reminder scheduled at 12:00 daily")
     logger.info("Server started! Swagger: http://localhost:8000/docs")
     logger.info("=" * 50)
 
