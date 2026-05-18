@@ -52,9 +52,12 @@ export const authAPI = {
 };
 
 export const adminAPI = {
+  verifyPin: (pin: string) => api.post('/api/v1/admin/verify-pin', { pin }),
   stats: () => api.get('/api/v1/admin/dashboard/stats'),
   trends: (days = 30) => api.get(`/api/v1/admin/dashboard/trends?days=${days}`),
   notificationStats: (days = 7) => api.get(`/api/v1/admin/dashboard/notifications?days=${days}`),
+  analytics: (days = 30) => api.get(`/api/v1/admin/dashboard/analytics?days=${days}`),
+  integrationStatus: () => api.get('/api/v1/admin/integration/1c-status'),
 
   // Tiers
   tiers: () => api.get('/api/v1/admin/tiers'),
@@ -103,6 +106,25 @@ export const adminAPI = {
   sendCampaign: (id: string) => api.post(`/api/v1/admin/campaigns/${id}/send`),
   cancelCampaign: (id: string) => api.post(`/api/v1/admin/campaigns/${id}/cancel`),
   deleteCampaign: (id: string) => api.delete(`/api/v1/admin/campaigns/${id}`),
+
+  // Coupons
+  coupons: (page = 1, limit = 50, customerId?: string) =>
+    api.get(`/api/v1/admin/coupons?page=${page}&limit=${limit}${customerId ? `&customer_id=${customerId}` : ''}`),
+  createCoupon: (d: {
+    title: string;
+    description?: string;
+    bonus_amount: number;
+    min_purchase?: number;
+    customer_id?: string | null;
+    expires_at?: string | null;
+  }) => api.post('/api/v1/admin/coupons', d),
+  deleteCoupon: (id: string) => api.delete(`/api/v1/admin/coupons/${id}`),
+
+  // Reviews
+  reviews: (page = 1, limit = 50, status?: string) =>
+    api.get(`/api/v1/admin/reviews?page=${page}&limit=${limit}${status ? `&status=${status}` : ''}`),
+  actionReview: (id: string, action: 'approve' | 'reject', note?: string) =>
+    api.post(`/api/v1/admin/reviews/${id}`, { action, note }),
 };
 
 export const customersAPI = {

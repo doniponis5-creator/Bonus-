@@ -55,11 +55,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(30);
 
-  useEffect(() => {
+  const [notifStats, setNotifStats] = useState<any>(null);
+
+  const loadAll = () => {
     Promise.all([
       adminAPI.stats().then(r => setStats(r.data)),
       adminAPI.trends(period).then(r => setTrends(r.data)),
+      adminAPI.notificationStats(7).then(r => setNotifStats(r.data)).catch(() => {}),
     ]).catch(() => {}).finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadAll();
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(loadAll, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   // Reload trends when period changes
@@ -125,6 +135,16 @@ export default function DashboardPage() {
         <StatsCard icon={<ShoppingCart size={20} />} label="Средний чек" value={trends ? fmt(trends.average_check) : '—'} color="var(--accent)" />
         <StatsCard icon={<TrendingUp size={20} />} label="Период" value={`${period} дн.`} sub={`${trends?.daily?.length || 0} точек данных`} />
       </div>
+
+      {/* Notification Stats */}
+      {notifStats && (
+        <div className="grid-4" style={{ marginBottom: 24 }}>
+          <StatsCard icon={<Bell size={20} />} label="WhatsApp отправлено" value={notifStats.sent || 0} sub="за 7 дней" color="#25D366" />
+          <StatsCard icon={<Bell size={20} />} label="Ошибки" value={notifStats.failed || 0} sub="за 7 дней" color="var(--danger)" />
+          <StatsCard icon={<Bell size={20} />} label="В ожидании" value={notifStats.pending || 0} sub="в очереди" color="#f59e0b" />
+          <StatsCard icon={<Bell size={20} />} label="Успешность" value={notifStats.total > 0 ? `${Math.round((notifStats.sent / notifStats.total) * 100)}%` : '—'} sub="доставки" color="#22c55e" />
+        </div>
+      )}
 
       {/* Earn/Spend Trends Chart */}
       {trends && trends.daily.length > 0 && (

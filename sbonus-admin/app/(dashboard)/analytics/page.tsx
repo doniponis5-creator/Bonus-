@@ -1,0 +1,204 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { adminAPI } from '@/lib/api';
+import { BarChart3, Loader2, TrendingUp, TrendingDown, Users, Repeat, Clock } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
+} from 'recharts';
+
+const TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  earn: { label: 'Начисление', color: '#FFE600' },
+  spend: { label: 'Списание', color: '#f97316' },
+  expire: { label: 'Истечение', color: '#8899aa' },
+  promo: { label: 'Промокод', color: '#c084fc' },
+  referral: { label: 'Реферал', color: '#60a5fa' },
+  campaign: { label: 'Кампания', color: '#22c55e' },
+  refund: { label: 'Возврат', color: '#fb923c' },
+  birthday: { label: 'День рождения', color: '#fbbf24' },
+};
+
+const PERIOD_OPTIONS = [
+  { label: '7 дней', value: 7 },
+  { label: '30 дней', value: 30 },
+  { label: '90 дней', value: 90 },
+  { label: '365 дней', value: 365 },
+];
+
+const fmt = (v: number) => Number(v).toLocaleString('ru-RU') + ' KGS';
+
+export default function AnalyticsPage() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState(30);
+
+  useEffect(() => {
+    setLoading(true);
+    adminAPI.analytics(period).then(r => setData(r.data)).catch(() => {}).finally(() => setLoading(false));
+  }, [period]);
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 60, color: 'var(--text2)' }}>
+      <Loader2 size={16} className="animate-spin" /> Загрузка...
+    </div>
+  );
+
+  if (!data) return null;
+
+  const revenueUp = data.revenue_change_pct >= 0;
+  const custUp = data.new_customers_current >= data.new_customers_previous;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <BarChart3 size={24} /> Детальная аналитика
+        </h1>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--card)', borderRadius: 10, padding: 3 }}>
+          {PERIOD_OPTIONS.map(opt => (
+            <button key={opt.value} onClick={() => setPeriod(opt.value)}
+              style={{
+                padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+                background: period === opt.value ? 'var(--accent)' : 'transparent',
+                color: period === opt.value ? '#000' : 'var(--text2)',
+              }}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Comparison cards */}
+      <div className="grid-4" style={{ marginBottom: 24 }}>
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Выручка</div>
+          <div style={{ fontSize: 22, fontWeight: 800 }}>{fmt(data.revenue_current)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 13, fontWeight: 600, color: revenueUp ? '#22c55e' : '#ff4d4d' }}>
+            {revenueUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+            {revenueUp ? '+' : ''}{data.revenue_change_pct}% vs пред. период
+          </div>
+        </div>
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Новые клиенты</div>
+          <div style={{ fontSize: 22, fontWeight: 800 }}>{data.new_customers_current}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 13, fontWeight: 600, color: custUp ? '#22c55e' : '#ff4d4d' }}>
+            {custUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+            было {data.new_customers_previous}
+          </div>
+        </div>
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>
+            <Repeat size={13} /> Retention
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>{data.retention_rate}%</div>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6 }}>
+            {data.repeat_buyers} из {data.total_buyers} покупателей
+          </div>
+        </div>
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Средний LTV</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>{fmt(data.average_ltv)}</div>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6 }}>бонусов на клиента</div>
+        </div>
+      </div>
+
+      <div className="grid-2" style={{ marginBottom: 24 }}>
+        {/* Hourly activity */}
+        <div className="card">
+          <h3 style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Clock size={16} /> Активность по часам
+          </h3>
+          {data.hourly_activity?.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={data.hourly_activity}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
+                <XAxis dataKey="hour" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(v: number) => `${v}:00`} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
+                <Tooltip
+                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#fff', fontSize: 13 }}
+                  formatter={(value: number, name: string) => [
+                    name === 'count' ? `${value} покупок` : fmt(value),
+                    name === 'count' ? 'Транзакции' : 'Выручка'
+                  ]}
+                  labelFormatter={(v: number) => `${v}:00 — ${v + 1}:00`}
+                />
+                <Bar dataKey="count" fill="#FFE600" radius={[3, 3, 0, 0]} name="count" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p style={{ color: 'var(--text3)', fontSize: 13 }}>Нет данных</p>
+          )}
+        </div>
+
+        {/* Transaction types distribution */}
+        <div className="card">
+          <h3 style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <BarChart3 size={16} /> Распределение операций
+          </h3>
+          {data.transaction_types?.length > 0 ? (() => {
+            const pieData = data.transaction_types.map((t: any) => ({
+              name: TYPE_LABELS[t.type]?.label || t.type,
+              value: t.count,
+              color: TYPE_LABELS[t.type]?.color || '#8899aa',
+            }));
+            return (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value" stroke="none">
+                    {pieData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#fff', fontSize: 13 }}
+                    formatter={(value: number, name: string) => [`${value} операций`, name]}
+                  />
+                  <Legend verticalAlign="bottom" iconType="circle" iconSize={8}
+                    formatter={(value: string) => <span style={{ color: '#94a3b8', fontSize: 11 }}>{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            );
+          })() : (
+            <p style={{ color: 'var(--text3)', fontSize: 13 }}>Нет данных</p>
+          )}
+        </div>
+      </div>
+
+      {/* Transaction types table */}
+      {data.transaction_types?.length > 0 && (
+        <div className="card">
+          <h3 style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16 }}>Детализация по типам операций</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr>
+                  {['Тип', 'Количество', 'Сумма'].map(h => (
+                    <th key={h} style={{ padding: '10px 14px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.transaction_types.map((t: any) => {
+                  const meta = TYPE_LABELS[t.type] || { label: t.type, color: '#8899aa' };
+                  return (
+                    <tr key={t.type}>
+                      <td style={{ padding: '12px 14px', borderBottom: '1px solid #1c2a3a', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{meta.label}</span>
+                      </td>
+                      <td style={{ padding: '12px 14px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 600 }}>
+                        {t.count.toLocaleString('ru-RU')}
+                      </td>
+                      <td style={{ padding: '12px 14px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: meta.color }}>
+                        {fmt(t.total)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

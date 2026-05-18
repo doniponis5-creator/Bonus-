@@ -19,7 +19,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_customer
-from app.models import Customer, CustomerDebt, Tier, Transaction, TransactionType
+from app.models import (
+    BonusAccount, Coupon, Customer, CustomerDebt, ReviewRequest, ReviewPlatform, ReviewStatus,
+    Setting, Tier, Transaction, TransactionType,
+)
 from app.schemas import (
     CustomerCabinetMe,
     CustomerCabinetTransaction,
@@ -268,4 +271,328 @@ async def get_referral_info(
         "referral_code": customer.referral_code,
         "invited_count": invited_count,
         "bonus_per_invite": float(Decimal("100")),
+    }
+
+
+# ─── LEADERBOARD ───
+
+@router.get("/leaderboard")
+async def get_leaderboard(
+    period: str = Query("month", regex="^(week|month|all)$"),
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """
+    Рейтинг TOP-10 клиентов по покупкам за период.
+    period: week | month | all
+    """
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    if period == "week":
+        cutoff = now - timedelta(days=7)
+    elif period == "month":
+        cutoff = now - timedelta(days=30)
+    else:
+        cutoff = None
+
+    # TOP-10 по сумме покупок
+    q = (
+        select(
+            Customer.id,
+            Customer.full_name,
+            func.coalesce(func.sum(Transaction.purchase_amount), 0).label("total_purchases"),
+            func.count(Transaction.id).label("txn_count"),
+        )
+        .join(Transaction, Transaction.customer_id == Customer.id)
+        .where(
+            Transaction.type == TransactionType.EARN,
+            Customer.is_active == True,
+        )
+    )
+    if cutoff:
+        q = q.where(Transaction.created_at >= cutoff)
+
+    q = (
+        q.group_by(Customer.id, Customer.full_name)
+        .order_by(func.sum(Transaction.purchase_amount).desc())
+        .limit(10)
+    )
+    result = await db.execute(q)
+    rows = result.all()
+
+    # Текущий клиент — его позиция
+    customer_id = current["sub"]
+    my_q = (
+        select(
+            func.coalesce(func.sum(Transaction.purchase_amount), 0).label("total"),
+        )
+        .where(
+            Transaction.customer_id == customer_id,
+            Transaction.type == TransactionType.EARN,
+        )
+    )
+    if cutoff:
+        my_q = my_q.where(Transaction.created_at >= cutoff)
+    my_total = (await db.execute(my_q)).scalar() or 0
+
+    # Подсчёт моей позиции
+    rank_q = (
+        select(func.count())
+        .select_from(
+            select(
+                Transaction.customer_id,
+                func.sum(Transaction.purchase_amount).label("s"),
+            )
+            .where(Transaction.type == TransactionType.EARN)
+            .group_by(Transaction.customer_id)
+            .having(func.sum(Transaction.purchase_amount) > my_total)
+            .subquery()
+        )
+    )
+    if cutoff:
+        rank_q = (
+            select(func.count())
+            .select_from(
+                select(
+                    Transaction.customer_id,
+                    func.sum(Transaction.purchase_amount).label("s"),
+                )
+                .where(
+                    Transaction.type == TransactionType.EARN,
+                    Transaction.created_at >= cutoff,
+                )
+                .group_by(Transaction.customer_id)
+                .having(func.sum(Transaction.purchase_amount) > my_total)
+                .subquery()
+            )
+        )
+    my_rank = ((await db.execute(rank_q)).scalar() or 0) + 1
+
+    leaders = []
+    for i, row in enumerate(rows, 1):
+        name = row.full_name or "Клиент"
+        # Маскировка имени для приватности (Гулола → Гул***)
+        masked = name[:3] + "***" if len(name) > 3 else name
+        leaders.append({
+            "rank": i,
+            "name": masked,
+            "total_purchases": int(row.total_purchases),
+            "txn_count": row.txn_count,
+            "is_me": str(row.id) == str(customer_id),
+        })
+
+    return {
+        "period": period,
+        "leaders": leaders,
+        "my_rank": my_rank,
+        "my_total": int(my_total),
+    }
+
+
+# ─── MY COUPONS ───
+
+@router.get("/coupons")
+async def my_coupons(
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """Купоны текущего клиента (персональные + общие неиспользованные)."""
+    from datetime import datetime, timezone
+
+    customer_id = current["sub"]
+    now = datetime.now(timezone.utc)
+
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.is_active == True,
+            Coupon.is_used == False,
+            (Coupon.expires_at.is_(None)) | (Coupon.expires_at > now),
+            (Coupon.customer_id == customer_id) | (Coupon.customer_id.is_(None)),
+        ).order_by(Coupon.bonus_amount.desc())
+    )
+    coupons = result.scalars().all()
+
+    return {
+        "coupons": [
+            {
+                "id": str(c.id),
+                "code": c.code,
+                "title": c.title,
+                "description": c.description,
+                "bonus_amount": float(c.bonus_amount),
+                "min_purchase": float(c.min_purchase),
+                "is_personal": c.customer_id is not None,
+                "expires_at": c.expires_at.isoformat() if c.expires_at else None,
+            }
+            for c in coupons
+        ],
+    }
+
+
+@router.post("/coupons/{code}/activate")
+async def activate_coupon(
+    code: str,
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """Активировать купон — начислить бонус."""
+    from datetime import datetime, timezone
+
+    customer_id = uuid.UUID(current["sub"])
+    now = datetime.now(timezone.utc)
+
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.code == code,
+            Coupon.is_active == True,
+            Coupon.is_used == False,
+        )
+    )
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail={"message": "Купон не найден или уже использован"})
+
+    # Проверка — персональный купон другому клиенту
+    if coupon.customer_id and coupon.customer_id != customer_id:
+        raise HTTPException(status_code=403, detail={"message": "Этот купон предназначен другому клиенту"})
+
+    # Проверка срока
+    if coupon.expires_at and coupon.expires_at < now:
+        raise HTTPException(status_code=400, detail={"message": "Купон истёк"})
+
+    # Начислить бонус
+    account = (await db.execute(
+        select(BonusAccount).where(BonusAccount.customer_id == customer_id).with_for_update()
+    )).scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail={"message": "Бонусный аккаунт не найден"})
+
+    account.balance += coupon.bonus_amount
+    account.total_earned += coupon.bonus_amount
+
+    txn = Transaction(
+        customer_id=customer_id,
+        type=TransactionType.PROMO,
+        amount=coupon.bonus_amount,
+        note=f"🎟 Купон: {coupon.title} ({coupon.code})",
+    )
+    db.add(txn)
+
+    coupon.is_used = True
+    coupon.used_at = now
+
+    await db.commit()
+
+    return {
+        "message": f"🎟 Купон активирован! +{int(coupon.bonus_amount)} KGS",
+        "bonus_amount": float(coupon.bonus_amount),
+        "new_balance": float(account.balance),
+    }
+
+
+# ─── REVIEW BONUS ───
+
+class ReviewSubmitRequest(BaseModel):
+    platform: str  # "google" or "2gis"
+    review_link: str
+
+
+@router.post("/review")
+async def submit_review(
+    body: ReviewSubmitRequest,
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """Клиент отправляет ссылку на отзыв для получения бонуса."""
+    customer_id = uuid.UUID(current["sub"])
+
+    # Validate platform
+    try:
+        platform = ReviewPlatform(body.platform.lower())
+    except ValueError:
+        raise HTTPException(status_code=400, detail={"message": "Укажите платформу: google или 2gis"})
+
+    # Validate link
+    link = body.review_link.strip()
+    if not link.startswith("http"):
+        raise HTTPException(status_code=400, detail={"message": "Укажите корректную ссылку на отзыв"})
+
+    # Check: no duplicate pending/approved for same platform
+    existing = await db.execute(
+        select(ReviewRequest).where(
+            ReviewRequest.customer_id == customer_id,
+            ReviewRequest.platform == platform,
+            ReviewRequest.status.in_([ReviewStatus.PENDING, ReviewStatus.APPROVED]),
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail={
+            "message": "Вы уже отправили отзыв для этой платформы"
+        })
+
+    # Get bonus amount from settings
+    bonus_setting = (await db.execute(
+        select(Setting).where(Setting.key == "REVIEW_BONUS_AMOUNT")
+    )).scalar_one_or_none()
+    bonus_amount = Decimal(bonus_setting.value) if bonus_setting else Decimal("200")
+
+    # Get customer name for reviewer_name
+    customer = (await db.execute(
+        select(Customer).where(Customer.id == customer_id)
+    )).scalar_one_or_none()
+
+    review = ReviewRequest(
+        customer_id=customer_id,
+        platform=platform,
+        review_link=link,
+        bonus_amount=bonus_amount,
+        reviewer_name=customer.full_name if customer else None,
+    )
+    db.add(review)
+    await db.commit()
+
+    platform_name = "Google Maps" if platform == ReviewPlatform.GOOGLE else "2GIS"
+    return {
+        "message": f"Отзыв на {platform_name} отправлен на проверку! После одобрения вы получите +{int(bonus_amount)} KGS",
+        "bonus_amount": float(bonus_amount),
+    }
+
+
+@router.get("/reviews")
+async def my_reviews(
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """Мои заявки на бонус за отзыв."""
+    customer_id = current["sub"]
+
+    result = await db.execute(
+        select(ReviewRequest)
+        .where(ReviewRequest.customer_id == customer_id)
+        .order_by(ReviewRequest.created_at.desc())
+    )
+    reviews = result.scalars().all()
+
+    return {
+        "reviews": [
+            {
+                "id": str(r.id),
+                "platform": r.platform.value if hasattr(r.platform, "value") else str(r.platform),
+                "review_link": r.review_link,
+                "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+                "bonus_amount": float(r.bonus_amount),
+                "admin_note": r.admin_note,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in reviews
+        ],
+        "can_submit_google": not any(
+            r.platform == ReviewPlatform.GOOGLE and r.status in (ReviewStatus.PENDING, ReviewStatus.APPROVED)
+            for r in reviews
+        ),
+        "can_submit_2gis": not any(
+            r.platform == ReviewPlatform.TWOGIS and r.status in (ReviewStatus.PENDING, ReviewStatus.APPROVED)
+            for r in reviews
+        ),
     }

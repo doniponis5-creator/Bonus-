@@ -5,17 +5,21 @@ import { useRouter } from 'next/navigation';
 import {
   LogOut, QrCode, Loader2, RefreshCw, Home, History, User, Gift,
   PlusCircle, MinusCircle, Clock, Users, Ticket, RefreshCcw,
-  Pencil, Share2, Copy, Check, ChevronLeft, ChevronRight, Disc3,
+  Pencil, Share2, Copy, Check, ChevronLeft, ChevronRight, Disc3, Trophy,
 } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import DebtCard from '@/components/DebtCard';
 import QRModal from '@/components/QRModal';
 import TransactionList from '@/components/TransactionList';
 import BonusWheel from '@/components/BonusWheel';
+import Leaderboard from '@/components/Leaderboard';
+import MyCoupons from '@/components/MyCoupons';
+import ReviewBonus from '@/components/ReviewBonus';
+import PWAInstall from '@/components/PWAInstall';
 import { customerAPI, type CabinetMe } from '@/lib/api';
 import { clearToken, getToken, isTokenValid } from '@/lib/auth';
 
-type Tab = 'home' | 'history' | 'wheel' | 'promo' | 'profile';
+type Tab = 'home' | 'history' | 'wheel' | 'promo' | 'rank' | 'profile';
 
 const TX_META: Record<string, { label: string; color: string; sign: '+' | '-' }> = {
   earn:     { label: 'Начисление',    color: '#FFE600', sign: '+' },
@@ -392,9 +396,33 @@ export default function DashboardPage() {
                 {copied ? <><Check size={14} /> Скопировано</> : <><Copy size={14} /> Копировать</>}
               </button>
             </div>
+
+            {/* Share buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button onClick={() => {
+                const text = `🎁 Смарт Центр: Получи 50 KGS бонус! Мой код: ${data.referral_code}\n📱 https://cabinet.smartcentr.store`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+              }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                📱 WhatsApp
+              </button>
+              <button onClick={() => {
+                const text = `🎁 Смарт Центр: Получи 50 KGS бонус! Мой код: ${data.referral_code} 📱 https://cabinet.smartcentr.store`;
+                if (navigator.share) {
+                  navigator.share({ title: 'Смарт Центр — Бонус', text });
+                } else {
+                  navigator.clipboard.writeText(text);
+                }
+              }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'rgba(255,255,255,0.08)', color: '#e2eaf6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                🔗 Поделиться
+              </button>
+            </div>
+
             {referralInfo && (
-              <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text2)' }}>
-                Приглашено друзей: <strong style={{ color: 'var(--accent)' }}>{referralInfo.invited_count}</strong>
+              <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text2)', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Приглашено друзей: <strong style={{ color: 'var(--accent)' }}>{referralInfo.invited_count}</strong></span>
+                <span>Заработано: <strong style={{ color: '#22c55e' }}>{(referralInfo.invited_count || 0) * 100} KGS</strong></span>
               </div>
             )}
           </div>
@@ -415,10 +443,18 @@ export default function DashboardPage() {
             </div>
             {refMsg && <p style={{ fontSize: 13, marginTop: 8, color: refMsg.startsWith('✅') ? '#22c55e' : '#ff4d4d' }}>{refMsg}</p>}
           </div>
+
+          {/* Coupons */}
+          <MyCoupons onBalanceChange={fetchData} />
+
+          {/* Review bonus */}
+          <ReviewBonus onBalanceChange={fetchData} />
         </div>
       )}
 
       {tab === 'wheel' && <BonusWheel />}
+
+      {tab === 'rank' && <Leaderboard />}
 
       {/* QR Modal */}
       <QRModal open={qrOpen} qrCode={data.qr_code} fullName={data.full_name} onClose={() => setQrOpen(false)} />
@@ -434,7 +470,7 @@ export default function DashboardPage() {
         {([
           { id: 'home', icon: Home, label: 'Главная' },
           { id: 'wheel', icon: Disc3, label: 'Удача' },
-          { id: 'history', icon: History, label: 'История' },
+          { id: 'rank', icon: Trophy, label: 'Рейтинг' },
           { id: 'promo', icon: Gift, label: 'Бонусы' },
           { id: 'profile', icon: User, label: 'Профиль' },
         ] as const).map(t => {
@@ -454,6 +490,9 @@ export default function DashboardPage() {
           );
         })}
       </nav>
+
+      {/* PWA Install Banner */}
+      <PWAInstall />
 
       {/* Bottom padding for tab bar */}
       <div style={{ height: 80 }} />

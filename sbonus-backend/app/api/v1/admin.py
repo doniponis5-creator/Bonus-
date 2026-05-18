@@ -20,14 +20,18 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import UserRole, hash_password, require_role, get_current_user
+from app.core.security import UserRole, hash_password, require_role, get_current_user, verify_password
 from app.models import (
     AuditLog,
     BonusAccount,
+    Coupon,
     Customer,
     PromoCode,
+    ReviewRequest,
+    ReviewStatus,
     Tier,
     Transaction,
+    TransactionType,
     User,
     UserRoleEnum,
 )
@@ -48,6 +52,94 @@ from app.services.whatsapp import send_whatsapp_message
 from app.services.bonus import BonusService
 
 router = APIRouter(prefix="/admin", tags=["Админ-панель"])
+
+
+# ═══════════════════════════════════════════
+# PIN VERIFICATION (2FA)
+# ═══════════════════════════════════════════
+
+class VerifyPinRequest(BaseModel):
+    pin: str
+
+
+@router.post(
+    "/verify-pin",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def verify_admin_pin(
+    body: VerifyPinRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Проверка PIN-кода администратора для критических действий."""
+    user = (await db.execute(
+        select(User).where(User.id == current_user["sub"])
+    )).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail={"message": "Пользователь не найден"})
+
+    # Check password_hash (admin uses password, not pin)
+    if user.password_hash and verify_password(body.pin, user.password_hash):
+        return {"verified": True, "message": "PIN подтверждён"}
+
+    # Also check pin_hash if set
+    if user.pin_hash and verify_password(body.pin, user.pin_hash):
+        return {"verified": True, "message": "PIN подтверждён"}
+
+    raise HTTPException(status_code=403, detail={"message": "Неверный PIN-код"})
+
+
+@router.get(
+    "/integration/1c-status",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def get_1c_status(
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Статус 1C интеграции: последние операции, ошибки, синхронизация."""
+    from app.models import CustomerDebt
+
+    # Check if 1C webhook enabled
+    enabled_setting = (await db.execute(
+        select(Setting).where(Setting.key == "ENABLE_1C_WEBHOOK")
+    )).scalar_one_or_none()
+    is_enabled = enabled_setting and enabled_setting.value == "true"
+
+    # Last 1C transaction (with receipt_number)
+    last_txn = (await db.execute(
+        select(Transaction)
+        .where(Transaction.receipt_number.isnot(None))
+        .order_by(Transaction.created_at.desc())
+        .limit(1)
+    )).scalar_one_or_none()
+
+    # Count 1C transactions today
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    txn_today = (await db.execute(
+        select(func.count(Transaction.id))
+        .where(Transaction.receipt_number.isnot(None), Transaction.created_at >= today_start)
+    )).scalar() or 0
+
+    # Last debt sync
+    last_debt = (await db.execute(
+        select(CustomerDebt).order_by(CustomerDebt.created_at.desc()).limit(1)
+    )).scalar_one_or_none()
+
+    # Total debts
+    total_debts = (await db.execute(
+        select(func.count(CustomerDebt.id))
+    )).scalar() or 0
+
+    return {
+        "webhook_enabled": is_enabled,
+        "last_transaction_at": last_txn.created_at.isoformat() if last_txn else None,
+        "last_receipt": last_txn.receipt_number if last_txn else None,
+        "transactions_today": txn_today,
+        "last_debt_sync_at": last_debt.created_at.isoformat() if last_debt else None,
+        "total_debt_records": total_debts,
+    }
 
 
 @router.get(
@@ -236,6 +328,112 @@ async def dashboard_notifications(
         "failed": status_map.get("failed", 0),
         "pending": status_map.get("pending", 0),
         "total": sum(status_map.values()),
+        "period_days": days,
+    }
+
+
+@router.get(
+    "/dashboard/analytics",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def dashboard_analytics(
+    days: int = Query(30, ge=7, le=365),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Детальная аналитика: по часам, retention, конверсия, сравнение периодов."""
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    prev_since = since - timedelta(days=days)
+
+    # Выручка по часам (для текущего периода)
+    hourly = await db.execute(
+        select(
+            func.extract("hour", Transaction.created_at).label("hour"),
+            func.count(Transaction.id).label("count"),
+            func.coalesce(func.sum(Transaction.purchase_amount), 0).label("revenue"),
+        )
+        .where(
+            Transaction.created_at >= since,
+            Transaction.type == TransactionType.EARN,
+        )
+        .group_by("hour")
+        .order_by("hour")
+    )
+    hourly_data = [
+        {"hour": int(r.hour), "count": r.count, "revenue": float(r.revenue)}
+        for r in hourly.all()
+    ]
+
+    # Текущий vs предыдущий период
+    curr_rev = (await db.execute(
+        select(func.coalesce(func.sum(Transaction.purchase_amount), 0))
+        .where(Transaction.created_at >= since, Transaction.type == TransactionType.EARN)
+    )).scalar() or 0
+    prev_rev = (await db.execute(
+        select(func.coalesce(func.sum(Transaction.purchase_amount), 0))
+        .where(
+            Transaction.created_at >= prev_since,
+            Transaction.created_at < since,
+            Transaction.type == TransactionType.EARN,
+        )
+    )).scalar() or 0
+
+    curr_customers = (await db.execute(
+        select(func.count(Customer.id)).where(Customer.created_at >= since)
+    )).scalar() or 0
+    prev_customers = (await db.execute(
+        select(func.count(Customer.id)).where(
+            Customer.created_at >= prev_since, Customer.created_at < since
+        )
+    )).scalar() or 0
+
+    # Retention: клиенты с >1 покупкой за период
+    active_buyers = (await db.execute(
+        select(func.count())
+        .select_from(
+            select(Transaction.customer_id)
+            .where(Transaction.created_at >= since, Transaction.type == TransactionType.EARN)
+            .group_by(Transaction.customer_id)
+            .having(func.count(Transaction.id) > 1)
+            .subquery()
+        )
+    )).scalar() or 0
+    total_buyers = (await db.execute(
+        select(func.count(func.distinct(Transaction.customer_id)))
+        .where(Transaction.created_at >= since, Transaction.type == TransactionType.EARN)
+    )).scalar() or 0
+
+    # Распределение по типам транзакций
+    type_dist = await db.execute(
+        select(
+            Transaction.type,
+            func.count(Transaction.id).label("count"),
+            func.coalesce(func.sum(Transaction.amount), 0).label("total"),
+        )
+        .where(Transaction.created_at >= since)
+        .group_by(Transaction.type)
+    )
+    type_data = [
+        {"type": r.type.value, "count": r.count, "total": float(r.total)}
+        for r in type_dist.all()
+    ]
+
+    # Средний LTV (total_earned на клиента)
+    avg_ltv = (await db.execute(
+        select(func.avg(BonusAccount.total_earned))
+    )).scalar() or 0
+
+    return {
+        "hourly_activity": hourly_data,
+        "revenue_current": float(curr_rev),
+        "revenue_previous": float(prev_rev),
+        "revenue_change_pct": round((float(curr_rev) - float(prev_rev)) / float(prev_rev) * 100, 1) if prev_rev else 0,
+        "new_customers_current": curr_customers,
+        "new_customers_previous": prev_customers,
+        "retention_rate": round(active_buyers / total_buyers * 100, 1) if total_buyers else 0,
+        "repeat_buyers": active_buyers,
+        "total_buyers": total_buyers,
+        "transaction_types": type_data,
+        "average_ltv": round(float(avg_ltv), 2),
         "period_days": days,
     }
 
@@ -1005,4 +1203,293 @@ async def test_whatsapp(
         return SuccessResponse(message="Тестовое сообщение отправлено")
     else:
         raise HTTPException(status_code=500, detail={"message": "Не удалось отправить сообщение. Проверьте консоль для деталей."})
+
+
+# ═══════════════════════════════════════
+# SMART COUPONS (Персональные купоны)
+# ═══════════════════════════════════════
+
+class CouponCreateRequest(BaseModel):
+    customer_id: str | None = None  # None = доступен всем
+    title: str
+    description: str | None = None
+    bonus_amount: float
+    min_purchase: float = 0
+    expires_at: str | None = None  # ISO datetime
+
+
+@router.get(
+    "/coupons",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def list_coupons(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    customer_id: str = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Список всех купонов с фильтром по клиенту."""
+    from sqlalchemy.orm import selectinload
+
+    q = select(Coupon).options(selectinload(Coupon.customer))
+    if customer_id:
+        q = q.where(Coupon.customer_id == customer_id)
+
+    total = (await db.execute(
+        select(func.count()).select_from(q.subquery())
+    )).scalar() or 0
+
+    result = await db.execute(
+        q.order_by(Coupon.created_at.desc())
+        .offset((page - 1) * limit).limit(limit)
+    )
+    coupons = result.scalars().all()
+
+    return {
+        "items": [
+            {
+                "id": str(c.id),
+                "code": c.code,
+                "title": c.title,
+                "description": c.description,
+                "bonus_amount": float(c.bonus_amount),
+                "min_purchase": float(c.min_purchase),
+                "customer_id": str(c.customer_id) if c.customer_id else None,
+                "customer_name": c.customer.full_name if c.customer else "Все клиенты",
+                "is_used": c.is_used,
+                "is_active": c.is_active,
+                "expires_at": c.expires_at.isoformat() if c.expires_at else None,
+                "used_at": c.used_at.isoformat() if c.used_at else None,
+                "created_at": c.created_at.isoformat(),
+            }
+            for c in coupons
+        ],
+        "total": total,
+        "page": page,
+    }
+
+
+@router.post(
+    "/coupons",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def create_coupon(
+    body: CouponCreateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> SuccessResponse:
+    """Создать персональный или общий купон."""
+    import secrets
+
+    code = f"SC-{secrets.token_hex(4).upper()}"
+
+    expires = None
+    if body.expires_at:
+        expires = datetime.fromisoformat(body.expires_at)
+
+    coupon = Coupon(
+        customer_id=uuid.UUID(body.customer_id) if body.customer_id else None,
+        code=code,
+        title=body.title,
+        description=body.description,
+        bonus_amount=Decimal(str(body.bonus_amount)),
+        min_purchase=Decimal(str(body.min_purchase)),
+        expires_at=expires,
+    )
+    db.add(coupon)
+    await db.commit()
+
+    # Отправить WhatsApp если персональный купон
+    if body.customer_id:
+        customer = (await db.execute(
+            select(Customer).where(Customer.id == body.customer_id)
+        )).scalar_one_or_none()
+        if customer:
+            wa_settings = await db.execute(
+                select(Setting).where(Setting.key.in_([
+                    "ENABLE_WHATSAPP_NOTIFICATIONS", "GREENAPI_INSTANCE_ID", "GREENAPI_API_TOKEN",
+                ]))
+            )
+            s_map = {s.key: s.value for s in wa_settings.scalars().all()}
+            if s_map.get("ENABLE_WHATSAPP_NOTIFICATIONS") == "true":
+                iid = s_map.get("GREENAPI_INSTANCE_ID")
+                tok = s_map.get("GREENAPI_API_TOKEN")
+                if iid and tok:
+                    msg = (
+                        f"🎟 {customer.full_name}, у вас новый купон!\n"
+                        f"*{body.title}*\n"
+                        f"Бонус: +{int(body.bonus_amount)} KGS\n"
+                        f"Код: {code}\n\n"
+                        f"📱 Активируйте: https://cabinet.smartcentr.store\n"
+                        f"🛒 Смарт Центр"
+                    )
+                    await send_whatsapp_message(
+                        phone=customer.phone, message=msg,
+                        instance_id=iid, api_token=tok,
+                    )
+
+    return SuccessResponse(message=f"Купон создан: {code}")
+
+
+@router.delete(
+    "/coupons/{coupon_id}",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def delete_coupon(
+    coupon_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> SuccessResponse:
+    """Деактивировать купон."""
+    result = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail={"message": "Купон не найден"})
+    coupon.is_active = False
+    await db.commit()
+    return SuccessResponse(message="Купон деактивирован")
+
+
+# ═══════════════════════════════════════════
+# REVIEW BONUS MANAGEMENT
+# ═══════════════════════════════════════════
+
+@router.get(
+    "/reviews",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def list_reviews(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: str = Query(None, alias="status"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Список заявок на бонус за отзыв."""
+    from sqlalchemy.orm import selectinload
+
+    q = select(ReviewRequest).options(selectinload(ReviewRequest.customer))
+    if status_filter:
+        try:
+            q = q.where(ReviewRequest.status == ReviewStatus(status_filter))
+        except ValueError:
+            pass
+
+    total = (await db.execute(
+        select(func.count()).select_from(q.subquery())
+    )).scalar() or 0
+
+    result = await db.execute(
+        q.order_by(ReviewRequest.created_at.desc())
+        .offset((page - 1) * limit).limit(limit)
+    )
+    reviews = result.scalars().all()
+
+    return {
+        "items": [
+            {
+                "id": str(r.id),
+                "customer_id": str(r.customer_id),
+                "customer_name": r.customer.full_name if r.customer else "—",
+                "customer_phone": r.customer.phone if r.customer else "—",
+                "platform": r.platform.value,
+                "review_link": r.review_link,
+                "status": r.status.value,
+                "bonus_amount": float(r.bonus_amount),
+                "admin_note": r.admin_note,
+                "created_at": r.created_at.isoformat(),
+                "reviewed_at": r.reviewed_at.isoformat() if r.reviewed_at else None,
+            }
+            for r in reviews
+        ],
+        "total": total,
+        "page": page,
+    }
+
+
+class ReviewActionRequest(BaseModel):
+    action: str  # "approve" or "reject"
+    note: str | None = None
+
+
+@router.post(
+    "/reviews/{review_id}",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def action_review(
+    review_id: uuid.UUID,
+    body: ReviewActionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> SuccessResponse:
+    """Одобрить или отклонить заявку на бонус за отзыв."""
+    from sqlalchemy.orm import selectinload
+
+    result = await db.execute(
+        select(ReviewRequest).options(selectinload(ReviewRequest.customer))
+        .where(ReviewRequest.id == review_id)
+    )
+    review = result.scalar_one_or_none()
+    if not review:
+        raise HTTPException(status_code=404, detail={"message": "Заявка не найдена"})
+    if review.status != ReviewStatus.PENDING:
+        raise HTTPException(status_code=400, detail={"message": "Заявка уже обработана"})
+
+    review.reviewed_by = uuid.UUID(current_user["sub"])
+    review.reviewed_at = datetime.now(timezone.utc)
+    review.admin_note = body.note
+
+    if body.action == "approve":
+        review.status = ReviewStatus.APPROVED
+
+        # Credit bonus
+        account = (await db.execute(
+            select(BonusAccount).where(BonusAccount.customer_id == review.customer_id).with_for_update()
+        )).scalar_one_or_none()
+        if account:
+            account.balance += review.bonus_amount
+            account.total_earned += review.bonus_amount
+
+            platform_name = "Google Maps" if review.platform.value == "google" else "2GIS"
+            txn = Transaction(
+                customer_id=review.customer_id,
+                type=TransactionType.PROMO,
+                amount=review.bonus_amount,
+                note=f"⭐ Бонус за отзыв на {platform_name}",
+            )
+            db.add(txn)
+
+            # WhatsApp notification
+            wa_settings = await db.execute(
+                select(Setting).where(Setting.key.in_([
+                    "ENABLE_WHATSAPP_NOTIFICATIONS", "GREENAPI_INSTANCE_ID", "GREENAPI_API_TOKEN",
+                ]))
+            )
+            s_map = {s.key: s.value for s in wa_settings.scalars().all()}
+            if s_map.get("ENABLE_WHATSAPP_NOTIFICATIONS") == "true" and review.customer:
+                iid = s_map.get("GREENAPI_INSTANCE_ID")
+                tok = s_map.get("GREENAPI_API_TOKEN")
+                if iid and tok:
+                    msg = (
+                        f"⭐ {review.customer.full_name}, спасибо за отзыв!\n"
+                        f"Вам начислено +{int(review.bonus_amount)} KGS бонусов.\n"
+                        f"Баланс: {float(account.balance):.0f} KGS\n\n"
+                        f"📱 https://cabinet.smartcentr.store\n"
+                        f"🛒 Смарт Центр"
+                    )
+                    await send_whatsapp_message(
+                        phone=review.customer.phone, message=msg,
+                        instance_id=iid, api_token=tok,
+                    )
+
+        await db.commit()
+        return SuccessResponse(message=f"Отзыв одобрен, +{int(review.bonus_amount)} KGS начислено")
+
+    elif body.action == "reject":
+        review.status = ReviewStatus.REJECTED
+        await db.commit()
+        return SuccessResponse(message="Заявка отклонена")
+
+    else:
+        raise HTTPException(status_code=400, detail={"message": "Действие: approve или reject"})
 

@@ -225,9 +225,42 @@ export default function CampaignsPage() {
 
           <div>
             <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>
-              WhatsApp шаблон (плейсхолдеры: {'{name} {amount} {balance}'})
+              WhatsApp шаблон (плейсхолдеры: {'{name} {amount} {balance} {link}'})
             </label>
+            {/* Quick templates */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Стандарт', text: 'Здравствуйте, {name}! Вам начислен бонус +{amount} KGS. Баланс: {balance} KGS.\n📱 {link}\n🛒 Смарт Центр' },
+                { label: 'Праздник', text: '🎉 {name}, поздравляем с праздником!\nВам начислено +{amount} KGS бонусов!\n💰 Баланс: {balance} KGS\n📱 {link}' },
+                { label: 'Скидка', text: '🔥 {name}, только для вас!\nБонус +{amount} KGS уже на счёте!\nИспользуйте при следующей покупке.\n📱 {link}' },
+                { label: 'VIP', text: '⭐ {name}, спасибо за лояльность!\nВам начислено +{amount} KGS как VIP клиенту.\nБаланс: {balance} KGS\n📱 {link}' },
+              ].map(t => (
+                <button key={t.label} type="button" onClick={() => setTemplate(t.text)}
+                  style={{
+                    padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    background: template === t.text ? 'rgba(255,230,0,0.2)' : 'rgba(255,255,255,0.06)',
+                    color: template === t.text ? '#FFE600' : '#8899aa',
+                  }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
             <textarea className="input" value={template} onChange={e => setTemplate(e.target.value)} rows={3} style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+            {/* Preview */}
+            {template && (
+              <div style={{
+                marginTop: 8, padding: '12px 14px', borderRadius: 10,
+                background: '#075E54', color: '#e2eaf6', fontSize: 13, lineHeight: 1.5,
+                whiteSpace: 'pre-wrap', position: 'relative',
+              }}>
+                <div style={{ fontSize: 10, color: '#25D366', fontWeight: 700, marginBottom: 4 }}>Предпросмотр WhatsApp:</div>
+                {template
+                  .replace(/\{name\}/g, 'Алексей')
+                  .replace(/\{amount\}/g, amount || '200')
+                  .replace(/\{balance\}/g, '1,500')
+                  .replace(/\{link\}/g, 'cabinet.smartcentr.store')}
+              </div>
+            )}
           </div>
 
           <div>

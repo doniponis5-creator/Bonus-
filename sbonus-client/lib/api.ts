@@ -81,6 +81,16 @@ export const customerAPI = {
     api.post('/api/v1/customer/referral', { code }),
   referralInfo: () =>
     api.get('/api/v1/customer/referral'),
+  leaderboard: (period: 'week' | 'month' | 'all' = 'month') =>
+    api.get(`/api/v1/customer/leaderboard?period=${period}`),
+  coupons: () =>
+    api.get('/api/v1/customer/coupons'),
+  activateCoupon: (code: string) =>
+    api.post(`/api/v1/customer/coupons/${encodeURIComponent(code)}/activate`),
+  submitReview: (platform: string, review_link: string) =>
+    api.post('/api/v1/customer/review', { platform, review_link }),
+  myReviews: () =>
+    api.get('/api/v1/customer/reviews'),
 };
 
 export const wheelAPI = {

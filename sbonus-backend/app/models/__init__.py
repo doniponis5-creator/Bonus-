@@ -78,6 +78,19 @@ class NotificationStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class ReviewStatus(str, enum.Enum):
+    """Статус заявки на бонус за отзыв."""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class ReviewPlatform(str, enum.Enum):
+    """Платформа отзыва."""
+    GOOGLE = "google"
+    TWOGIS = "2gis"
+
+
 # ═══════════════════════════════════════════
 # МОДЕЛИ
 # ═══════════════════════════════════════════
@@ -231,6 +244,61 @@ class PromoCode(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Coupon(Base):
+    """Персональные купоны для клиентов."""
+    __tablename__ = "coupons"
+    __table_args__ = (
+        Index("ix_coupons_customer_id", "customer_id"),
+        Index("ix_coupons_code", "code", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=True)
+    code: Mapped[str] = mapped_column(String(30), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bonus_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    min_purchase: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    customer: Mapped["Customer | None"] = relationship("Customer", foreign_keys=[customer_id])
+
+
+class ReviewRequest(Base):
+    """Заявки на бонус за отзыв в Google / 2GIS."""
+    __tablename__ = "review_requests"
+    __table_args__ = (
+        Index("ix_review_requests_customer_id", "customer_id"),
+        Index("ix_review_requests_status", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
+    platform: Mapped[ReviewPlatform] = mapped_column(
+        SAEnum(ReviewPlatform, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+    )
+    review_link: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[ReviewStatus] = mapped_column(
+        SAEnum(ReviewStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ReviewStatus.PENDING,
+    )
+    bonus_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("200"))
+    reviewer_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    customer: Mapped["Customer"] = relationship("Customer", foreign_keys=[customer_id])
+    reviewer: Mapped["User | None"] = relationship("User", foreign_keys=[reviewed_by])
 
 
 class AuditLog(Base):
