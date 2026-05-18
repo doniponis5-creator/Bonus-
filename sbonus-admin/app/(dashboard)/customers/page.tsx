@@ -53,6 +53,14 @@ export default function CustomersPage() {
   };
 
   const handleAction = async () => {
+    if (modalType === 'earn' || modalType === 'spend') {
+      const amt = Number(formData.amount);
+      if (!amt || amt <= 0) { alert('Введите сумму больше 0'); return; }
+      if (!formData.note || formData.note.trim().length < 2) {
+        alert('Причина обязательна (минимум 2 символа)');
+        return;
+      }
+    }
     try {
       if (modalType === 'edit') {
         await customersAPI.update(selectedCustomer.id, {
@@ -61,14 +69,16 @@ export default function CustomersPage() {
           birth_date: formData.birth_date || null
         });
       } else if (modalType === 'earn') {
-        await customersAPI.adminEarn(selectedCustomer.id, Number(formData.amount), formData.note);
+        await customersAPI.adminEarn(selectedCustomer.id, Number(formData.amount), formData.note.trim());
       } else if (modalType === 'spend') {
-        await customersAPI.adminSpend(selectedCustomer.id, Number(formData.amount), formData.note);
+        await customersAPI.adminSpend(selectedCustomer.id, Number(formData.amount), formData.note.trim());
       }
       setModalOpen(false);
       loadCustomers(page);
     } catch (err: any) {
-      alert(err?.response?.data?.detail?.message || 'Ошибка выполнения операции');
+      const d = err?.response?.data?.detail;
+      const msg = typeof d === 'string' ? d : (d?.message || (Array.isArray(d) ? d.map((e:any)=>e.msg).join('; ') : 'Ошибка выполнения операции'));
+      alert(msg);
     }
   };
 
@@ -218,15 +228,15 @@ export default function CustomersPage() {
                     <input className="input" style={{width:'100%', fontSize: 20, color: '#00e5a0', fontWeight: 700}} type="number" value={formData.amount} onChange={e=>setFormData({...formData, amount: e.target.value})} placeholder="0" />
                   </div>
                   <div>
-                    <label style={{display:'block', fontSize: 12, color: '#8899aa', marginBottom: 8}}>Причина (обязательно)</label>
-                    <textarea className="input" style={{width:'100%', minHeight: 80}} value={formData.note} onChange={e=>setFormData({...formData, note: e.target.value})} placeholder="Напр: Корректировка баланса" />
+                    <label style={{display:'block', fontSize: 12, color: '#8899aa', marginBottom: 8}}>Причина (минимум 2 символа) *</label>
+                    <textarea className="input" style={{width:'100%', minHeight: 80}} value={formData.note} onChange={e=>setFormData({...formData, note: e.target.value})} placeholder="Напр: Корректировка баланса" minLength={2} maxLength={255} />
                   </div>
                 </>
               )}
               
               <div style={{display:'flex', gap: 12, marginTop: 12}}>
                 <button className="btn" style={{flex:1, background: '#1c2a3a', color: '#e2eaf6'}} onClick={() => setModalOpen(false)}>Отмена</button>
-                <button className="btn btn-primary" style={{flex:1}} onClick={handleAction} disabled={ (modalType !== 'edit' && (!formData.amount || !formData.note)) }>Сохранить</button>
+                <button className="btn btn-primary" style={{flex:1}} onClick={handleAction} disabled={ (modalType !== 'edit' && (!formData.amount || Number(formData.amount) <= 0 || !formData.note || formData.note.trim().length < 2)) }>Сохранить</button>
               </div>
             </div>
           </div>
