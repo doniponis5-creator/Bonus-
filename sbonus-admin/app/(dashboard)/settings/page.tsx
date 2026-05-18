@@ -1,5 +1,5 @@
 "use client";
-import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save } from 'lucide-react';
+import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -47,8 +47,13 @@ export default function SettingsPage() {
     ENABLE_WHATSAPP_NOTIFICATIONS: "false",
     GREENAPI_INSTANCE_ID: "",
     GREENAPI_API_TOKEN: "",
-    WHATSAPP_TEMPLATE_EARN: "Начислено: {amount} бонусов. Баланс: {balance}",
-    WHATSAPP_TEMPLATE_SPEND: "Списано: {amount} бонусов. Баланс: {balance}",
+    WHATSAPP_TEMPLATE_EARN: "✅ {name}, начислено +{amount} KGS бонусов!\nБаланс: {balance} KGS\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_SPEND: "💳 {name}, списано {amount} KGS бонусов.\nОстаток: {balance} KGS\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_EXPIRE: "⏰ {name}, у вас истекли {amount} KGS бонусов.\nОстаток: {balance} KGS.\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_EXPIRE_WARNING: "⚠️ {name}, через {days} дней истечёт {amount} KGS бонусов!\nБаланс: {balance} KGS.\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_BALANCE_REMINDER: "👋 {name}, у вас {balance} KGS бонусов!\nНе забудьте использовать 🛍\n\n📱 Проверить баланс: {link}\n🛒 Смарт Центр",
+    BALANCE_REMINDER_INACTIVE_DAYS: "14",
+    BALANCE_REMINDER_MIN_BALANCE: "100",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
@@ -385,8 +390,11 @@ export default function SettingsPage() {
             <div>
               <h2 style={styles.cardTitle}>Шаблоны сообщений</h2>
               <p style={styles.cardDesc}>
-                Переменные: <span style={{ color: colors.accent }}>{"{amount}"}</span> — сумма,{" "}
-                <span style={{ color: colors.accent }}>{"{balance}"}</span> — баланс
+                Переменные: <span style={{ color: colors.accent }}>{"{name}"}</span> — имя,{" "}
+                <span style={{ color: colors.accent }}>{"{amount}"}</span> — сумма,{" "}
+                <span style={{ color: colors.accent }}>{"{balance}"}</span> — баланс,{" "}
+                <span style={{ color: colors.accent }}>{"{link}"}</span> — кабинет,{" "}
+                <span style={{ color: colors.accent }}>{"{days}"}</span> — дни
               </p>
             </div>
           </div>
@@ -408,6 +416,77 @@ export default function SettingsPage() {
               value={settings.WHATSAPP_TEMPLATE_SPEND}
               onChange={(e) => handleChange("WHATSAPP_TEMPLATE_SPEND", e.target.value)}
             />
+          </div>
+          <div>
+            <label style={styles.inputLabel}>Истечение бонусов (EXPIRE)</label>
+            <textarea
+              style={styles.textarea}
+              value={settings.WHATSAPP_TEMPLATE_EXPIRE}
+              onChange={(e) => handleChange("WHATSAPP_TEMPLATE_EXPIRE", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={styles.inputLabel}>Предупреждение об истечении</label>
+            <textarea
+              style={styles.textarea}
+              value={settings.WHATSAPP_TEMPLATE_EXPIRE_WARNING}
+              onChange={(e) => handleChange("WHATSAPP_TEMPLATE_EXPIRE_WARNING", e.target.value)}
+            />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={styles.inputLabel}>Напоминание о бонусах (REMINDER)</label>
+            <textarea
+              style={styles.textarea}
+              value={settings.WHATSAPP_TEMPLATE_BALANCE_REMINDER}
+              onChange={(e) => handleChange("WHATSAPP_TEMPLATE_BALANCE_REMINDER", e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* BALANCE REMINDER CARD */}
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardTitleWrapper}>
+            <Bell size={24} color={colors.accent} />
+            <div>
+              <h2 style={styles.cardTitle}>Авто-напоминания</h2>
+              <p style={styles.cardDesc}>Ежедневно в 12:00 — напоминание неактивным клиентам с бонусами</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Clock size={16} color={colors.textMuted} />
+            <span style={{ fontSize: 13, color: colors.textMuted }}>Каждый день 12:00</span>
+          </div>
+        </div>
+
+        <div style={styles.grid2}>
+          <div>
+            <label style={styles.inputLabel}>Дней без покупок для напоминания</label>
+            <input
+              style={styles.input}
+              type="number"
+              min="1"
+              max="90"
+              value={settings.BALANCE_REMINDER_INACTIVE_DAYS}
+              onChange={(e) => handleChange("BALANCE_REMINDER_INACTIVE_DAYS", e.target.value)}
+            />
+            <p style={{ fontSize: 12, color: colors.textMuted, marginTop: 6 }}>
+              Клиенты, которые не покупали больше этого срока, получат напоминание
+            </p>
+          </div>
+          <div>
+            <label style={styles.inputLabel}>Минимальный баланс (KGS)</label>
+            <input
+              style={styles.input}
+              type="number"
+              min="0"
+              value={settings.BALANCE_REMINDER_MIN_BALANCE}
+              onChange={(e) => handleChange("BALANCE_REMINDER_MIN_BALANCE", e.target.value)}
+            />
+            <p style={{ fontSize: 12, color: colors.textMuted, marginTop: 6 }}>
+              Напоминание только если баланс выше этой суммы
+            </p>
           </div>
         </div>
       </div>

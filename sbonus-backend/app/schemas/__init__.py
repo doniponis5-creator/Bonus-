@@ -215,6 +215,11 @@ class SettingsUpdateRequest(BaseModel):
     ENABLE_WHATSAPP_NOTIFICATIONS: Optional[str] = None
     WHATSAPP_TEMPLATE_EARN: Optional[str] = None
     WHATSAPP_TEMPLATE_SPEND: Optional[str] = None
+    WHATSAPP_TEMPLATE_EXPIRE: Optional[str] = None
+    WHATSAPP_TEMPLATE_EXPIRE_WARNING: Optional[str] = None
+    WHATSAPP_TEMPLATE_BALANCE_REMINDER: Optional[str] = None
+    BALANCE_REMINDER_INACTIVE_DAYS: Optional[str] = None
+    BALANCE_REMINDER_MIN_BALANCE: Optional[str] = None
     MIN_PURCHASE_FOR_BONUS: Optional[str] = None
     REFERRAL_BONUS_INVITER: Optional[str] = None
     REFERRAL_BONUS_INVITEE: Optional[str] = None
