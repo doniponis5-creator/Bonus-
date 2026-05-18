@@ -15,7 +15,7 @@ interface LogItem {
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  earn: '#00e5a0',
+  earn: '#22c55e',
   spend: '#ff4d4d',
   login: '#60a5fa',
   logout: '#8899aa',

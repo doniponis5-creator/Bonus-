@@ -28,7 +28,7 @@ const ICONS: Record<ToastType, typeof CheckCircle2> = {
 };
 
 const COLORS: Record<ToastType, { bg: string; border: string; icon: string }> = {
-  success: { bg: 'rgba(0, 229, 160, 0.1)', border: '#00E5A0', icon: '#00E5A0' },
+  success: { bg: 'rgba(34, 197, 94, 0.1)', border: '#22c55e', icon: '#22c55e' },
   error: { bg: 'rgba(255, 71, 87, 0.1)', border: '#FF4757', icon: '#FF4757' },
   warning: { bg: 'rgba(255, 165, 2, 0.1)', border: '#FFA502', icon: '#FFA502' },
   info: { bg: 'rgba(70, 130, 255, 0.1)', border: '#4682FF', icon: '#4682FF' },
@@ -109,7 +109,7 @@ function ConfirmModal({ message, onResult }: { message: string; onResult: (ok: b
           }}>Отмена</button>
           <button onClick={() => onResult(true)} style={{
             padding: '10px 20px', borderRadius: 10, border: 'none',
-            background: '#00E5A0', color: '#0a0f1a', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+            background: '#FFE600', color: '#0a0f1a', cursor: 'pointer', fontSize: 14, fontWeight: 600,
           }}>Подтвердить</button>
         </div>
       </div>

@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
 
   qrBtn: {
     backgroundColor: COLORS.card, borderRadius: 20, padding: 28,
-    borderWidth: 1, borderColor: 'rgba(0,229,160,0.2)', alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,230,0,0.2)', alignItems: 'center',
   },
   qrTitle: { color: COLORS.text, fontSize: 17, fontWeight: '700', marginBottom: 6 },
   qrDesc: { color: COLORS.text2, fontSize: 13, textAlign: 'center' },

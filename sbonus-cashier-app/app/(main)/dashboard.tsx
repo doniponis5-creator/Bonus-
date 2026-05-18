@@ -66,7 +66,7 @@ export default function DashboardScreen() {
           onPress={() => navigation.navigate('Search')}
           activeOpacity={0.7}
         >
-          <View style={[styles.btnIcon, { backgroundColor: 'rgba(0,229,160,0.12)' }]}>
+          <View style={[styles.btnIcon, { backgroundColor: 'rgba(255,230,0,0.12)' }]}>
             <Search size={22} color={COLORS.accent} />
           </View>
           <View style={styles.btnInfo}>
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   logoCircle: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(0,229,160,0.12)', borderWidth: 1.5, borderColor: COLORS.accent,
+    backgroundColor: 'rgba(255,230,0,0.12)', borderWidth: 1.5, borderColor: COLORS.accent,
     justifyContent: 'center', alignItems: 'center',
   },
   logoText: { fontSize: 20, fontWeight: '900', color: COLORS.accent },

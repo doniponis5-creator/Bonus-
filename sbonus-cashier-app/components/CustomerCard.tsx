@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     flexDirection: 'row', gap: 8,
   },
-  btnEarn: { backgroundColor: 'rgba(0,229,160,0.15)', borderWidth: 1, borderColor: 'rgba(0,229,160,0.3)' },
+  btnEarn: { backgroundColor: 'rgba(255,230,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,230,0,0.3)' },
   btnSpend: { backgroundColor: 'rgba(124,111,255,0.15)', borderWidth: 1, borderColor: 'rgba(124,111,255,0.3)' },
   btnText: { color: COLORS.text, fontSize: 15, fontWeight: '700' },
 });

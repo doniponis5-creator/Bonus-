@@ -7,7 +7,7 @@ import { adminAPI } from '@/lib/api';
 type TxMeta = { label: string; color: string; Icon: typeof PlusCircle };
 
 const TYPE_LABELS: Record<string, TxMeta> = {
-  earn:     { label: 'Начисление',    color: '#00e5a0', Icon: PlusCircle },
+  earn:     { label: 'Начисление',    color: '#22c55e', Icon: PlusCircle },
   spend:    { label: 'Списание',      color: '#ff4d4d', Icon: MinusCircle },
   birthday: { label: 'День рождения', color: '#ffd700', Icon: Gift },
   referral: { label: 'Реферал',       color: '#60a5fa', Icon: Users },

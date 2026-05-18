@@ -1,6 +1,6 @@
 /**
  * S Bonus — Тема приложения кассира.
- * Тёмная тема + зелёный акцент.
+ * Тёмная тема + жёлтый акцент (Smart Center brand).
  */
 
 export const COLORS = {
@@ -11,9 +11,9 @@ export const COLORS = {
   card: '#141c2b',
   cardBorder: '#1e293b',
 
-  // Акценты
-  accent: '#00E5A0',
-  accent2: '#00B8D4',
+  // Акценты (brand yellow)
+  accent: '#FFE600',
+  accent2: '#FFC107',
   accent3: '#7C6FFF',
 
   // Текст
@@ -22,7 +22,7 @@ export const COLORS = {
   text3: '#556677',
 
   // Статусы
-  success: '#00E5A0',
+  success: '#22c55e',
   danger: '#ef4444',
   warn: '#f59e0b',
 
@@ -30,7 +30,7 @@ export const COLORS = {
   bronze: '#cd7f32',
   silver: '#b0b0b0',
   gold: '#ffd700',
-  platinum: '#00E5A0',
+  platinum: '#FFE600',
 
   // Общие
   white: '#ffffff',

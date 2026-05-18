@@ -2,7 +2,7 @@ import { Clock, Gift, History, MinusCircle, PlusCircle, RefreshCcw, Ticket, User
 import type { CabinetTransaction } from '@/lib/api';
 
 const TX_META: Record<string, { label: string; color: string; Icon: typeof PlusCircle; sign: '+' | '-' }> = {
-  earn:     { label: 'Начисление',    color: '#00E5A0', Icon: PlusCircle,  sign: '+' },
+  earn:     { label: 'Начисление',    color: '#FFE600', Icon: PlusCircle,  sign: '+' },
   spend:    { label: 'Списание',      color: '#ff4d4d', Icon: MinusCircle, sign: '-' },
   birthday: { label: 'День рождения', color: '#ffd700', Icon: Gift,         sign: '+' },
   referral: { label: 'Реферал',       color: '#60a5fa', Icon: Users,        sign: '+' },

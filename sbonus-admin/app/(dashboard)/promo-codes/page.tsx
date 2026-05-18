@@ -57,7 +57,7 @@ export default function PromoCodesPage() {
               const inactive = !p.is_active || exhausted || expired;
               return (
                 <tr key={p.id}>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#00e5a0' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#FFE600' }}>
                     {p.code}
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#e2eaf6' }}>
@@ -74,8 +74,8 @@ export default function PromoCodesPage() {
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
                     <span style={{
-                      background: inactive ? '#ff4d4d18' : '#00e5a018',
-                      color: inactive ? '#ff4d4d' : '#00e5a0',
+                      background: inactive ? '#ff4d4d18' : '#22c55e18',
+                      color: inactive ? '#ff4d4d' : '#22c55e',
                       padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700,
                     }}>
                       {exhausted ? 'Исчерпан' : expired ? 'Истёк' : p.is_active ? 'Активен' : 'Отключён'}

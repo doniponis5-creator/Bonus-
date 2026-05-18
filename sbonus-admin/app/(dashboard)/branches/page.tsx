@@ -76,8 +76,8 @@ export default function BranchesPage() {
                 <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{b.phone || '—'}</td>
                 <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
                   <span style={{
-                    background: b.is_active ? '#00e5a018' : '#ff4d4d18',
-                    color: b.is_active ? '#00e5a0' : '#ff4d4d',
+                    background: b.is_active ? '#22c55e18' : '#ff4d4d18',
+                    color: b.is_active ? '#22c55e' : '#ff4d4d',
                     padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700,
                   }}>
                     {b.is_active ? 'Активен' : 'Отключён'}

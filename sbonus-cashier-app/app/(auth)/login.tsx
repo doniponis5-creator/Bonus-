@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   logoCircle: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: 'rgba(0,229,160,0.12)', borderWidth: 2, borderColor: COLORS.accent,
+    backgroundColor: 'rgba(255,230,0,0.12)', borderWidth: 2, borderColor: COLORS.accent,
     justifyContent: 'center', alignItems: 'center', marginBottom: 12,
   },
   logoText: { fontSize: 36, fontWeight: '900', color: COLORS.accent },

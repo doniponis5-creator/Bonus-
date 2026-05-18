@@ -45,7 +45,7 @@ export default function LoginPage() {
               width: 72,
               height: 72,
               borderRadius: '50%',
-              background: 'rgba(0,229,160,0.15)',
+              background: 'rgba(255,230,0,0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

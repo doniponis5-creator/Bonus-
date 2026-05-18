@@ -80,7 +80,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: COLORS.card, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.cardBorder },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   name: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
-  br: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(0,229,160,0.08)', borderRadius: 12, padding: 14, marginBottom: 20 },
+  br: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,230,0,0.08)', borderRadius: 12, padding: 14, marginBottom: 20 },
   brLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   bl: { color: COLORS.text2, fontSize: 14 }, bv: { color: COLORS.accent, fontSize: 20, fontWeight: '800' },
   l: { color: COLORS.text2, fontSize: 13, fontWeight: '600', marginBottom: 8 },

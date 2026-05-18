@@ -21,7 +21,7 @@ const TIER_COLORS: Record<string, string> = {
   Gold: '#FFD700',
   Platinum: '#B9F2FF',
 };
-const DEFAULT_TIER_COLOR = '#00E5A0';
+const DEFAULT_TIER_COLOR = '#FFE600';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);

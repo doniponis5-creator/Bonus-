@@ -8,7 +8,7 @@ const TIER_META: Record<string, { Icon: LucideIcon; color: string }> = {
   Bronze:   { Icon: Medal,  color: '#cd7f32' },
   Silver:   { Icon: Award,  color: '#b0b0b0' },
   Gold:     { Icon: Trophy, color: '#ffd700' },
-  Platinum: { Icon: Gem,    color: '#00e5a0' },
+  Platinum: { Icon: Gem,    color: '#FFE600' },
 };
 
 const DEFAULT_META = { Icon: Star, color: '#60a5fa' };

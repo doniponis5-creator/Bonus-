@@ -11,7 +11,7 @@ const CustomToggle = ({ isEnabled, onToggle }: { isEnabled: boolean; onToggle: (
     style={{
       width: "52px",
       height: "28px",
-      background: isEnabled ? "#00e5a0" : "#1c2a3a",
+      background: isEnabled ? "#22c55e" : "#1c2a3a",
       borderRadius: "14px",
       cursor: "pointer",
       position: "relative",
@@ -116,7 +116,7 @@ export default function SettingsPage() {
     bg: "#07090f",
     cardBg: "#0d1117",
     border: "#1c2a3a",
-    accent: "#00e5a0",
+    accent: "#FFE600",
     text: "#e2eaf6",
     textMuted: "#8899aa",
   };
@@ -238,7 +238,7 @@ export default function SettingsPage() {
       fontSize: "16px",
       fontWeight: 700,
       cursor: "pointer",
-      boxShadow: "0 4px 20px rgba(0, 229, 160, 0.3)",
+      boxShadow: "0 4px 20px rgba(255, 230, 0, 0.3)",
       transition: "all 0.2s",
     },
     btnTest: {

@@ -97,8 +97,8 @@ export default function CashiersPage() {
                 <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{c.branch_name}</td>
                 <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
                   <span style={{
-                    background: c.is_active ? '#00e5a018' : '#ff4d4d18',
-                    color: c.is_active ? '#00e5a0' : '#ff4d4d',
+                    background: c.is_active ? '#22c55e18' : '#ff4d4d18',
+                    color: c.is_active ? '#22c55e' : '#ff4d4d',
                     padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700,
                   }}>
                     {c.is_active ? 'Активен' : 'Отключён'}
@@ -112,8 +112,8 @@ export default function CashiersPage() {
                     onClick={() => toggleActive(c)}
                     style={{
                       background: 'none',
-                      border: '1px solid ' + (c.is_active ? '#f59e0b' : '#00e5a0'),
-                      color: c.is_active ? '#f59e0b' : '#00e5a0',
+                      border: '1px solid ' + (c.is_active ? '#f59e0b' : '#22c55e'),
+                      color: c.is_active ? '#f59e0b' : '#22c55e',
                       padding: '6px 12px',
                       borderRadius: 8,
                       cursor: 'pointer',

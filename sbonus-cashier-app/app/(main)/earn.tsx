@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
   },
   preview: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: 'rgba(0,229,160,0.08)', borderRadius: 14, padding: 16, marginTop: 16,
-    borderWidth: 1, borderColor: 'rgba(0,229,160,0.15)',
+    backgroundColor: 'rgba(255,230,0,0.08)', borderRadius: 14, padding: 16, marginTop: 16,
+    borderWidth: 1, borderColor: 'rgba(255,230,0,0.15)',
   },
   previewLabel: { color: COLORS.text2, fontSize: 14 },
   previewValue: { color: COLORS.accent, fontSize: 22, fontWeight: '800' },

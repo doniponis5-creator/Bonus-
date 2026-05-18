@@ -39,7 +39,7 @@ export default function SuccessModal({ visible, type, title, message, amount, ne
       <View style={styles.overlay}>
         <Animated.View style={[styles.card, { transform: [{ scale }], opacity }]}>
           {/* Иконка */}
-          <View style={[styles.iconCircle, { backgroundColor: isSuccess ? 'rgba(0,229,160,0.15)' : 'rgba(239,68,68,0.15)' }]}>
+          <View style={[styles.iconCircle, { backgroundColor: isSuccess ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)' }]}>
             {isSuccess ? (
               <CheckCircle2 size={44} color={COLORS.accent} />
             ) : (

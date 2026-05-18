@@ -99,7 +99,7 @@ export default function CustomersPage() {
     Bronze:'#cd7f32', 
     Silver:'#b0b0b0', 
     Gold:'#ffd700', 
-    Platinum:'#00e5a0' 
+    Platinum:'#FFE600'
   };
 
   return (
@@ -142,8 +142,8 @@ export default function CustomersPage() {
                 <td style={{padding: '16px', color: '#e2eaf6', borderBottom: '1px solid #1c2a3a', fontSize: 14}}>{c.phone}</td>
                 <td style={{padding: '16px', color: '#e2eaf6', borderBottom: '1px solid #1c2a3a', fontSize: 14}}>
                   <span style={{
-                    backgroundColor: `${TIER_COLORS[c.tier_name] || '#00e5a0'}20`, 
-                    color: TIER_COLORS[c.tier_name] || '#00e5a0',
+                    backgroundColor: `${TIER_COLORS[c.tier_name] || '#FFE600'}20`,
+                    color: TIER_COLORS[c.tier_name] || '#FFE600',
                     padding: '4px 10px',
                     borderRadius: '100px',
                     fontSize: 12,
@@ -152,7 +152,7 @@ export default function CustomersPage() {
                     {c.tier_name}
                   </span>
                 </td>
-                <td style={{padding: '16px', color: '#00e5a0', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700}}>
+                <td style={{padding: '16px', color: '#FFE600', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700}}>
                   {Number(c.balance).toLocaleString('ru-RU')} KGS
                   {c.is_active === false && (
                     <span style={{ display: 'block', fontSize: 10, color: '#ff4d4d', fontWeight: 600, marginTop: 2 }}>Заблокирован</span>
@@ -161,9 +161,9 @@ export default function CustomersPage() {
                 <td style={{padding: '16px', borderBottom: '1px solid #1c2a3a', textAlign: 'right'}}>
                   <div style={{display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap'}}>
                     <button onClick={() => openModal('edit', c)} style={{background: 'none', border: '1px solid #1c2a3a', color: '#8899aa', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}><Pencil size={12} /> Изм.</button>
-                    <button onClick={() => openModal('earn', c)} style={{background: 'none', border: '1px solid #00e5a0', color: '#00e5a0', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}><PlusCircle size={12} /> Бонус</button>
+                    <button onClick={() => openModal('earn', c)} style={{background: 'none', border: '1px solid #FFE600', color: '#FFE600', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}><PlusCircle size={12} /> Бонус</button>
                     <button onClick={() => openModal('spend', c)} style={{background: 'none', border: '1px solid #ff4d4d', color: '#ff4d4d', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}><MinusCircle size={12} /> Списать</button>
-                    <button onClick={() => toggleActive(c)} style={{background: 'none', border: '1px solid ' + (c.is_active === false ? '#00e5a0' : '#f59e0b'), color: c.is_active === false ? '#00e5a0' : '#f59e0b', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}>
+                    <button onClick={() => toggleActive(c)} style={{background: 'none', border: '1px solid ' + (c.is_active === false ? '#22c55e' : '#f59e0b'), color: c.is_active === false ? '#22c55e' : '#f59e0b', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4}}>
                       {c.is_active === false ? <><Unlock size={12} /> Разблок.</> : <><Lock size={12} /> Блокир.</>}
                     </button>
                   </div>
@@ -227,7 +227,7 @@ export default function CustomersPage() {
                   </div>
                   <div>
                     <label style={{display:'block', fontSize: 12, color: '#8899aa', marginBottom: 8}}>Сумма бонусов (KGS)</label>
-                    <input className="input" style={{width:'100%', fontSize: 20, color: '#00e5a0', fontWeight: 700}} type="number" value={formData.amount} onChange={e=>setFormData({...formData, amount: e.target.value})} placeholder="0" />
+                    <input className="input" style={{width:'100%', fontSize: 20, color: '#FFE600', fontWeight: 700}} type="number" value={formData.amount} onChange={e=>setFormData({...formData, amount: e.target.value})} placeholder="0" />
                   </div>
                   <div>
                     <label style={{display:'block', fontSize: 12, color: '#8899aa', marginBottom: 8}}>Причина (минимум 2 символа) *</label>

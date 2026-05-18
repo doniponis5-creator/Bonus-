@@ -8,13 +8,13 @@ import { adminAPI } from '@/lib/api';
 const STATUS_LABEL: Record<string, { text: string; color: string; bg: string }> = {
   pending:    { text: 'Ожидает',     color: '#ffb347', bg: '#ffb34718' },
   processing: { text: 'Обработка',   color: '#00b8d4', bg: '#00b8d418' },
-  sent:       { text: 'Отправлено',  color: '#00e5a0', bg: '#00e5a018' },
+  sent:       { text: 'Отправлено',  color: '#22c55e', bg: '#22c55e18' },
   cancelled:  { text: 'Отменено',    color: '#ff4d4d', bg: '#ff4d4d18' },
 };
 
 const REC_STATUS: Record<string, { text: string; color: string }> = {
   pending: { text: 'Ожидает', color: '#ffb347' },
-  sent:    { text: 'Отправлено', color: '#00e5a0' },
+  sent:    { text: 'Отправлено', color: '#22c55e' },
   failed:  { text: 'Ошибка', color: '#ff4d4d' },
 };
 
@@ -64,7 +64,7 @@ export default function CampaignDetailPage() {
         </div>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8899aa', fontSize: 12, marginBottom: 8 }}><Coins size={14} /> Сумма</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#00e5a0' }}>+{Number(c.amount).toLocaleString('ru-RU')} KGS</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#FFE600' }}>+{Number(c.amount).toLocaleString('ru-RU')} KGS</div>
         </div>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8899aa', fontSize: 12, marginBottom: 8 }}><Target size={14} /> Цель</div>

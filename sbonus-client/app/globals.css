@@ -5,15 +5,15 @@
   --bg3: #1a2332;
   --card: #141c2b;
   --border: #1e293b;
-  --accent: #00E5A0;
-  --accent2: #00B8D4;
+  --accent: #FFE600;
+  --accent2: #FFC107;
   --accent3: #7C6FFF;
   --text: #e2eaf6;
   --text2: #8899aa;
   --text3: #556677;
   --danger: #ef4444;
   --warn: #f59e0b;
-  --success: #00E5A0;
+  --success: #22c55e;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -50,7 +50,7 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 12px;
 }
 
-.card-accent { border-color: rgba(0,229,160,0.25); }
+.card-accent { border-color: rgba(255,230,0,0.25); }
 .card-danger { border-color: rgba(239,68,68,0.3); }
 
 /* ── Buttons ── */
@@ -106,7 +106,7 @@ a { text-decoration: none; color: inherit; }
   font-size: 12px;
   font-weight: 700;
 }
-.badge-green { background: rgba(0,229,160,0.15); color: var(--accent); }
+.badge-green { background: rgba(34,197,94,0.15); color: var(--success); }
 .badge-purple { background: rgba(124,111,255,0.15); color: var(--accent3); }
 .badge-yellow { background: rgba(245,158,11,0.15); color: var(--warn); }
 .badge-red { background: rgba(239,68,68,0.15); color: var(--danger); }
@@ -136,7 +136,7 @@ a { text-decoration: none; color: inherit; }
 .tier-bronze { color: #cd7f32; }
 .tier-silver { color: #b0b0b0; }
 .tier-gold { color: #ffd700; }
-.tier-platinum { color: #00E5A0; }
+.tier-platinum { color: #FFE600; }
 
 /* ── Centering ── */
 .center {

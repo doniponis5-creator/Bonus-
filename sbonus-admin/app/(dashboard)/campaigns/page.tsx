@@ -7,7 +7,7 @@ import { adminAPI, customersAPI } from '@/lib/api';
 const STATUS_LABEL: Record<string, { text: string; color: string; bg: string }> = {
   pending:    { text: 'Ожидает',     color: '#ffb347', bg: '#ffb34718' },
   processing: { text: 'Обработка',   color: '#00b8d4', bg: '#00b8d418' },
-  sent:       { text: 'Отправлено',  color: '#00e5a0', bg: '#00e5a018' },
+  sent:       { text: 'Отправлено',  color: '#22c55e', bg: '#22c55e18' },
   cancelled:  { text: 'Отменено',    color: '#ff4d4d', bg: '#ff4d4d18' },
 };
 
@@ -151,12 +151,12 @@ export default function CampaignsPage() {
               return (
                 <tr key={c.id}>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 600, color: '#e2eaf6' }}>
-                    <Link href={`/campaigns/${c.id}`} style={{ color: '#00e5a0' }}>{c.name}</Link>
+                    <Link href={`/campaigns/${c.id}`} style={{ color: '#FFE600' }}>{c.name}</Link>
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6' }}>
                     {new Date(c.bonus_date).toLocaleDateString('ru-RU')}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#00e5a0' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#FFE600' }}>
                     +{Number(c.amount).toLocaleString('ru-RU')} KGS
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
@@ -233,10 +233,10 @@ export default function CampaignsPage() {
           <div>
             <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Цель *</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => setTargetType('all')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'all' ? 'rgba(0,229,160,0.15)' : undefined, color: targetType === 'all' ? '#00e5a0' : undefined, fontWeight: 700 }}>
+              <button type="button" onClick={() => setTargetType('all')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'all' ? 'rgba(255,230,0,0.15)' : undefined, color: targetType === 'all' ? '#FFE600' : undefined, fontWeight: 700 }}>
                 Все клиенты
               </button>
-              <button type="button" onClick={() => setTargetType('individual')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'individual' ? 'rgba(0,229,160,0.15)' : undefined, color: targetType === 'individual' ? '#00e5a0' : undefined, fontWeight: 700 }}>
+              <button type="button" onClick={() => setTargetType('individual')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'individual' ? 'rgba(255,230,0,0.15)' : undefined, color: targetType === 'individual' ? '#FFE600' : undefined, fontWeight: 700 }}>
                 Индивидуально
               </button>
             </div>
@@ -267,9 +267,9 @@ export default function CampaignsPage() {
               <div style={{ fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Выбрано: {selected.length}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {selected.map(s => (
-                  <div key={s.id} style={{ background: 'rgba(0,229,160,0.12)', color: '#00e5a0', padding: '4px 10px', borderRadius: 100, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div key={s.id} style={{ background: 'rgba(255,230,0,0.12)', color: '#FFE600', padding: '4px 10px', borderRadius: 100, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {s.name}
-                    <button type="button" onClick={() => removeSelected(s.id)} style={{ background: 'none', border: 'none', color: '#00e5a0', cursor: 'pointer', padding: 0 }}>×</button>
+                    <button type="button" onClick={() => removeSelected(s.id)} style={{ background: 'none', border: 'none', color: '#FFE600', cursor: 'pointer', padding: 0 }}>×</button>
                   </div>
                 ))}
               </div>
