@@ -209,13 +209,13 @@ class DashboardStatsResponse(BaseModel):
 
 class SettingsUpdateRequest(BaseModel):
     """Обновление глобальных настроек системы."""
+    ENABLE_1C_WEBHOOK: Optional[str] = None
     GREENAPI_INSTANCE_ID: Optional[str] = None
     GREENAPI_API_TOKEN: Optional[str] = None
     ENABLE_WHATSAPP_NOTIFICATIONS: Optional[str] = None
     WHATSAPP_TEMPLATE_EARN: Optional[str] = None
     WHATSAPP_TEMPLATE_SPEND: Optional[str] = None
     MIN_PURCHASE_FOR_BONUS: Optional[str] = None
-    BIRTHDAY_BONUS: Optional[str] = None
     REFERRAL_BONUS_INVITER: Optional[str] = None
     REFERRAL_BONUS_INVITEE: Optional[str] = None
 

@@ -632,10 +632,10 @@ async def get_audit_logs(
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
 )
 async def get_settings(db: AsyncSession = Depends(get_db)):
-    """Получить глобальные настройки."""
+    """Получить глобальные настройки. Значение 'None' (из бага старых сохранений) → пустая строка."""
     result = await db.execute(select(Setting))
     settings = result.scalars().all()
-    return {s.key: s.value for s in settings}
+    return {s.key: ("" if s.value == "None" else (s.value or "")) for s in settings}
 
 
 @router.post(
@@ -647,8 +647,8 @@ async def update_settings(
     body: SettingsUpdateRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Обновить глобальные настройки."""
-    updates = body.dict()
+    """Обновить глобальные настройки (None — поле пропускается, существующее значение остаётся)."""
+    updates = body.model_dump(exclude_none=True)
     for key, value in updates.items():
         result = await db.execute(select(Setting).where(Setting.key == key))
         setting = result.scalar_one_or_none()
