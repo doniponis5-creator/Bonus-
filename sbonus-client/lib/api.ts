@@ -71,6 +71,16 @@ export const customerAuthAPI = {
 
 export const customerAPI = {
   me: () => api.get<CabinetMe>('/api/v1/customer/me'),
+  transactions: (page = 1, limit = 20, type = '') =>
+    api.get(`/api/v1/customer/transactions?page=${page}&limit=${limit}${type ? `&tx_type=${type}` : ''}`),
+  updateProfile: (data: { full_name?: string; birth_date?: string | null }) =>
+    api.patch('/api/v1/customer/profile', data),
+  applyPromo: (code: string) =>
+    api.post('/api/v1/customer/promo', { code }),
+  applyReferral: (code: string) =>
+    api.post('/api/v1/customer/referral', { code }),
+  referralInfo: () =>
+    api.get('/api/v1/customer/referral'),
 };
 
 export default api;

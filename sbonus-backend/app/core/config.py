@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     birthday_bonus: Decimal = Decimal("200")
     referral_bonus_inviter: Decimal = Decimal("100")
     referral_bonus_invitee: Decimal = Decimal("50")
+    bonus_expiration_days: int = 365
+    bonus_expiration_warning_days: int = 30
 
     # ─── БД ───
     postgres_user: str = "sbonus"

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.core.security import hash_password
-from app.models import Branch, User, UserRoleEnum
+from app.models import Branch, Setting, User, UserRoleEnum
 
 settings = get_settings()
 logger = get_logger("seeds.defaults")
@@ -55,6 +55,32 @@ async def seed_default_data(db: AsyncSession) -> None:
         )
         db.add(admin)
         logger.info("Created super-admin: admin@smartcenter.kg")
+
+    # WhatsApp шаблоны для expire
+    # Телефон для отчётов
+    _report_phone_key = "ADMIN_PHONE_FOR_REPORTS"
+    result = await db.execute(select(Setting).where(Setting.key == _report_phone_key))
+    if not result.scalar_one_or_none():
+        db.add(Setting(key=_report_phone_key, value=settings.shop_phone))
+        logger.info("Created setting: %s", _report_phone_key)
+
+    _expire_templates = {
+        "WHATSAPP_TEMPLATE_EXPIRE": (
+            "⏰ {name}, у вас истекли {amount} KGS бонусов (срок хранения 365 дней).\n"
+            "Остаток: {balance} KGS.\n"
+            "Используйте бонусы вовремя! 🛒 Смарт Центр"
+        ),
+        "WHATSAPP_TEMPLATE_EXPIRE_WARNING": (
+            "⚠️ {name}, через {days} дней у вас истечёт {amount} KGS бонусов!\n"
+            "Текущий баланс: {balance} KGS.\n"
+            "Успейте потратить! 🛒 Смарт Центр"
+        ),
+    }
+    for key, value in _expire_templates.items():
+        result = await db.execute(select(Setting).where(Setting.key == key))
+        if not result.scalar_one_or_none():
+            db.add(Setting(key=key, value=value))
+            logger.info("Created setting: %s", key)
 
     await db.commit()
     logger.info("Default data seed completed")

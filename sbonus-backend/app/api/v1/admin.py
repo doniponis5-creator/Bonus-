@@ -103,6 +103,144 @@ async def dashboard_stats(db: AsyncSession = Depends(get_db)) -> DashboardStatsR
 
 
 @router.get(
+    "/dashboard/trends",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def dashboard_trends(
+    days: int = Query(30, ge=7, le=365),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Тренды для графиков: ежедневная статистика за указанный период.
+    Возвращает массивы для recharts: earn/spend/customers по дням.
+    """
+    from app.models import TransactionType
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    # Ежедневные транзакции по типам
+    daily_txn = await db.execute(
+        select(
+            func.date_trunc("day", Transaction.created_at).label("day"),
+            Transaction.type,
+            func.count(Transaction.id).label("count"),
+            func.coalesce(func.sum(Transaction.amount), 0).label("total"),
+        )
+        .where(Transaction.created_at >= since)
+        .group_by("day", Transaction.type)
+        .order_by("day")
+    )
+    txn_rows = daily_txn.all()
+
+    # Ежедневные новые клиенты
+    daily_cust = await db.execute(
+        select(
+            func.date_trunc("day", Customer.created_at).label("day"),
+            func.count(Customer.id).label("count"),
+        )
+        .where(Customer.created_at >= since)
+        .group_by("day")
+        .order_by("day")
+    )
+    cust_rows = daily_cust.all()
+
+    # Собираем в dict по дням
+    days_map: dict = {}
+    for row in txn_rows:
+        d = row.day.strftime("%Y-%m-%d")
+        if d not in days_map:
+            days_map[d] = {"date": d, "earn": 0, "spend": 0, "earn_count": 0, "spend_count": 0, "new_customers": 0}
+        if row.type == TransactionType.EARN:
+            days_map[d]["earn"] = float(row.total)
+            days_map[d]["earn_count"] = row.count
+        elif row.type == TransactionType.SPEND:
+            days_map[d]["spend"] = float(row.total)
+            days_map[d]["spend_count"] = row.count
+
+    for row in cust_rows:
+        d = row.day.strftime("%Y-%m-%d")
+        if d not in days_map:
+            days_map[d] = {"date": d, "earn": 0, "spend": 0, "earn_count": 0, "spend_count": 0, "new_customers": 0}
+        days_map[d]["new_customers"] = row.count
+
+    # Топ-5 клиентов по покупкам за период
+    top_customers = await db.execute(
+        select(
+            Customer.full_name,
+            Customer.phone,
+            func.coalesce(func.sum(Transaction.purchase_amount), 0).label("total_purchase"),
+            func.count(Transaction.id).label("txn_count"),
+        )
+        .join(Transaction, Transaction.customer_id == Customer.id)
+        .where(
+            Transaction.created_at >= since,
+            Transaction.type == TransactionType.EARN,
+        )
+        .group_by(Customer.id, Customer.full_name, Customer.phone)
+        .order_by(func.sum(Transaction.purchase_amount).desc())
+        .limit(5)
+    )
+    top_rows = top_customers.all()
+
+    # Средний чек за период
+    avg_check = await db.execute(
+        select(func.avg(Transaction.purchase_amount))
+        .where(
+            Transaction.created_at >= since,
+            Transaction.type == TransactionType.EARN,
+            Transaction.purchase_amount.isnot(None),
+        )
+    )
+    avg_val = avg_check.scalar()
+
+    return {
+        "daily": sorted(days_map.values(), key=lambda x: x["date"]),
+        "top_customers": [
+            {
+                "name": r.full_name,
+                "phone": r.phone,
+                "total_purchase": float(r.total_purchase),
+                "transactions": r.txn_count,
+            }
+            for r in top_rows
+        ],
+        "average_check": round(float(avg_val), 2) if avg_val else 0,
+        "period_days": days,
+    }
+
+
+@router.get(
+    "/dashboard/notifications",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def dashboard_notifications(
+    days: int = Query(7, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Статистика уведомлений: отправлено, failed, retry."""
+    from app.models import Notification, NotificationStatus
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    stats = await db.execute(
+        select(
+            Notification.status,
+            func.count(Notification.id).label("count"),
+        )
+        .where(Notification.created_at >= since)
+        .group_by(Notification.status)
+    )
+    status_map = {row.status.value: row.count for row in stats.all()}
+
+    return {
+        "sent": status_map.get("sent", 0),
+        "failed": status_map.get("failed", 0),
+        "pending": status_map.get("pending", 0),
+        "total": sum(status_map.values()),
+        "period_days": days,
+    }
+
+
+@router.get(
     "/tiers",
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
 )
@@ -413,42 +551,58 @@ async def get_customers(
     search: str = Query("", max_length=50),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
+    tier_name: str = Query(None, description="Фильтр по уровню: Bronze/Silver/Gold/Platinum"),
+    is_active: bool = Query(None, description="Фильтр по статусу: true/false"),
+    min_balance: float = Query(None, ge=0, description="Минимальный баланс"),
+    max_balance: float = Query(None, ge=0, description="Максимальный баланс"),
+    sort_by: str = Query("created_at", description="Сортировка: created_at/balance/full_name"),
+    sort_dir: str = Query("desc", description="Направление: asc/desc"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Список всех клиентов с пагинацией и поиском."""
-    from sqlalchemy import func
+    """Список клиентов с сегментацией, пагинацией и фильтрами."""
+    from sqlalchemy import func as sqlfunc
     from app.models import BonusAccount, Customer, Tier
-    
-    query = select(Customer).outerjoin(BonusAccount).outerjoin(Tier)
-    
-    if search:
-        search_term = f"%{search}%"
-        query = query.where(
-            (Customer.phone.ilike(search_term)) |
-            (Customer.full_name.ilike(search_term))
-        )
-        
-    # Count total
-    count_q = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_q)).scalar() or 0
-    
-    # Fetch data
-    offset = (page - 1) * limit
+
+    # Base query with joins
     stmt = (
         select(Customer, BonusAccount, Tier)
         .outerjoin(BonusAccount, Customer.id == BonusAccount.customer_id)
         .outerjoin(Tier, Customer.tier_id == Tier.id)
     )
+
+    # Filters
     if search:
         search_term = f"%{search}%"
         stmt = stmt.where(
             (Customer.phone.ilike(search_term)) |
             (Customer.full_name.ilike(search_term))
         )
-    stmt = stmt.order_by(Customer.created_at.desc()).offset(offset).limit(limit)
+    if tier_name:
+        stmt = stmt.where(Tier.name == tier_name)
+    if is_active is not None:
+        stmt = stmt.where(Customer.is_active == is_active)
+    if min_balance is not None:
+        stmt = stmt.where(BonusAccount.balance >= Decimal(str(min_balance)))
+    if max_balance is not None:
+        stmt = stmt.where(BonusAccount.balance <= Decimal(str(max_balance)))
+
+    # Count
+    count_sub = stmt.subquery()
+    total = (await db.execute(select(sqlfunc.count()).select_from(count_sub))).scalar() or 0
+
+    # Sort
+    sort_map = {
+        "created_at": Customer.created_at,
+        "balance": BonusAccount.balance,
+        "full_name": Customer.full_name,
+    }
+    sort_col = sort_map.get(sort_by, Customer.created_at)
+    stmt = stmt.order_by(sort_col.desc() if sort_dir == "desc" else sort_col.asc())
+    stmt = stmt.offset((page - 1) * limit).limit(limit)
+
     result = await db.execute(stmt)
     rows = result.all()
-    
+
     items = []
     for customer, account, tier in rows:
         items.append({
@@ -457,16 +611,71 @@ async def get_customers(
             "phone": customer.phone,
             "tier_name": tier.name if tier else "Bronze",
             "balance": float(account.balance) if account else 0.0,
+            "total_earned": float(account.total_earned) if account else 0.0,
+            "total_spent": float(account.total_spent) if account else 0.0,
             "is_active": customer.is_active,
-            "created_at": customer.created_at.isoformat()
+            "created_at": customer.created_at.isoformat(),
         })
-        
+
     return {
         "items": items,
         "total": total,
         "page": page,
-        "limit": limit
+        "limit": limit,
     }
+
+
+class BulkBonusRequest(BaseModel):
+    customer_ids: list[str]
+    type: str  # "earn" or "spend"
+    amount: Decimal
+    note: str
+
+
+@router.post(
+    "/customers/bulk-bonus",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def bulk_bonus(
+    body: BulkBonusRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> SuccessResponse:
+    """Массовое начисление/списание бонусов для выбранных клиентов."""
+    from app.models import TransactionType
+
+    if body.type not in ("earn", "spend"):
+        raise HTTPException(status_code=400, detail={"message": "Тип должен быть earn или spend"})
+    if body.amount <= 0:
+        raise HTTPException(status_code=400, detail={"message": "Сумма должна быть больше 0"})
+    if not body.customer_ids:
+        raise HTTPException(status_code=400, detail={"message": "Выберите клиентов"})
+
+    tx_type = TransactionType.EARN if body.type == "earn" else TransactionType.SPEND
+    admin_id = uuid.UUID(current_user["sub"])
+    svc = BonusService(db)
+
+    success = 0
+    errors = []
+    for cid in body.customer_ids:
+        try:
+            await svc.admin_adjustment(
+                customer_id=uuid.UUID(cid),
+                type=tx_type,
+                amount=body.amount,
+                admin_id=admin_id,
+                note=f"[BULK] {body.note}",
+            )
+            success += 1
+        except Exception as e:
+            errors.append(f"{cid}: {str(e)[:100]}")
+
+    await db.commit()
+    msg = f"Обработано: {success}/{len(body.customer_ids)}"
+    if errors:
+        msg += f". Ошибки: {len(errors)}"
+    return SuccessResponse(message=msg)
 
 @router.put(
     "/customers/{id}",
@@ -540,6 +749,95 @@ async def spend_admin(
     )
     await db.commit()
     return res
+
+class TransactionReversalRequest(BaseModel):
+    reason: str
+
+
+@router.post(
+    "/transactions/{txn_id}/reverse",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def reverse_transaction(
+    txn_id: uuid.UUID,
+    body: TransactionReversalRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> SuccessResponse:
+    """
+    Отмена транзакции (REFUND). Таблица transactions иммутабельна,
+    поэтому создаём обратную REFUND транзакцию.
+    Только EARN-type транзакции можно отменять.
+    """
+    from app.models import TransactionType, BonusAccount
+
+    result = await db.execute(select(Transaction).where(Transaction.id == txn_id))
+    txn = result.scalar_one_or_none()
+    if not txn:
+        raise HTTPException(status_code=404, detail={"message": "Транзакция не найдена"})
+
+    # Проверяем что не REFUND и не SPEND (нельзя вернуть списание)
+    if txn.type in (TransactionType.REFUND, TransactionType.EXPIRE):
+        raise HTTPException(status_code=400, detail={"message": "Нельзя отменить REFUND/EXPIRE транзакцию"})
+
+    # Проверяем что ещё не отменена
+    existing_refund = await db.execute(
+        select(Transaction).where(
+            Transaction.customer_id == txn.customer_id,
+            Transaction.type == TransactionType.REFUND,
+            Transaction.note.contains(str(txn_id)),
+        )
+    )
+    if existing_refund.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail={"message": "Эта транзакция уже была отменена"})
+
+    # Получаем аккаунт
+    acc_result = await db.execute(
+        select(BonusAccount)
+        .where(BonusAccount.customer_id == txn.customer_id)
+        .with_for_update()
+    )
+    account = acc_result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=400, detail={"message": "Бонусный аккаунт не найден"})
+
+    # Для EARN-type: списываем обратно
+    is_earn_type = txn.type in (
+        TransactionType.EARN, TransactionType.BIRTHDAY,
+        TransactionType.REFERRAL, TransactionType.PROMO, TransactionType.CAMPAIGN,
+    )
+
+    if is_earn_type:
+        if txn.amount > account.balance:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": f"Недостаточно бонусов для отмены. Баланс: {account.balance} KGS, нужно: {txn.amount} KGS"},
+            )
+        account.balance -= txn.amount
+        account.total_earned -= txn.amount
+    elif txn.type == TransactionType.SPEND:
+        # Возврат списания — бонусы возвращаются
+        account.balance += txn.amount
+        account.total_spent -= txn.amount
+
+    # Создаём REFUND
+    refund = Transaction(
+        customer_id=txn.customer_id,
+        type=TransactionType.REFUND,
+        amount=txn.amount,
+        branch_id=txn.branch_id,
+        cashier_id=uuid.UUID(current_user["sub"]),
+        receipt_number=f"REFUND-{uuid.uuid4().hex[:10].upper()}",
+        note=f"↩ Отмена #{str(txn_id)[:8]}... | {body.reason}",
+    )
+    db.add(refund)
+    await db.commit()
+
+    return SuccessResponse(
+        message=f"Транзакция отменена. {'Списано' if is_earn_type else 'Возвращено'} {txn.amount} KGS"
+    )
+
 
 @router.get(
     "/transactions",

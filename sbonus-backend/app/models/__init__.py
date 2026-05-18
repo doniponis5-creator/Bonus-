@@ -330,6 +330,40 @@ class BonusCampaignRecipient(Base):
     customer: Mapped["Customer"] = relationship()
 
 
+class Notification(Base):
+    """Трекинг уведомлений (WhatsApp, SMS)."""
+    __tablename__ = "notifications"
+    __table_args__ = (
+        Index("ix_notifications_customer_id", "customer_id"),
+        Index("ix_notifications_status", "status"),
+        Index("ix_notifications_created_at", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
+    channel: Mapped[NotificationChannel] = mapped_column(
+        SAEnum(NotificationChannel, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=NotificationChannel.WHATSAPP,
+    )
+    status: Mapped[NotificationStatus] = mapped_column(
+        SAEnum(NotificationStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=NotificationStatus.PENDING,
+    )
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)  # earn, spend, expire, campaign, etc.
+    external_id: Mapped[str | None] = mapped_column(String(100), nullable=True)  # Green API message ID
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_retries: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    customer: Mapped["Customer"] = relationship()
+
+
 class CustomerDebt(Base):
     """История задолженности клиента (синхронизация с 1C)."""
     __tablename__ = "customer_debts"

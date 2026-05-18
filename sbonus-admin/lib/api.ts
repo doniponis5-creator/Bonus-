@@ -53,6 +53,8 @@ export const authAPI = {
 
 export const adminAPI = {
   stats: () => api.get('/api/v1/admin/dashboard/stats'),
+  trends: (days = 30) => api.get(`/api/v1/admin/dashboard/trends?days=${days}`),
+  notificationStats: (days = 7) => api.get(`/api/v1/admin/dashboard/notifications?days=${days}`),
 
   // Tiers
   tiers: () => api.get('/api/v1/admin/tiers'),
@@ -62,9 +64,11 @@ export const adminAPI = {
   promoCodes: (page = 1, limit = 50) => api.get(`/api/v1/admin/promo-codes?page=${page}&limit=${limit}`),
   createPromo: (d: any) => api.post('/api/v1/admin/promo-codes', d),
 
-  // Transactions (haqiqiy tranzaksiyalar)
+  // Transactions
   transactions: (page = 1, perPage = 50, type = '') =>
     api.get(`/api/v1/admin/transactions?page=${page}&per_page=${perPage}${type ? `&tx_type=${type}` : ''}`),
+  reverseTransaction: (id: string, reason: string) =>
+    api.post(`/api/v1/admin/transactions/${id}/reverse`, { reason }),
 
   // Audit logs
   auditLogs: (page: number) => api.get(`/api/v1/admin/audit-logs?page=${page}`),
@@ -105,8 +109,26 @@ export const customersAPI = {
   byPhone: (p: string) => api.get(`/api/v1/customers/by-phone/${encodeURIComponent(p)}`),
   balance: (id: string) => api.get(`/api/v1/customers/${id}/balance`),
   transactions: (id: string, page: number) => api.get(`/api/v1/customers/${id}/transactions?page=${page}`),
-  list: (search: string = '', page: number = 1, limit: number = 50) => 
-    api.get(`/api/v1/admin/customers?search=${encodeURIComponent(search)}&page=${page}&limit=${limit}`),
+  list: (params: {
+    search?: string; page?: number; limit?: number;
+    tier_name?: string; is_active?: boolean | null;
+    min_balance?: number; max_balance?: number;
+    sort_by?: string; sort_dir?: string;
+  } = {}) => {
+    const p = new URLSearchParams();
+    if (params.search) p.set('search', params.search);
+    p.set('page', String(params.page || 1));
+    p.set('limit', String(params.limit || 50));
+    if (params.tier_name) p.set('tier_name', params.tier_name);
+    if (params.is_active !== undefined && params.is_active !== null) p.set('is_active', String(params.is_active));
+    if (params.min_balance !== undefined) p.set('min_balance', String(params.min_balance));
+    if (params.max_balance !== undefined) p.set('max_balance', String(params.max_balance));
+    if (params.sort_by) p.set('sort_by', params.sort_by);
+    if (params.sort_dir) p.set('sort_dir', params.sort_dir);
+    return api.get(`/api/v1/admin/customers?${p.toString()}`);
+  },
+  bulkBonus: (customer_ids: string[], type: 'earn' | 'spend', amount: number, note: string) =>
+    api.post('/api/v1/admin/customers/bulk-bonus', { customer_ids, type, amount, note }),
   update: (id: string, data: any) => api.put(`/api/v1/admin/customers/${id}`, data),
   adminEarn: (id: string, amount: number, note: string) => 
     api.post(`/api/v1/admin/customers/${id}/bonus/earn`, { amount, note }),

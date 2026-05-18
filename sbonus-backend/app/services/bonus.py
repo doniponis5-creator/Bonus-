@@ -131,12 +131,14 @@ class BonusService:
 
         tier_name = new_tier.name if tier_upgraded else tier.name
 
-        # Отправка WhatsApp уведомления
+        # Отправка WhatsApp уведомления (с трекингом)
         await self._notify_whatsapp(
-            customer.phone, 
-            "WHATSAPP_TEMPLATE_EARN", 
-            amount=bonus_amount, 
-            balance=account.balance
+            customer.phone,
+            "WHATSAPP_TEMPLATE_EARN",
+            amount=bonus_amount,
+            balance=account.balance,
+            customer_id=customer_id,
+            event_type="earn",
         )
 
         return BonusResult(
@@ -224,12 +226,14 @@ class BonusService:
         self.db.add(txn)
         await self.db.flush()
 
-        # Отправка WhatsApp уведомления
+        # Отправка WhatsApp уведомления (с трекингом)
         await self._notify_whatsapp(
-            customer.phone, 
-            "WHATSAPP_TEMPLATE_SPEND", 
-            amount=spend_amount, 
-            balance=account.balance
+            customer.phone,
+            "WHATSAPP_TEMPLATE_SPEND",
+            amount=spend_amount,
+            balance=account.balance,
+            customer_id=customer_id,
+            event_type="spend",
         )
 
         return BonusResult(
@@ -529,11 +533,13 @@ class BonusService:
 
         return False, None
 
-    async def _notify_whatsapp(self, phone: str, template_key: str, amount: Decimal, balance: Decimal):
-        """Отправка WhatsApp уведомления с кешированием настроек."""
-        import asyncio
+    async def _notify_whatsapp(
+        self, phone: str, template_key: str, amount: Decimal, balance: Decimal,
+        customer_id: uuid.UUID | None = None, event_type: str = "bonus",
+    ):
+        """Отправка WhatsApp уведомления с трекингом и кешированием настроек."""
         from app.models import Setting
-        from app.services.whatsapp import send_whatsapp_message
+        from app.services.whatsapp import send_tracked_whatsapp, send_whatsapp_message
         global _wa_cache, _wa_cache_ttl
 
         now = time.monotonic()
@@ -561,6 +567,20 @@ class BonusService:
             return
 
         msg = tmpl_row.value.replace("{amount}", str(amount)).replace("{balance}", str(balance))
-        asyncio.create_task(send_whatsapp_message(
-            phone=phone, message=msg, instance_id=instance_id, api_token=api_token
-        ))
+
+        # Используем tracked отправку если есть customer_id
+        if customer_id:
+            await send_tracked_whatsapp(
+                db=self.db,
+                customer_id=customer_id,
+                phone=phone,
+                message=msg,
+                event_type=event_type,
+                instance_id=instance_id,
+                api_token=api_token,
+            )
+        else:
+            import asyncio
+            asyncio.create_task(send_whatsapp_message(
+                phone=phone, message=msg, instance_id=instance_id, api_token=api_token
+            ))

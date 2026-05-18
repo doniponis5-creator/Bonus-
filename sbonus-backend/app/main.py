@@ -20,6 +20,9 @@ from app.core.database import Base, engine
 from app.seeds.defaults import seed_default_data
 from app.seeds.tiers import seed_tiers
 from app.tasks.campaigns import process_due_campaigns
+from app.tasks.expiration import expire_old_bonuses, warn_expiring_bonuses
+from app.tasks.notification_retry import retry_failed_notifications
+from app.tasks.weekly_report import send_weekly_report
 
 settings = get_settings()
 logger = get_logger("main")
@@ -60,8 +63,44 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
+    # Cron: истечение бонусов — каждый день 02:00
+    scheduler.add_job(
+        expire_old_bonuses,
+        CronTrigger(hour=2, minute=0),
+        id="bonus_expiration",
+        replace_existing=True,
+    )
+
+    # Cron: предупреждение об истечении — каждый день 10:00
+    scheduler.add_job(
+        warn_expiring_bonuses,
+        CronTrigger(hour=10, minute=0),
+        id="bonus_expiration_warning",
+        replace_existing=True,
+    )
+
+    # Cron: повтор неотправленных уведомлений — каждые 15 минут
+    scheduler.add_job(
+        retry_failed_notifications,
+        CronTrigger(minute="*/15"),
+        id="notification_retry",
+        replace_existing=True,
+    )
+
+    # Cron: еженедельный отчёт — понедельник 08:00
+    scheduler.add_job(
+        send_weekly_report,
+        CronTrigger(day_of_week="mon", hour=8, minute=0),
+        id="weekly_report",
+        replace_existing=True,
+    )
+
     scheduler.start()
     logger.info("Cron: bonus campaigns scheduled at 09:00 daily")
+    logger.info("Cron: bonus expiration scheduled at 02:00 daily")
+    logger.info("Cron: expiration warnings scheduled at 10:00 daily")
+    logger.info("Cron: notification retry scheduled every 15 min")
+    logger.info("Cron: weekly report scheduled at Mon 08:00")
     logger.info("Server started! Swagger: http://localhost:8000/docs")
     logger.info("=" * 50)
 
