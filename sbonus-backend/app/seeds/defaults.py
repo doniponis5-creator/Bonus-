@@ -64,23 +64,42 @@ async def seed_default_data(db: AsyncSession) -> None:
         db.add(Setting(key=_report_phone_key, value=settings.shop_phone))
         logger.info("Created setting: %s", _report_phone_key)
 
-    _expire_templates = {
+    # ── WhatsApp шаблоны (upsert — обновляем если текст изменился) ──
+    _wa_templates = {
+        "WHATSAPP_TEMPLATE_EARN": (
+            "✅ {name}, начислено +{amount} KGS бонусов!\n"
+            "Баланс: {balance} KGS\n\n"
+            "📱 Личный кабинет: {link}\n"
+            "🛒 Смарт Центр"
+        ),
+        "WHATSAPP_TEMPLATE_SPEND": (
+            "💳 {name}, списано {amount} KGS бонусов.\n"
+            "Остаток: {balance} KGS\n\n"
+            "📱 Личный кабинет: {link}\n"
+            "🛒 Смарт Центр"
+        ),
         "WHATSAPP_TEMPLATE_EXPIRE": (
             "⏰ {name}, у вас истекли {amount} KGS бонусов (срок хранения 365 дней).\n"
-            "Остаток: {balance} KGS.\n"
-            "Используйте бонусы вовремя! 🛒 Смарт Центр"
+            "Остаток: {balance} KGS.\n\n"
+            "📱 Личный кабинет: {link}\n"
+            "🛒 Смарт Центр"
         ),
         "WHATSAPP_TEMPLATE_EXPIRE_WARNING": (
             "⚠️ {name}, через {days} дней у вас истечёт {amount} KGS бонусов!\n"
-            "Текущий баланс: {balance} KGS.\n"
-            "Успейте потратить! 🛒 Смарт Центр"
+            "Текущий баланс: {balance} KGS.\n\n"
+            "📱 Личный кабинет: {link}\n"
+            "🛒 Смарт Центр"
         ),
     }
-    for key, value in _expire_templates.items():
+    for key, value in _wa_templates.items():
         result = await db.execute(select(Setting).where(Setting.key == key))
-        if not result.scalar_one_or_none():
+        existing = result.scalar_one_or_none()
+        if not existing:
             db.add(Setting(key=key, value=value))
             logger.info("Created setting: %s", key)
+        elif existing.value != value:
+            existing.value = value
+            logger.info("Updated setting: %s", key)
 
     await db.commit()
     logger.info("Default data seed completed")

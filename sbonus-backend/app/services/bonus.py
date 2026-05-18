@@ -140,6 +140,7 @@ class BonusService:
             balance=account.balance,
             customer_id=customer_id,
             event_type="earn",
+            customer_name=customer.full_name,
         )
 
         return BonusResult(
@@ -235,6 +236,7 @@ class BonusService:
             balance=account.balance,
             customer_id=customer_id,
             event_type="spend",
+            customer_name=customer.full_name,
         )
 
         return BonusResult(
@@ -541,6 +543,7 @@ class BonusService:
     async def _notify_whatsapp(
         self, phone: str, template_key: str, amount: Decimal, balance: Decimal,
         customer_id: uuid.UUID | None = None, event_type: str = "bonus",
+        customer_name: str = "",
     ):
         """Отправка WhatsApp уведомления с трекингом и кешированием настроек."""
         from app.models import Setting
@@ -571,7 +574,13 @@ class BonusService:
         if not tmpl_row or not tmpl_row.value:
             return
 
-        msg = tmpl_row.value.replace("{amount}", str(amount)).replace("{balance}", str(balance))
+        msg = (
+            tmpl_row.value
+            .replace("{amount}", str(amount))
+            .replace("{balance}", str(balance))
+            .replace("{name}", customer_name or "")
+            .replace("{link}", "https://cabinet.smartcentr.store")
+        )
 
         # Используем tracked отправку если есть customer_id
         if customer_id:
