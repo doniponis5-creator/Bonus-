@@ -12,6 +12,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.models import (
@@ -481,7 +482,11 @@ class BonusService:
 
     async def _get_customer(self, customer_id: uuid.UUID) -> Customer:
         """Получить клиента или 404."""
-        result = await self.db.execute(select(Customer).where(Customer.id == customer_id))
+        result = await self.db.execute(
+            select(Customer)
+            .options(selectinload(Customer.tier))
+            .where(Customer.id == customer_id)
+        )
         customer = result.scalar_one_or_none()
         if not customer:
             raise HTTPException(
