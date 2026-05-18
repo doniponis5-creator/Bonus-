@@ -5,6 +5,14 @@ export const metadata: Metadata = {
   title: 'S Bonus — Личный кабинет',
   description: 'Бонусная программа Смарт Центр',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/icon-192.png',
+  },
 };
 
 export const viewport: Viewport = {

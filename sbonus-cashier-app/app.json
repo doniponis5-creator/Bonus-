@@ -8,7 +8,8 @@
     "scheme": "sbonus",
     "userInterfaceStyle": "dark",
     "splash": {
-      "backgroundColor": "#0a0f1a",
+      "image": "./assets/splash.png",
+      "backgroundColor": "#FFE600",
       "resizeMode": "contain"
     },
     "assetBundlePatterns": ["**/*"],
@@ -21,7 +22,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0a0f1a"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFE600"
       },
       "package": "kg.smartcenter.sbonus.cashier",
       "permissions": ["CAMERA"]
