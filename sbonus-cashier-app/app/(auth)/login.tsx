@@ -52,6 +52,12 @@ export default function LoginScreen() {
             placeholderTextColor={COLORS.text3}
             keyboardType="phone-pad"
             maxLength={13}
+            autoComplete="username"
+            textContentType="username"
+            // @ts-ignore — RN-web ham name'ni qabul qiladi
+            name="phone"
+            // @ts-ignore
+            autoCapitalize="none"
           />
 
           <View style={[styles.labelRow, { marginTop: 20 }]}>
@@ -67,6 +73,10 @@ export default function LoginScreen() {
             keyboardType="number-pad"
             secureTextEntry
             maxLength={4}
+            autoComplete="current-password"
+            textContentType="password"
+            // @ts-ignore — RN-web ham name'ni qabul qiladi
+            name="pin"
           />
 
           {error && (
