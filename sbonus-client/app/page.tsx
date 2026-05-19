@@ -6,6 +6,7 @@ import {
   LogOut, QrCode, Loader2, RefreshCw, Home, History, User, Gift,
   PlusCircle, MinusCircle, Clock, Users, Ticket, RefreshCcw,
   Pencil, Share2, Copy, Check, ChevronLeft, ChevronRight, Disc3, Trophy,
+  CheckCircle2, XCircle, Smartphone, Link2,
 } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import DebtCard from '@/components/DebtCard';
@@ -128,12 +129,12 @@ export default function DashboardPage() {
     setPromoLoading(true); setPromoMsg('');
     try {
       const { data: r } = await customerAPI.applyPromo(promoCode.trim());
-      setPromoMsg(`✅ ${r.message}`);
+      setPromoMsg(`[ok]${r.message}`);
       setPromoCode('');
       fetchData();
     } catch (err: any) {
       const d = err?.response?.data?.detail;
-      setPromoMsg(`❌ ${typeof d === 'string' ? d : d?.message || 'Ошибка'}`);
+      setPromoMsg(`[err]${typeof d === 'string' ? d : d?.message || 'Ошибка'}`);
     } finally { setPromoLoading(false); }
   };
 
@@ -142,12 +143,12 @@ export default function DashboardPage() {
     setRefLoading(true); setRefMsg('');
     try {
       const { data: r } = await customerAPI.applyReferral(refCode.trim());
-      setRefMsg(`✅ ${r.message}`);
+      setRefMsg(`[ok]${r.message}`);
       setRefCode('');
       fetchData();
     } catch (err: any) {
       const d = err?.response?.data?.detail;
-      setRefMsg(`❌ ${typeof d === 'string' ? d : d?.message || 'Ошибка'}`);
+      setRefMsg(`[err]${typeof d === 'string' ? d : d?.message || 'Ошибка'}`);
     } finally { setRefLoading(false); }
   };
 
@@ -375,7 +376,12 @@ export default function DashboardPage() {
                 {promoLoading ? '...' : 'Применить'}
               </button>
             </div>
-            {promoMsg && <p style={{ fontSize: 13, marginTop: 8, color: promoMsg.startsWith('✅') ? '#22c55e' : '#ff4d4d' }}>{promoMsg}</p>}
+            {promoMsg && (
+              <p style={{ fontSize: 13, marginTop: 8, color: promoMsg.startsWith('[ok]') ? '#22c55e' : '#ff4d4d', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {promoMsg.startsWith('[ok]') ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                {promoMsg.replace(/^\[(ok|err)\]/, '')}
+              </p>
+            )}
           </div>
 
           {/* Referral - My code */}
@@ -404,7 +410,7 @@ export default function DashboardPage() {
                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
               }}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                📱 WhatsApp
+                <Smartphone size={14} /> WhatsApp
               </button>
               <button onClick={() => {
                 const text = `🎁 Смарт Центр: Получи 50 KGS бонус! Мой код: ${data.referral_code} 📱 https://cabinet.smartcentr.store`;
@@ -415,7 +421,7 @@ export default function DashboardPage() {
                 }
               }}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'rgba(255,255,255,0.08)', color: '#e2eaf6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                🔗 Поделиться
+                <Link2 size={14} /> Поделиться
               </button>
             </div>
 
@@ -441,7 +447,12 @@ export default function DashboardPage() {
                 {refLoading ? '...' : 'Применить'}
               </button>
             </div>
-            {refMsg && <p style={{ fontSize: 13, marginTop: 8, color: refMsg.startsWith('✅') ? '#22c55e' : '#ff4d4d' }}>{refMsg}</p>}
+            {refMsg && (
+              <p style={{ fontSize: 13, marginTop: 8, color: refMsg.startsWith('[ok]') ? '#22c55e' : '#ff4d4d', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {refMsg.startsWith('[ok]') ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                {refMsg.replace(/^\[(ok|err)\]/, '')}
+              </p>
+            )}
           </div>
 
           {/* Coupons */}

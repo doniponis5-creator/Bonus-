@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Trophy, Medal, TrendingUp } from 'lucide-react';
 import { customerAPI } from '@/lib/api';
 
 interface Leader {
@@ -11,7 +12,7 @@ interface Leader {
   is_me: boolean;
 }
 
-const MEDALS = ['🥇', '🥈', '🥉'];
+const MEDAL_COLORS = ['#FFE600', '#c0c0c0', '#cd7f32'];
 const PERIODS = [
   { id: 'week' as const, label: 'Неделя' },
   { id: 'month' as const, label: 'Месяц' },
@@ -43,7 +44,7 @@ export default function Leaderboard() {
     <div style={{ padding: '20px 0' }}>
       {/* Title */}
       <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        🏆 Рейтинг покупателей
+        <Trophy size={20} color="#FFE600" /> Рейтинг покупателей
       </h2>
       <p style={{ fontSize: 13, color: '#8899aa', margin: '0 0 16px' }}>
         Войдите в TOP-10 и получите бонус!
@@ -121,7 +122,7 @@ export default function Leaderboard() {
                 color: l.rank <= 3 ? '#0a0f1a' : '#8899aa',
                 flexShrink: 0,
               }}>
-                {l.rank <= 3 ? MEDALS[l.rank - 1] : l.rank}
+                {l.rank <= 3 ? <Medal size={18} color={MEDAL_COLORS[l.rank - 1]} /> : l.rank}
               </div>
 
               {/* Name */}
@@ -156,7 +157,7 @@ export default function Leaderboard() {
           background: 'rgba(255,255,255,0.03)', borderRadius: 12,
           fontSize: 13, color: '#8899aa', lineHeight: 1.6,
         }}>
-          До TOP-10 осталось совсем немного! 💪<br />
+          До TOP-10 осталось совсем немного! <TrendingUp size={14} style={{ display: 'inline', verticalAlign: 'middle' }} color="#FFE600" /><br />
           Делайте покупки и поднимайтесь в рейтинге!
         </div>
       )}

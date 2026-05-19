@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Ticket, Clock } from 'lucide-react';
 import { customerAPI } from '@/lib/api';
 
 interface Coupon {
@@ -64,7 +65,7 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
   return (
     <div style={{ padding: '20px 0' }}>
       <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        🎟 Мои купоны
+        <Ticket size={20} color="#FFE600" /> Мои купоны
       </h2>
       <p style={{ fontSize: 13, color: '#8899aa', margin: '0 0 16px' }}>
         Активируйте купон и получите бонус на счёт
@@ -98,7 +99,7 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
           textAlign: 'center', padding: '40px 20px',
           background: 'rgba(255,255,255,0.03)', borderRadius: 16,
         }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🎫</div>
+          <div style={{ marginBottom: 12 }}><Ticket size={40} color="#64748b" /></div>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
             Нет доступных купонов
           </div>
@@ -164,7 +165,7 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
                     color: new Date(c.expires_at).getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000
                       ? '#f59e0b' : '#64748b',
                   }}>
-                    ⏳ {formatExpiry(c.expires_at)}
+                    <Clock size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {formatExpiry(c.expires_at)}
                   </span>
                 )}
               </div>

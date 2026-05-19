@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Disc3, Ticket, ShoppingCart, Gift, Meh } from 'lucide-react';
 import { wheelAPI } from '@/lib/api';
 
 interface Segment {
@@ -173,7 +174,7 @@ export default function BonusWheel() {
       {/* Title */}
       <div style={{ textAlign: 'center' }}>
         <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: '#FFE600' }}>
-          🎰 Колесо Удачи
+          <Disc3 size={22} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} /> Колесо Удачи
         </h2>
         <p style={{ fontSize: 13, color: '#8899aa', margin: '6px 0 0' }}>
           Каждая покупка = 1 попытка!
@@ -186,7 +187,7 @@ export default function BonusWheel() {
         borderRadius: 12, padding: '10px 24px',
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <span style={{ fontSize: 24 }}>🎫</span>
+        <Ticket size={24} color={spins > 0 ? '#FFE600' : '#64748b'} />
         <div>
           <div style={{ fontSize: 20, fontWeight: 800, color: spins > 0 ? '#FFE600' : '#64748b' }}>
             {spins}
@@ -250,7 +251,7 @@ export default function BonusWheel() {
           boxShadow: spins > 0 ? '0 4px 20px rgba(255,230,0,0.3)' : 'none',
         }}
       >
-        {spinning ? '🎰 Крутится...' : spins > 0 ? '🎰 КРУТИТЬ!' : '🛒 Сделайте покупку'}
+        {spinning ? (<><Disc3 size={18} style={{ display: 'inline', verticalAlign: 'middle' }} /> Крутится...</>) : spins > 0 ? (<><Disc3 size={18} style={{ display: 'inline', verticalAlign: 'middle' }} /> КРУТИТЬ!</>) : (<><ShoppingCart size={18} style={{ display: 'inline', verticalAlign: 'middle' }} /> Сделайте покупку</>)}
       </button>
 
       {/* Result */}
@@ -262,8 +263,8 @@ export default function BonusWheel() {
           borderRadius: 16, padding: 20, textAlign: 'center',
           animation: 'fadeIn 0.5s ease',
         }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>
-            {result.value > 0 ? '🎉' : '😊'}
+          <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+            {result.value > 0 ? <Gift size={32} color="#22c55e" /> : <Meh size={32} color="#8899aa" />}
           </div>
           <div style={{
             fontSize: 16, fontWeight: 700,

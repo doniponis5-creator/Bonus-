@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Star } from 'lucide-react';
 import { customerAPI } from '@/lib/api';
 
 interface Review {
@@ -68,7 +69,7 @@ export default function ReviewBonus({ onBalanceChange }: { onBalanceChange?: () 
   return (
     <div style={{ padding: '20px 0' }}>
       <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        ⭐ Бонус за отзыв
+        <Star size={20} color="#FFE600" /> Бонус за отзыв
       </h2>
       <p style={{ fontSize: 13, color: '#8899aa', margin: '0 0 16px', lineHeight: 1.5 }}>
         Оставьте отзыв о Смарт Центр на Google Maps или 2GIS и получите бонус!

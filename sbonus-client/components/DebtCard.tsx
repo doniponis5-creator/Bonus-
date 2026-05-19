@@ -31,7 +31,7 @@ export default function DebtCard({ amount, updatedAt }: Props) {
       )}
       {!hasDebt && (
         <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-          Задолженности нет ✓
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Задолженности нет <CheckCircle2 size={14} color="var(--accent)" /></span>
         </p>
       )}
     </div>

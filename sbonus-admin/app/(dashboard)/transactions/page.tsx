@@ -1,5 +1,5 @@
 'use client';
-import { Users, CreditCard, Ticket, Loader2, PlusCircle, MinusCircle, Gift, Clock, RefreshCcw, Undo2, Megaphone } from 'lucide-react';
+import { Users, CreditCard, Ticket, Loader2, PlusCircle, MinusCircle, Gift, Clock, RefreshCcw, Undo2, Megaphone, AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ExportButton from '@/components/ExportButton';
 import { adminAPI } from '@/lib/api';
@@ -200,7 +200,7 @@ export default function TransactionsPage() {
             </div>
 
             <div style={{ background: 'rgba(251,146,60,0.1)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: '#fb923c' }}>
-              ⚠️ {reverseTxn.type === 'spend'
+              <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> {reverseTxn.type === 'spend'
                 ? `Бонусы (${Number(reverseTxn.amount).toLocaleString('ru-RU')} KGS) будут возвращены на счёт клиента`
                 : `С бонусного счёта клиента будет списано ${Number(reverseTxn.amount).toLocaleString('ru-RU')} KGS`
               }
