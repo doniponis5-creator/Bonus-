@@ -143,9 +143,9 @@ export default function CashierBonusesPage() {
     setSaving(true);
     try {
       await adminAPI.updateCashierBonusConfig(config);
-      toast('Конфигурация сохранена', 'success');
+      toast('success', 'Конфигурация сохранена');
     } catch {
-      toast('Ошибка сохранения', 'error');
+      toast('error', 'Ошибка сохранения');
     } finally { setSaving(false); }
   };
 
