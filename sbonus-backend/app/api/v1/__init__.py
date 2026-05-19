@@ -11,6 +11,7 @@ from app.api.v1.campaigns import router as campaigns_router
 from app.api.v1.customer import router as customer_cabinet_router
 from app.api.v1.customer_auth import router as customer_auth_router
 from app.api.v1.customers import router as customers_router
+from app.api.v1.cashier_bonus import router as cashier_bonus_router
 from app.api.v1.webhook import router as webhook_router
 from app.api.v1.wheel import router as wheel_router
 
@@ -21,6 +22,7 @@ api_router.include_router(customers_router)
 api_router.include_router(bonus_router)
 api_router.include_router(webhook_router)
 api_router.include_router(admin_router)
+api_router.include_router(cashier_bonus_router)
 api_router.include_router(campaigns_router)
 api_router.include_router(customer_auth_router)
 api_router.include_router(customer_cabinet_router)

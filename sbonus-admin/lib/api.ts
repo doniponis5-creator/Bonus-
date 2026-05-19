@@ -134,6 +134,12 @@ export const adminAPI = {
   wheelConfig: () => api.get('/api/v1/admin/wheel/config'),
   updateWheelConfig: (segments: any[]) => api.put('/api/v1/admin/wheel/config', { segments }),
   resetWheelConfig: () => api.post('/api/v1/admin/wheel/config/reset'),
+
+  // Cashier bonuses
+  cashierBonusConfig: () => api.get('/api/v1/admin/cashier-bonuses/config'),
+  updateCashierBonusConfig: (config: any) => api.put('/api/v1/admin/cashier-bonuses/config', config),
+  cashierBonusProgress: () => api.get('/api/v1/admin/cashier-bonuses/progress'),
+  cashierBonusProgressById: (id: string) => api.get(`/api/v1/admin/cashier-bonuses/progress/${id}`),
 };
 
 export const customersAPI = {

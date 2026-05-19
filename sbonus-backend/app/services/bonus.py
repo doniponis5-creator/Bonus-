@@ -130,6 +130,11 @@ class BonusService:
 
         await self.db.flush()
 
+        # Проверка вех кассира (дневные/месячные/стрик)
+        if cashier_id:
+            from app.services.cashier_bonus import check_cashier_milestones
+            await check_cashier_milestones(self.db, cashier_id)
+
         tier_name = new_tier.name if tier_upgraded else tier.name
 
         # Отправка WhatsApp уведомления (с трекингом)
