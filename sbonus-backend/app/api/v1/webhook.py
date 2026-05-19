@@ -91,18 +91,24 @@ async def _security_check(request: Request, x_signature: str | None) -> None:
             detail={"code": "WEBHOOK_IP_BLOCKED", "message": f"IP {client_ip} не в белом списке"},
         )
 
-    if settings.webhook_1c_secret and settings.webhook_1c_secret != "your_hmac_secret_here":
-        if not x_signature:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"code": "WEBHOOK_MISSING_SIGNATURE", "message": "Требуется HMAC-SHA256 подпись (X-Signature)"},
-            )
-        raw_body = await request.body()
-        if not _verify_hmac_signature(raw_body, x_signature, settings.webhook_1c_secret):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"code": "WEBHOOK_INVALID_SIGNATURE", "message": "Неверная HMAC-SHA256 подпись"},
-            )
+    # HMAC-SHA256 обязателен — без валидного секрета webhook не работает
+    if not settings.webhook_1c_secret or settings.webhook_1c_secret == "your_hmac_secret_here":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "WEBHOOK_NOT_CONFIGURED", "message": "HMAC секрет не настроен. Установите WEBHOOK_1C_SECRET в .env"},
+        )
+
+    if not x_signature:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "WEBHOOK_MISSING_SIGNATURE", "message": "Требуется HMAC-SHA256 подпись (X-Signature)"},
+        )
+    raw_body = await request.body()
+    if not _verify_hmac_signature(raw_body, x_signature, settings.webhook_1c_secret):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "WEBHOOK_INVALID_SIGNATURE", "message": "Неверная HMAC-SHA256 подпись"},
+        )
 
 
 async def _get_customer_or_404(phone: str, db: AsyncSession) -> Customer:
@@ -262,9 +268,11 @@ async def webhook_1c_refund(
         # Прямой возврат если оригинал не найден
         refund_bonus = body.refund_amount
 
-    # Найти или создать бонусный счёт
+    # Найти бонусный счёт с блокировкой (предотвращает double-spend)
     acc_result = await db.execute(
-        select(BonusAccount).where(BonusAccount.customer_id == customer.id)
+        select(BonusAccount)
+        .where(BonusAccount.customer_id == customer.id)
+        .with_for_update()
     )
     account = acc_result.scalar_one_or_none()
     if not account:
@@ -412,6 +420,7 @@ async def webhook_1c_get_customer(
     phone: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    x_api_key: str = Header(None, alias="X-Api-Key"),
 ) -> dict:
     """
     **Баланс клиента из 1С** — проверить регистрацию и баланс перед продажей.
@@ -428,6 +437,14 @@ async def webhook_1c_get_customer(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "WEBHOOK_IP_BLOCKED", "message": f"IP {client_ip} не в белом списке"},
         )
+
+    # Проверка API-ключа для GET endpoints (HMAC нет для GET — нет body)
+    if settings.webhook_1c_secret and settings.webhook_1c_secret != "your_hmac_secret_here":
+        if x_api_key != settings.webhook_1c_secret:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"code": "WEBHOOK_INVALID_API_KEY", "message": "Неверный X-Api-Key"},
+            )
 
     phone = normalize_phone(phone)
     customer = await _get_customer_or_404(phone, db)
@@ -464,6 +481,7 @@ async def webhook_1c_check_spend(
     purchase_amount: Decimal = Query(..., gt=0, description="Сумма покупки в KGS"),
     request: Request = None,
     db: AsyncSession = Depends(get_db),
+    x_api_key: str = Header(None, alias="X-Api-Key"),
 ) -> dict:
     """
     **Проверка доступной суммы для списания** — вызывается 1С перед оплатой.
@@ -482,6 +500,14 @@ async def webhook_1c_check_spend(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "WEBHOOK_IP_BLOCKED", "message": f"IP {client_ip} не в белом списке"},
         )
+
+    # Проверка API-ключа для GET endpoints
+    if settings.webhook_1c_secret and settings.webhook_1c_secret != "your_hmac_secret_here":
+        if x_api_key != settings.webhook_1c_secret:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"code": "WEBHOOK_INVALID_API_KEY", "message": "Неверный X-Api-Key"},
+            )
 
     phone = normalize_phone(phone)
     customer = await _get_customer_or_404(phone, db)
@@ -574,6 +600,12 @@ async def webhook_greenapi(
     - «БАЛАНС» — получить текущий бонусный баланс
     - «ПОМОЩЬ» — список доступных команд
     """
+    # Rate limit по IP: 30 запросов в минуту (защита от спама)
+    from app.core.redis import check_rate_limit
+    client_ip = request.client.host if request.client else "0.0.0.0"
+    if not await check_rate_limit(f"greenapi:{client_ip}", max_attempts=30, window_seconds=60):
+        return {"success": False, "error": "rate_limit"}
+
     try:
         body = await request.json()
     except Exception:

@@ -19,6 +19,7 @@ export default function LoginPage() {
       localStorage.setItem('admin_token', data.access_token);
       localStorage.setItem('admin_refresh', data.refresh_token);
       localStorage.setItem('admin_user', JSON.stringify({ id: data.user_id, role: data.role }));
+      document.cookie = `admin_token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`;
       router.push('/');
     } catch (err: any) {
       setError(err?.response?.data?.detail?.message || 'Неверный email или пароль');

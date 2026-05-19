@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -360,6 +360,13 @@ class BonusService:
                 detail={"code": "REFERRAL_CODE_INVALID", "message": "Реферальный код не найден"},
             )
 
+        # Блокируем самореферал
+        if inviter.id == customer_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "REFERRAL_SELF_NOT_ALLOWED", "message": "Нельзя использовать собственный реферальный код"},
+            )
+
         customer = await self._get_customer(customer_id)
         if customer.referred_by:
             raise HTTPException(
@@ -369,6 +376,22 @@ class BonusService:
 
         # Обновить referred_by
         customer.referred_by = inviter.id
+
+        # Проверка дневного лимита реферальных бонусов (макс. 5 рефералов в день)
+        from datetime import datetime, timezone, timedelta
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_refs = (await self.db.execute(
+            select(func.count(Transaction.id)).where(
+                Transaction.customer_id == inviter.id,
+                Transaction.type == TransactionType.REFERRAL,
+                Transaction.created_at >= today_start,
+            )
+        )).scalar() or 0
+        if daily_refs >= 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "REFERRAL_DAILY_LIMIT", "message": "Дневной лимит реферальных бонусов достигнут"},
+            )
 
         # Бонус пригласившему
         inviter_account = await self._get_or_create_account(inviter.id)
@@ -413,8 +436,11 @@ class BonusService:
     ) -> BonusResult:
         """Применить промокод."""
         from datetime import datetime, timezone
+        # FOR UPDATE — предотвращает двойное использование при параллельных запросах
         result = await self.db.execute(
-            select(PromoCode).where(PromoCode.code == promo_code, PromoCode.is_active == True)
+            select(PromoCode)
+            .where(PromoCode.code == promo_code, PromoCode.is_active == True)
+            .with_for_update()
         )
         promo = result.scalar_one_or_none()
 

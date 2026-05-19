@@ -17,8 +17,13 @@ RUN mkdir -p /app/keys
 # Copy app
 COPY . .
 
-# Entrypoint
+# Entrypoint permissions (before switching to non-root)
 RUN chmod +x /app/entrypoint.sh
+
+# Non-root user for security
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser \
+    && chown -R appuser:appgroup /app
+USER appuser
 
 EXPOSE 8000
 

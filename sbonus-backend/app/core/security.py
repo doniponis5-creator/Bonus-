@@ -155,6 +155,13 @@ async def get_current_user(
             detail={"code": "AUTH_INVALID_TOKEN_TYPE", "message": "Требуется access токен"},
         )
 
+    # Блокируем клиентские токены — они не могут использовать admin endpoints
+    if payload.get("role") == "customer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "AUTH_CUSTOMER_NOT_ALLOWED", "message": "Клиентский токен не имеет доступа к админ-панели"},
+        )
+
     # Проверяем blacklist
     jti = payload.get("jti")
     if jti and await is_token_blacklisted(jti):

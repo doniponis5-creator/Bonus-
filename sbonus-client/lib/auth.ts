@@ -7,10 +7,13 @@ export function getToken(): string | null {
 
 export function setToken(token: string): void {
   localStorage.setItem(STORAGE_KEY, token);
+  // Sync to cookie for middleware server-side auth check
+  document.cookie = `customer_token=${token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict`;
 }
 
 export function clearToken(): void {
   localStorage.removeItem(STORAGE_KEY);
+  document.cookie = 'customer_token=; path=/; max-age=0';
 }
 
 export function isTokenValid(token: string | null): boolean {

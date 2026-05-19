@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.redis import check_rate_limit
 from app.core.security import get_current_customer
 from app.models import (
     BonusAccount, Coupon, Customer, CustomerDebt, ReviewRequest, ReviewPlatform, ReviewStatus,
@@ -217,9 +218,13 @@ async def apply_promo_code(
     current: dict = Depends(get_current_customer),
 ) -> dict:
     """Клиент вводит промокод из кабинета."""
+    customer_id = uuid.UUID(current["sub"])
+    # Rate limit: 5 попыток промокода в 5 минут
+    if not await check_rate_limit(f"promo:{customer_id}", max_attempts=5, window_seconds=300):
+        raise HTTPException(status_code=429, detail={"code": "RATE_LIMIT", "message": "Слишком много попыток. Подождите 5 минут."})
     from app.services.bonus import BonusService
     svc = BonusService(db)
-    result = await svc.apply_promo(uuid.UUID(current["sub"]), body.code.strip().upper())
+    result = await svc.apply_promo(customer_id, body.code.strip().upper())
     await db.commit()
     return {
         "message": result.message_ru,
@@ -239,9 +244,13 @@ async def apply_referral_code(
     current: dict = Depends(get_current_customer),
 ) -> dict:
     """Клиент вводит реферальный код друга."""
+    customer_id = uuid.UUID(current["sub"])
+    # Rate limit: 3 попытки реферала в 5 минут
+    if not await check_rate_limit(f"referral:{customer_id}", max_attempts=3, window_seconds=300):
+        raise HTTPException(status_code=429, detail={"code": "RATE_LIMIT", "message": "Слишком много попыток. Подождите 5 минут."})
     from app.services.bonus import BonusService
     svc = BonusService(db)
-    result = await svc.apply_referral(uuid.UUID(current["sub"]), body.code.strip().upper())
+    result = await svc.apply_referral(customer_id, body.code.strip().upper())
     await db.commit()
     return {
         "message": result.message_ru,
@@ -440,14 +449,18 @@ async def activate_coupon(
     from datetime import datetime, timezone
 
     customer_id = uuid.UUID(current["sub"])
+    # Rate limit: 5 попыток активации в 5 минут
+    if not await check_rate_limit(f"coupon:{customer_id}", max_attempts=5, window_seconds=300):
+        raise HTTPException(status_code=429, detail={"code": "RATE_LIMIT", "message": "Слишком много попыток. Подождите 5 минут."})
     now = datetime.now(timezone.utc)
 
+    # FOR UPDATE — предотвращает двойную активацию при параллельных запросах
     result = await db.execute(
         select(Coupon).where(
             Coupon.code == code,
             Coupon.is_active == True,
             Coupon.is_used == False,
-        )
+        ).with_for_update()
     )
     coupon = result.scalar_one_or_none()
     if not coupon:

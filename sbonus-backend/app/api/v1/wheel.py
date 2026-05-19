@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.redis import check_rate_limit
 from app.core.security import get_current_customer
 from app.models import (
     BonusAccount,
@@ -108,19 +109,47 @@ async def spin_wheel(
     """Крутить колесо — использовать 1 спин."""
     customer_id = uuid.UUID(current_customer["sub"])
 
-    # Проверить спины
-    spins = await _get_available_spins(db, customer_id)
+    # Rate limit: max 3 спина в минуту на клиента
+    if not await check_rate_limit(f"wheel:spin:{customer_id}", max_attempts=3, window_seconds=60):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "RATE_LIMIT", "message": "Слишком много попыток. Подождите минуту."},
+        )
+
+    # ── ATOMIC: Lock spin counter FIRST to prevent race condition ──
+    spin_key = f"WHEEL_SPINS_USED_{customer_id}"
+    result = await db.execute(
+        select(Setting).where(Setting.key == spin_key).with_for_update()
+    )
+    spin_record = result.scalar_one_or_none()
+    used_spins = int(spin_record.value) if spin_record else 0
+
+    # Count total earned spins
+    earn_count = (await db.execute(
+        select(func.count(Transaction.id)).where(
+            Transaction.customer_id == customer_id,
+            Transaction.type == TransactionType.EARN,
+        )
+    )).scalar() or 0
+
+    spins = max(0, earn_count - used_spins)
     if spins <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "NO_SPINS", "message": "Нет доступных попыток. Сделайте покупку!"},
         )
 
+    # Increment spin counter IMMEDIATELY (inside lock)
+    if spin_record:
+        spin_record.value = str(used_spins + 1)
+    else:
+        db.add(Setting(key=spin_key, value="1"))
+
     # Выбрать сегмент
     segments = await _get_segments(db)
     winner = _pick_segment(segments)
 
-    # Получить аккаунт
+    # Получить аккаунт (locked)
     result = await db.execute(
         select(BonusAccount)
         .where(BonusAccount.customer_id == customer_id)
@@ -149,9 +178,9 @@ async def spin_wheel(
         )
         last_earn_txn = last_earn.scalar_one_or_none()
         if last_earn_txn:
-            bonus_amount = last_earn_txn.amount  # x2 = ещё раз столько же
+            bonus_amount = last_earn_txn.amount
         else:
-            bonus_amount = Decimal("50")  # fallback
+            bonus_amount = Decimal("50")
 
     # Начислить бонус если > 0
     message = ""
@@ -161,23 +190,14 @@ async def spin_wheel(
 
         txn = Transaction(
             customer_id=customer_id,
-            type=TransactionType.PROMO,  # используем PROMO тип для wheel
+            type=TransactionType.PROMO,
             amount=bonus_amount,
-            note=f"🎰 Колесо удачи: {winner['label']}",
+            note=f"Колесо удачи: {winner['label']}",
         )
         db.add(txn)
-        message = f"🎉 Поздравляем! Вы выиграли {bonus_amount} KGS!"
+        message = f"Поздравляем! Вы выиграли {bonus_amount} KGS!"
     else:
-        message = "😊 Не повезло! Попробуйте в следующий раз!"
-
-    # Записать спин (используем Setting как счётчик)
-    spin_key = f"WHEEL_SPINS_USED_{customer_id}"
-    result = await db.execute(select(Setting).where(Setting.key == spin_key))
-    spin_record = result.scalar_one_or_none()
-    if spin_record:
-        spin_record.value = str(int(spin_record.value) + 1)
-    else:
-        db.add(Setting(key=spin_key, value="1"))
+        message = "Не повезло! Попробуйте в следующий раз!"
 
     await db.commit()
 

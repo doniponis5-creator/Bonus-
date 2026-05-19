@@ -35,11 +35,11 @@ class Settings(BaseSettings):
     bonus_expiration_days: int = 365
     bonus_expiration_warning_days: int = 30
 
-    # ─── БД ───
+    # ─── БД (обязательно задать в .env) ───
     postgres_user: str = "sbonus"
-    postgres_password: str = "sbonus_secret_2025"
+    postgres_password: str = ""
     postgres_db: str = "sbonus_db"
-    database_url: str = "postgresql+asyncpg://sbonus:sbonus_secret_2025@db:5432/sbonus_db"
+    database_url: str = ""
 
     # ─── Redis ───
     redis_url: str = "redis://redis:6379/0"
@@ -74,7 +74,7 @@ class Settings(BaseSettings):
 
     # ─── Приложение ───
     app_env: str = "development"
-    debug: bool = True
+    debug: bool = False
     log_level: str = "INFO"
 
     @property
@@ -90,5 +90,15 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Кешированный синглтон настроек."""
-    return Settings()
+    """Кешированный синглтон настроек с валидацией секретов."""
+    s = Settings()
+
+    # Проверяем обязательные секреты при запуске
+    if not s.database_url:
+        raise ValueError("DATABASE_URL не задан в .env! Приложение не может запуститься без БД.")
+    if not s.postgres_password:
+        raise ValueError("POSTGRES_PASSWORD не задан в .env!")
+    if s.enable_1c_webhook and (not s.webhook_1c_secret or s.webhook_1c_secret == "your_hmac_secret_here"):
+        raise ValueError("WEBHOOK_1C_SECRET не настроен! Задайте реальный HMAC-секрет в .env для 1С webhook.")
+
+    return s

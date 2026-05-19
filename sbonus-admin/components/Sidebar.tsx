@@ -37,7 +37,7 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <button onClick={() => { localStorage.removeItem('admin_token'); window.location.href = '/login'; }} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px',borderRadius:10,fontSize:13,color:'var(--danger)',background:'transparent',border:'none',cursor:'pointer',fontWeight:600}}>
+      <button onClick={() => { localStorage.removeItem('admin_token'); localStorage.removeItem('admin_refresh'); localStorage.removeItem('admin_user'); document.cookie = 'admin_token=; path=/; max-age=0'; window.location.href = '/login'; }} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px',borderRadius:10,fontSize:13,color:'var(--danger)',background:'transparent',border:'none',cursor:'pointer',fontWeight:600}}>
         <LogOut size={16} /> Выход
       </button>
     </aside>
