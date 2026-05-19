@@ -14,7 +14,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import UserRole, require_role
+from fastapi import Request
+from app.core.security import UserRole, require_role, get_current_user
+from app.services.audit import log_audit
 from app.services.cashier_bonus import (
     get_cashier_bonus_config,
     save_cashier_bonus_config,
@@ -66,7 +68,9 @@ async def get_config(db: AsyncSession = Depends(get_db)) -> dict:
 )
 async def update_config(
     body: CashierBonusConfigRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> dict:
     """Обновить конфиг кассир-бонусов."""
     config = {
@@ -77,6 +81,10 @@ async def update_config(
         "streak_min_sales": body.streak_min_sales,
     }
     await save_cashier_bonus_config(db, config)
+    forwarded = request.headers.get("x-forwarded-for")
+    ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
+    await log_audit(db, "cashier_bonus_config", "settings", None,
+                    uuid.UUID(current_user["sub"]), {"enabled": body.enabled}, ip)
     await db.commit()
     return {"status": "ok", "message": "Конфигурация сохранена"}
 

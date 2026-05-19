@@ -77,7 +77,12 @@ export const adminAPI = {
     api.post(`/api/v1/admin/transactions/${id}/reverse`, { reason }),
 
   // Audit logs
-  auditLogs: (page: number) => api.get(`/api/v1/admin/audit-logs?page=${page}`),
+  auditLogs: (page: number, action?: string, entityType?: string) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (action) params.set('action', action);
+    if (entityType) params.set('entity_type', entityType);
+    return api.get(`/api/v1/admin/audit-logs?${params.toString()}`);
+  },
 
   // Cashiers
   cashiers: () => api.get('/api/v1/admin/cashiers'),

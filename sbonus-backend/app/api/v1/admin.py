@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -50,9 +50,23 @@ from app.schemas import (
 from app.models import Setting
 from app.services.whatsapp import send_whatsapp_message
 from app.services.bonus import BonusService
+from app.services.audit import log_audit
 from app.api.v1.wheel import DEFAULT_SEGMENTS
 
 router = APIRouter(prefix="/admin", tags=["Админ-панель"])
+
+
+def _get_ip(request: Request) -> str:
+    """Получить IP клиента (учитывая X-Forwarded-For за Nginx)."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _uid(current_user: dict) -> uuid.UUID:
+    """Извлечь UUID пользователя из JWT."""
+    return uuid.UUID(current_user["sub"])
 
 
 # ═══════════════════════════════════════════
@@ -565,7 +579,9 @@ async def get_tiers(db: AsyncSession = Depends(get_db)):
 )
 async def create_or_update_tier(
     body: TierCreateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
     """Добавить или обновить уровень бонусной программы."""
     result = await db.execute(select(Tier).where(Tier.name == body.name))
@@ -575,6 +591,8 @@ async def create_or_update_tier(
         existing.min_total_kgs = body.min_total_kgs
         existing.bonus_percent = body.bonus_percent
         existing.max_spend_pct = body.max_spend_pct
+        await log_audit(db, "tier_update", "tier", existing.id, _uid(current_user),
+                        {"name": body.name, "bonus_percent": float(body.bonus_percent)}, _get_ip(request))
         return SuccessResponse(message=f"Уровень '{body.name}' обновлён")
     else:
         max_order = (await db.execute(select(func.max(Tier.sort_order)))).scalar() or 0
@@ -586,6 +604,9 @@ async def create_or_update_tier(
             sort_order=max_order + 1,
         )
         db.add(tier)
+        await db.flush()
+        await log_audit(db, "tier_create", "tier", tier.id, _uid(current_user),
+                        {"name": body.name, "bonus_percent": float(body.bonus_percent)}, _get_ip(request))
         return SuccessResponse(message=f"Уровень '{body.name}' создан")
 
 
@@ -631,7 +652,9 @@ async def get_promo_codes(
 )
 async def create_promo_code(
     body: PromoCodeCreateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
     """Создать промокод (сумма, срок, лимит)."""
     existing = await db.execute(select(PromoCode).where(PromoCode.code == body.code))
@@ -645,6 +668,9 @@ async def create_promo_code(
         expires_at=body.expires_at,
     )
     db.add(promo)
+    await db.flush()
+    await log_audit(db, "promo_create", "promo_code", promo.id, _uid(current_user),
+                    {"code": body.code.upper(), "bonus": float(body.bonus_amount)}, _get_ip(request))
     return SuccessResponse(message=f"Промокод '{body.code}' создан: +{body.bonus_amount} KGS")
 
 
@@ -685,13 +711,17 @@ class BranchCreateRequest(BaseModel):
 )
 async def create_branch(
     body: BranchCreateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
     """Добавить новый филиал."""
     from app.models import Branch
     branch = Branch(name=body.name, address=body.address, city=body.city, phone=body.phone)
     db.add(branch)
     await db.flush()
+    await log_audit(db, "branch_create", "branch", branch.id, _uid(current_user),
+                    {"name": body.name}, _get_ip(request))
     return SuccessResponse(message=f"Филиал '{body.name}' добавлен")
 
 
@@ -730,7 +760,9 @@ async def get_cashiers(db: AsyncSession = Depends(get_db)):
 )
 async def create_cashier(
     body: CashierCreateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
     """Добавить кассира (имя, телефон, PIN, филиал)."""
     existing = await db.execute(select(User).where(User.phone == body.phone))
@@ -745,6 +777,9 @@ async def create_cashier(
         pin_hash=hash_password(body.pin),
     )
     db.add(cashier)
+    await db.flush()
+    await log_audit(db, "cashier_create", "user", cashier.id, _uid(current_user),
+                    {"name": body.full_name, "phone": body.phone}, _get_ip(request))
     await db.commit()
     return SuccessResponse(message=f"Кассир '{body.full_name}' добавлен")
 
@@ -757,7 +792,9 @@ async def create_cashier(
 async def update_cashier(
     cashier_id: uuid.UUID,
     body: AdminCashierUpdateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
     """Обновить кассира (блокировка, переименование, сброс PIN, перевод в другой филиал)."""
     result = await db.execute(
@@ -767,15 +804,21 @@ async def update_cashier(
     if not cashier:
         raise HTTPException(status_code=404, detail={"message": "Кассир не найден"})
 
+    changes = {}
     if body.full_name is not None:
         cashier.full_name = body.full_name
+        changes["full_name"] = body.full_name
     if body.branch_id is not None:
         cashier.branch_id = body.branch_id
+        changes["branch_id"] = str(body.branch_id)
     if body.is_active is not None:
         cashier.is_active = body.is_active
+        changes["is_active"] = body.is_active
     if body.pin is not None:
         cashier.pin_hash = hash_password(body.pin)
+        changes["pin_reset"] = True
 
+    await log_audit(db, "cashier_update", "user", cashier_id, _uid(current_user), changes, _get_ip(request))
     await db.commit()
     return SuccessResponse(message="Данные кассира обновлены")
 
@@ -936,6 +979,7 @@ class BulkBonusRequest(BaseModel):
 )
 async def bulk_bonus(
     body: BulkBonusRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
@@ -968,6 +1012,8 @@ async def bulk_bonus(
         except Exception as e:
             errors.append(f"{cid}: {str(e)[:100]}")
 
+    await log_audit(db, "bulk_bonus", "customer", None, _uid(current_user),
+                    {"type": body.type, "amount": body.amount, "count": len(body.customer_ids), "success": success}, _get_ip(request))
     await db.commit()
     msg = f"Обработано: {success}/{len(body.customer_ids)}"
     if errors:
@@ -982,7 +1028,9 @@ async def bulk_bonus(
 async def update_customer(
     id: uuid.UUID,
     body: AdminCustomerUpdateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Обновить данные клиента."""
     from app.models import Customer
@@ -996,6 +1044,8 @@ async def update_customer(
     if body.birth_date is not None: customer.birth_date = body.birth_date
     if body.is_active is not None: customer.is_active = body.is_active
 
+    await log_audit(db, "customer_update", "customer", id, _uid(current_user),
+                    body.model_dump(exclude_none=True), _get_ip(request))
     await db.commit()
     return SuccessResponse(message="Данные клиента обновлены")
 
@@ -1007,6 +1057,7 @@ async def update_customer(
 async def earn_admin(
     id: uuid.UUID,
     body: AdminBonusAdjustmentRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -1020,6 +1071,8 @@ async def earn_admin(
         admin_id=uuid.UUID(current_user["sub"]),
         note=body.note
     )
+    await log_audit(db, "admin_earn", "customer", id, _uid(current_user),
+                    {"amount": float(body.amount), "note": body.note}, _get_ip(request))
     await db.commit()
     return res
 
@@ -1031,6 +1084,7 @@ async def earn_admin(
 async def spend_admin(
     id: uuid.UUID,
     body: AdminBonusAdjustmentRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -1044,6 +1098,8 @@ async def spend_admin(
         admin_id=uuid.UUID(current_user["sub"]),
         note=body.note
     )
+    await log_audit(db, "admin_spend", "customer", id, _uid(current_user),
+                    {"amount": float(body.amount), "note": body.note}, _get_ip(request))
     await db.commit()
     return res
 
@@ -1062,6 +1118,7 @@ class TransactionReversalRequest(BaseModel):
 )
 async def gift_spin(
     id: uuid.UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -1110,6 +1167,8 @@ async def gift_spin(
                 instance_id=instance_id, api_token=api_token
             ))
 
+    await log_audit(db, "gift_spin", "customer", id, _uid(current_user),
+                    {"customer_name": customer.full_name}, _get_ip(request))
     await db.commit()
     return SuccessResponse(message=f"Бесплатный спин подарен клиенту {customer.full_name}")
 
@@ -1122,6 +1181,7 @@ async def gift_spin(
 async def reverse_transaction(
     txn_id: uuid.UUID,
     body: TransactionReversalRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
@@ -1192,6 +1252,8 @@ async def reverse_transaction(
         note=f"↩ Отмена #{str(txn_id)[:8]}... | {body.reason}",
     )
     db.add(refund)
+    await log_audit(db, "transaction_reverse", "transaction", txn_id, _uid(current_user),
+                    {"amount": float(txn.amount), "type": txn.type.value, "reason": body.reason}, _get_ip(request))
     await db.commit()
 
     return SuccessResponse(
@@ -1266,32 +1328,41 @@ async def get_audit_logs(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     action: str = Query(None),
+    entity_type: str = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Журнал аудита с фильтрами и пагинацией."""
-    query = select(AuditLog)
+    query = select(AuditLog, User).outerjoin(User, AuditLog.user_id == User.id)
     if action:
         query = query.where(AuditLog.action == action)
+    if entity_type:
+        query = query.where(AuditLog.entity_type == entity_type)
 
-    count_q = select(func.count()).select_from(query.subquery())
+    count_q = select(func.count()).select_from(
+        select(AuditLog).where(
+            *([AuditLog.action == action] if action else []),
+            *([AuditLog.entity_type == entity_type] if entity_type else []),
+        ).subquery()
+    )
     total = (await db.execute(count_q)).scalar() or 0
 
     result = await db.execute(
         query.order_by(AuditLog.created_at.desc())
         .offset((page - 1) * per_page).limit(per_page)
     )
-    logs = result.scalars().all()
+    rows = result.all()
 
     return {
         "items": [
             {
                 "id": str(l.id), "user_id": str(l.user_id) if l.user_id else None,
+                "user_name": u.full_name if u else None,
                 "action": l.action, "entity_type": l.entity_type,
                 "entity_id": str(l.entity_id) if l.entity_id else None,
                 "details": l.details, "ip_address": l.ip_address,
                 "created_at": l.created_at.isoformat(),
             }
-            for l in logs
+            for l, u in rows
         ],
         "total": total, "page": page, "per_page": per_page,
     }
@@ -1315,10 +1386,13 @@ async def get_settings(db: AsyncSession = Depends(get_db)):
 )
 async def update_settings(
     body: SettingsUpdateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Обновить глобальные настройки (None — поле пропускается, существующее значение остаётся)."""
     updates = body.model_dump(exclude_none=True)
+    changed_keys = list(updates.keys())
     for key, value in updates.items():
         result = await db.execute(select(Setting).where(Setting.key == key))
         setting = result.scalar_one_or_none()
@@ -1327,6 +1401,8 @@ async def update_settings(
         else:
             db.add(Setting(key=key, value=str(value)))
 
+    await log_audit(db, "settings_update", "settings", None, _uid(current_user),
+                    {"keys": changed_keys}, _get_ip(request))
     await db.commit()
     return SuccessResponse(message="Настройки успешно сохранены")
 
@@ -1438,7 +1514,9 @@ async def list_coupons(
 )
 async def create_coupon(
     body: CouponCreateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
     """Создать персональный или общий купон."""
     import secrets
@@ -1459,6 +1537,9 @@ async def create_coupon(
         expires_at=expires,
     )
     db.add(coupon)
+    await db.flush()
+    await log_audit(db, "coupon_create", "coupon", coupon.id, _uid(current_user),
+                    {"code": code, "title": body.title, "bonus": float(body.bonus_amount)}, _get_ip(request))
     await db.commit()
 
     # Отправить WhatsApp если персональный купон
@@ -1500,7 +1581,9 @@ async def create_coupon(
 )
 async def delete_coupon(
     coupon_id: uuid.UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
     """Деактивировать купон."""
     result = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
@@ -1508,6 +1591,8 @@ async def delete_coupon(
     if not coupon:
         raise HTTPException(status_code=404, detail={"message": "Купон не найден"})
     coupon.is_active = False
+    await log_audit(db, "coupon_delete", "coupon", coupon_id, _uid(current_user),
+                    {"code": coupon.code, "title": coupon.title}, _get_ip(request))
     await db.commit()
     return SuccessResponse(message="Купон деактивирован")
 
@@ -1581,6 +1666,7 @@ class ReviewActionRequest(BaseModel):
 async def action_review(
     review_id: uuid.UUID,
     body: ReviewActionRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
@@ -1644,11 +1730,15 @@ async def action_review(
                         instance_id=iid, api_token=tok,
                     )
 
+        await log_audit(db, "review_approve", "review", review_id, _uid(current_user),
+                        {"bonus": float(review.bonus_amount)}, _get_ip(request))
         await db.commit()
         return SuccessResponse(message=f"Отзыв одобрен, +{int(review.bonus_amount)} KGS начислено")
 
     elif body.action == "reject":
         review.status = ReviewStatus.REJECTED
+        await log_audit(db, "review_reject", "review", review_id, _uid(current_user),
+                        {"note": body.note}, _get_ip(request))
         await db.commit()
         return SuccessResponse(message="Заявка отклонена")
 
@@ -1699,7 +1789,9 @@ async def get_wheel_config(db: AsyncSession = Depends(get_db)) -> dict:
 )
 async def update_wheel_config(
     body: WheelConfigUpdateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse:
     """Обновить конфигурацию колеса удачи (сегменты, вероятности, бонусы)."""
     import json
@@ -1751,6 +1843,8 @@ async def update_wheel_config(
     else:
         db.add(Setting(key="WHEEL_SEGMENTS", value=json_value))
 
+    await log_audit(db, "wheel_config_update", "wheel", None, _uid(current_user),
+                    {"segments_count": len(segments_data)}, _get_ip(request))
     await db.commit()
     return SuccessResponse(message=f"Конфигурация колеса сохранена: {len(segments_data)} сегментов")
 
@@ -1760,7 +1854,11 @@ async def update_wheel_config(
     response_model=SuccessResponse,
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
 )
-async def reset_wheel_config(db: AsyncSession = Depends(get_db)) -> SuccessResponse:
+async def reset_wheel_config(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> SuccessResponse:
     """Сбросить конфигурацию колеса к значениям по умолчанию."""
     import json
     result = await db.execute(
@@ -1772,6 +1870,7 @@ async def reset_wheel_config(db: AsyncSession = Depends(get_db)) -> SuccessRespo
     else:
         db.add(Setting(key="WHEEL_SEGMENTS", value=json.dumps(DEFAULT_SEGMENTS, ensure_ascii=False)))
 
+    await log_audit(db, "wheel_config_reset", "wheel", None, _uid(current_user), None, _get_ip(request))
     await db.commit()
     return SuccessResponse(message="Конфигурация колеса сброшена к значениям по умолчанию")
 
@@ -1784,8 +1883,10 @@ async def reset_wheel_config(db: AsyncSession = Depends(get_db)) -> SuccessRespo
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
 )
 async def import_customers_from_excel(
+    request: Request,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Массовый импорт клиентов из Excel файла.
@@ -1929,6 +2030,8 @@ async def import_customers_from_excel(
         existing_phones.add(phone)
         created += 1
 
+    await log_audit(db, "customer_import", "customer", None, _uid(current_user),
+                    {"created": created, "skipped": skipped, "errors": len(errors), "file": file.filename}, _get_ip(request))
     await db.commit()
     wb.close()
 
