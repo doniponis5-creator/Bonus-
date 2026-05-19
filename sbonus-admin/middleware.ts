@@ -25,18 +25,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Basic JWT expiry check (without signature verification — that's backend's job)
+  // Basic JWT format check — expiry and auth handled client-side via refresh interceptor
   try {
     const parts = token.split('.');
     if (parts.length !== 3) throw new Error('Invalid JWT');
     const payload = JSON.parse(atob(parts[1]));
-    if (payload.exp * 1000 < Date.now()) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      const response = NextResponse.redirect(url);
-      response.cookies.delete('admin_token');
-      return response;
-    }
     // Block customer tokens from accessing admin
     if (payload.role === 'customer') {
       const url = request.nextUrl.clone();
@@ -46,6 +39,7 @@ export function middleware(request: NextRequest) {
       return response;
     }
   } catch {
+    // Malformed token — redirect to login
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     const response = NextResponse.redirect(url);
