@@ -370,12 +370,12 @@ export default function DashboardPage() {
             <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Ticket size={14} /> Ввести промокод
             </h3>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input className="input" style={{ flex: 1, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+              <input className="input" style={{ flex: 1, minWidth: 0, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, fontSize: 16 }}
                 value={promoCode} onChange={e => setPromoCode(e.target.value)}
                 placeholder="PROMO2024" maxLength={30}
                 onKeyDown={e => e.key === 'Enter' && handlePromo()} />
-              <button className="btn btn-primary" onClick={handlePromo} disabled={promoLoading || !promoCode.trim()}>
+              <button className="btn btn-primary" style={{ width: 'auto', flexShrink: 0, padding: '14px 20px' }} onClick={handlePromo} disabled={promoLoading || !promoCode.trim()}>
                 {promoLoading ? '...' : 'Применить'}
               </button>
             </div>
@@ -441,12 +441,12 @@ export default function DashboardPage() {
             <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Users size={14} /> Ввести реферальный код друга
             </h3>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input className="input" style={{ flex: 1, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+              <input className="input" style={{ flex: 1, minWidth: 0, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, fontSize: 16 }}
                 value={refCode} onChange={e => setRefCode(e.target.value)}
-                placeholder="ABC123" maxLength={20}
+                placeholder="REF-XXXXXX" maxLength={20}
                 onKeyDown={e => e.key === 'Enter' && handleReferral()} />
-              <button className="btn btn-primary" onClick={handleReferral} disabled={refLoading || !refCode.trim()}>
+              <button className="btn btn-primary" style={{ width: 'auto', flexShrink: 0, padding: '14px 20px' }} onClick={handleReferral} disabled={refLoading || !refCode.trim()}>
                 {refLoading ? '...' : 'Применить'}
               </button>
             </div>
