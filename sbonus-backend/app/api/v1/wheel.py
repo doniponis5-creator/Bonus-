@@ -132,7 +132,15 @@ async def spin_wheel(
         )
     )).scalar() or 0
 
-    spins = max(0, earn_count - used_spins)
+    # Бесплатные спины клиента
+    free_key = f"WHEEL_FREE_SPINS_{customer_id}"
+    free_result = await db.execute(
+        select(Setting).where(Setting.key == free_key).with_for_update()
+    )
+    free_record = free_result.scalar_one_or_none()
+    free_spins = int(free_record.value) if free_record else 0
+
+    spins = max(0, earn_count + free_spins - used_spins)
     if spins <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -242,7 +250,7 @@ async def _get_segments(db: AsyncSession) -> list[dict]:
 async def _get_available_spins(db: AsyncSession, customer_id: uuid.UUID) -> int:
     """
     Подсчёт доступных спинов.
-    Формула: кол-во EARN транзакций — кол-во использованных спинов.
+    Формула: (EARN транзакции + бесплатные спины) — использованные спины.
     """
     # Всего EARN транзакций
     earn_count = (await db.execute(
@@ -252,10 +260,16 @@ async def _get_available_spins(db: AsyncSession, customer_id: uuid.UUID) -> int:
         )
     )).scalar() or 0
 
+    # Бесплатные спины клиента (начисляются при регистрации/импорте)
+    free_key = f"WHEEL_FREE_SPINS_{customer_id}"
+    free_result = await db.execute(select(Setting).where(Setting.key == free_key))
+    free_record = free_result.scalar_one_or_none()
+    free_spins = int(free_record.value) if free_record else 0
+
     # Использованные спины
     spin_key = f"WHEEL_SPINS_USED_{customer_id}"
     result = await db.execute(select(Setting).where(Setting.key == spin_key))
     spin_record = result.scalar_one_or_none()
     used_spins = int(spin_record.value) if spin_record else 0
 
-    return max(0, earn_count - used_spins)
+    return max(0, earn_count + free_spins - used_spins)

@@ -1,5 +1,5 @@
 "use client";
-import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock } from 'lucide-react';
+import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -55,6 +55,7 @@ export default function SettingsPage() {
     BALANCE_REMINDER_INACTIVE_DAYS: "14",
     BALANCE_REMINDER_MIN_BALANCE: "100",
     WA_MESSAGE_INTERVAL: "3",
+    WHEEL_FREE_SPINS_ON_REGISTER: "1",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
@@ -509,6 +510,37 @@ export default function SettingsPage() {
             <p style={{ fontSize: 12, color: colors.textMuted, marginTop: 6 }}>
               Напоминание только если баланс выше этой суммы
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* WHEEL FREE SPINS CARD */}
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardTitleWrapper}>
+            <Gift size={24} color={colors.accent} />
+            <div>
+              <h2 style={styles.cardTitle}>Колесо удачи — бесплатные спины</h2>
+              <p style={styles.cardDesc}>Бесплатные попытки для новых клиентов при регистрации или импорте</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label style={styles.inputLabel}>Кол-во бесплатных спинов при регистрации</label>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <input
+              style={{ ...styles.input, maxWidth: "120px" }}
+              type="number"
+              min={0}
+              max={10}
+              value={settings.WHEEL_FREE_SPINS_ON_REGISTER}
+              onChange={(e) => handleChange("WHEEL_FREE_SPINS_ON_REGISTER", e.target.value)}
+              placeholder="1"
+            />
+            <span style={{ fontSize: "13px", color: colors.textMuted }}>
+              0 = без бесплатных спинов. Рекомендуется 1-3.
+            </span>
           </div>
         </div>
       </div>

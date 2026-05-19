@@ -1663,6 +1663,13 @@ async def import_customers_from_excel(
     existing_phones_result = await db.execute(select(Customer.phone))
     existing_phones = {row[0] for row in existing_phones_result.all()}
 
+    # Бесплатные спины для новых клиентов (настройка колеса удачи)
+    free_spins_result = await db.execute(
+        select(Setting).where(Setting.key == "WHEEL_FREE_SPINS_ON_REGISTER")
+    )
+    free_spins_record = free_spins_result.scalar_one_or_none()
+    free_spins_count = int(free_spins_record.value) if free_spins_record and free_spins_record.value else 0
+
     created = 0
     skipped = 0
     errors = []
@@ -1750,6 +1757,13 @@ async def import_customers_from_excel(
             total_spent=0,
         )
         db.add(bonus_account)
+
+        # Начисление бесплатных спинов колеса удачи
+        if free_spins_count > 0:
+            db.add(Setting(
+                key=f"WHEEL_FREE_SPINS_{customer.id}",
+                value=str(free_spins_count),
+            ))
 
         existing_phones.add(phone)
         created += 1
