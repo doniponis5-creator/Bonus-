@@ -48,6 +48,7 @@ async def send_balance_reminders() -> None:
                 "WHATSAPP_TEMPLATE_BALANCE_REMINDER",
                 "BALANCE_REMINDER_INACTIVE_DAYS",
                 "BALANCE_REMINDER_MIN_BALANCE",
+                "WA_MESSAGE_INTERVAL",
             ]))
         )
         settings_map = {s.key: s.value for s in wa_settings.scalars().all()}
@@ -122,7 +123,11 @@ async def send_balance_reminders() -> None:
 
         print(f"  📨 Balance reminder: {len(rows)} клиентов")
 
+        import asyncio
         from app.services.whatsapp import send_tracked_whatsapp
+
+        # Интервал между сообщениями (по умолчанию 3 секунды)
+        wa_interval = float(settings_map.get("WA_MESSAGE_INTERVAL", "3"))
 
         sent = 0
         for row in rows:
@@ -147,6 +152,9 @@ async def send_balance_reminders() -> None:
                     api_token=api_token,
                 )
                 sent += 1
+                # Задержка между сообщениями (защита от блокировки WhatsApp)
+                if wa_interval > 0:
+                    await asyncio.sleep(wa_interval)
             except Exception as e:
                 print(f"  ❌ Reminder failed for {customer.phone}: {e}")
 

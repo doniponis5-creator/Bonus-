@@ -57,6 +57,7 @@ async def _get_whatsapp_config(db: AsyncSession) -> dict:
             "ENABLE_WHATSAPP_NOTIFICATIONS",
             "GREENAPI_INSTANCE_ID",
             "GREENAPI_API_TOKEN",
+            "WA_MESSAGE_INTERVAL",
         ]))
     )
     return {s.key: s.value for s in result.scalars().all()}
@@ -82,6 +83,9 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
 
     # Filter out already-sent recipients
     pending = [r for r in recipients if r.status != "sent"]
+
+    # Интервал между WhatsApp сообщениями (по умолчанию 3 секунды)
+    wa_interval = float(wa_cfg.get("WA_MESSAGE_INTERVAL", "3"))
 
     sent_count = 0
     BATCH_SIZE = 100
@@ -146,12 +150,18 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
                         .replace("{name}", customer.full_name)
                     )
                     from app.services.whatsapp import send_whatsapp_message
-                    asyncio.create_task(send_whatsapp_message(
-                        phone=customer.phone,
-                        message=msg,
-                        instance_id=wa_instance,
-                        api_token=wa_token,
-                    ))
+                    try:
+                        await send_whatsapp_message(
+                            phone=customer.phone,
+                            message=msg,
+                            instance_id=wa_instance,
+                            api_token=wa_token,
+                        )
+                    except Exception:
+                        pass  # Ошибка отправки WA не блокирует кампанию
+                    # Задержка между сообщениями (защита от блокировки WhatsApp)
+                    if wa_interval > 0:
+                        await asyncio.sleep(wa_interval)
             except Exception as e:
                 rec.status = "failed"
                 rec.error = str(e)[:500]

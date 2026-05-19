@@ -54,6 +54,7 @@ export default function SettingsPage() {
     WHATSAPP_TEMPLATE_BALANCE_REMINDER: "👋 {name}, у вас {balance} KGS бонусов!\nНе забудьте использовать 🛍\n\n📱 Проверить баланс: {link}\n🛒 Смарт Центр",
     BALANCE_REMINDER_INACTIVE_DAYS: "14",
     BALANCE_REMINDER_MIN_BALANCE: "100",
+    WA_MESSAGE_INTERVAL: "3",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
@@ -378,6 +379,27 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("GREENAPI_API_TOKEN", e.target.value)}
               placeholder="Например: d1b1c2..."
             />
+          </div>
+        </div>
+
+        <div style={{ marginTop: "16px" }}>
+          <label style={styles.inputLabel}>
+            <Clock size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: "6px" }} />
+            Интервал между сообщениями (сек)
+          </label>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <input
+              style={{ ...styles.input, maxWidth: "120px" }}
+              type="number"
+              min={1}
+              max={30}
+              value={settings.WA_MESSAGE_INTERVAL}
+              onChange={(e) => handleChange("WA_MESSAGE_INTERVAL", e.target.value)}
+              placeholder="3"
+            />
+            <span style={{ fontSize: "13px", color: colors.textSecondary }}>
+              Задержка между WhatsApp сообщениями для защиты от блокировки (рекомендуется 3-5 сек)
+            </span>
           </div>
         </div>
       </div>
