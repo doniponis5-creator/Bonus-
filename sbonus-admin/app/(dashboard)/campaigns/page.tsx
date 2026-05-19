@@ -47,7 +47,7 @@ export default function CampaignsPage() {
     if (!search.trim()) return;
     setSearching(true);
     try {
-      const { data } = await customersAPI.list(search.trim(), 1, 20);
+      const { data } = await customersAPI.list({ search: search.trim(), page: 1, limit: 20 });
       setSearchResults(data.items || []);
     } catch {
       setSearchResults([]);
