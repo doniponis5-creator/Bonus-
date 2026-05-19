@@ -397,7 +397,7 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("WA_MESSAGE_INTERVAL", e.target.value)}
               placeholder="3"
             />
-            <span style={{ fontSize: "13px", color: colors.textSecondary }}>
+            <span style={{ fontSize: "13px", color: colors.textMuted }}>
               Задержка между WhatsApp сообщениями для защиты от блокировки (рекомендуется 3-5 сек)
             </span>
           </div>
