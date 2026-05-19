@@ -1,6 +1,7 @@
 """
 Sbonus+ — API маршруты клиентов.
 POST   /api/v1/customers/register
+GET    /api/v1/customers/search?q=...
 GET    /api/v1/customers/by-phone/{phone}
 GET    /api/v1/customers/by-qr/{qr_code}
 GET    /api/v1/customers/{id}/balance
@@ -10,7 +11,7 @@ GET    /api/v1/customers/{id}/transactions
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -94,6 +95,46 @@ async def register_customer(
         is_active=customer.is_active,
         created_at=customer.created_at,
     )
+
+
+@router.get("/search", response_model=list[CustomerResponse])
+async def search_customers(
+    q: str = Query(..., min_length=2, max_length=50),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> list[CustomerResponse]:
+    """Умный поиск клиента по ФИО, телефону или QR коду."""
+    term = q.strip()
+    search_pattern = f"%{term}%"
+
+    query = (
+        select(Customer)
+        .options(selectinload(Customer.tier))
+        .where(
+            Customer.is_active == True,
+            or_(
+                Customer.full_name.ilike(search_pattern),
+                Customer.phone.ilike(search_pattern),
+                Customer.qr_code.ilike(search_pattern),
+            ),
+        )
+        .order_by(Customer.full_name.asc())
+        .limit(10)
+    )
+    result = await db.execute(query)
+    customers = result.scalars().all()
+
+    return [
+        CustomerResponse(
+            id=c.id, phone=c.phone, full_name=c.full_name,
+            qr_code=c.qr_code, birth_date=c.birth_date,
+            tier_name=c.tier.name if c.tier else None,
+            tier_percent=c.tier.bonus_percent if c.tier else None,
+            referral_code=c.referral_code, is_active=c.is_active,
+            created_at=c.created_at,
+        )
+        for c in customers
+    ]
 
 
 @router.get("/by-phone/{phone}", response_model=CustomerResponse)

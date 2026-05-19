@@ -81,6 +81,9 @@ export const customersAPI = {
   register: (data: { phone: string; full_name: string; birth_date?: string }) =>
     api.post('/api/v1/customers/register', data),
 
+  search: (query: string) =>
+    api.get(`/api/v1/customers/search?q=${encodeURIComponent(query)}`),
+
   byPhone: (phone: string) =>
     api.get(`/api/v1/customers/by-phone/${encodeURIComponent(phone)}`),
 
