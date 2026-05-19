@@ -37,6 +37,16 @@ const fmtShort = (v: number) => {
   return v.toString();
 };
 
+const tooltipStyle = {
+  background: '#141c2b',
+  border: '1px solid #1e293b',
+  borderRadius: 10,
+  color: '#e2eaf6',
+  fontSize: 13,
+  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+  padding: '10px 14px',
+};
+
 const TIER_COLORS: Record<string, string> = {
   Bronze: '#CD7F32', Silver: '#C0C0C0', Gold: '#FFD700', Platinum: '#B9F2FF',
 };
@@ -173,7 +183,7 @@ export default function DashboardPage() {
               />
               <YAxis tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={fmtShort} />
               <Tooltip
-                contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#fff', fontSize: 13 }}
+                contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
                 formatter={(value: number, name: string) => [fmt(value), name === 'earn' ? 'Начислено' : 'Использовано']}
                 labelFormatter={(label: string) => new Date(label).toLocaleDateString('ru-RU')}
               />
@@ -202,7 +212,7 @@ export default function DashboardPage() {
                 />
                 <YAxis tick={{ fill: '#64748b', fontSize: 10 }} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#fff', fontSize: 13 }}
+                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
                   formatter={(value: number) => [`${value} клиентов`, 'Новые']}
                   labelFormatter={(label: string) => new Date(label).toLocaleDateString('ru-RU')}
                 />
@@ -226,7 +236,7 @@ export default function DashboardPage() {
                 />
                 <YAxis tick={{ fill: '#64748b', fontSize: 10 }} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#fff', fontSize: 13 }}
+                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
                   labelFormatter={(label: string) => new Date(label).toLocaleDateString('ru-RU')}
                 />
                 <Bar dataKey="earn_count" fill="#FFE600" radius={[4, 4, 0, 0]} name="Начислений" />
@@ -257,7 +267,7 @@ export default function DashboardPage() {
                     {tierData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#fff', fontSize: 13 }}
+                    contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
                     formatter={(value: number, name: string) => [`${value} клиентов`, name]}
                   />
                   <Legend verticalAlign="bottom" iconType="circle" iconSize={8}

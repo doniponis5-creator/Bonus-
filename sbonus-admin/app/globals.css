@@ -16,8 +16,14 @@ a { text-decoration: none; color: inherit; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 /* Cards */
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
-.card:hover { border-color: rgba(255,230,0,0.2); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: border-color 0.2s ease; }
+.card:hover { border-color: rgba(255,230,0,0.15); }
+
+/* Recharts tooltip & cursor polish */
+.recharts-tooltip-wrapper { filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4)); }
+.recharts-default-tooltip { backdrop-filter: blur(12px); }
+.recharts-active-dot circle { filter: drop-shadow(0 0 6px rgba(255,230,0,0.5)); }
+.recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line { opacity: 0.5; }
 
 /* Buttons */
 .btn { padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; }

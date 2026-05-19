@@ -27,6 +27,16 @@ const PERIOD_OPTIONS = [
 
 const fmt = (v: number) => Number(v).toLocaleString('ru-RU') + ' KGS';
 
+const tooltipStyle = {
+  background: '#141c2b',
+  border: '1px solid #1e293b',
+  borderRadius: 10,
+  color: '#e2eaf6',
+  fontSize: 13,
+  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+  padding: '10px 14px',
+};
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -115,7 +125,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="hour" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(v: number) => `${v}:00`} />
                 <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#fff', fontSize: 13 }}
+                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
                   formatter={(value: number, name: string) => [
                     name === 'count' ? `${value} покупок` : fmt(value),
                     name === 'count' ? 'Транзакции' : 'Выручка'
@@ -148,7 +158,7 @@ export default function AnalyticsPage() {
                     {pieData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#fff', fontSize: 13 }}
+                    contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
                     formatter={(value: number, name: string) => [`${value} операций`, name]}
                   />
                   <Legend verticalAlign="bottom" iconType="circle" iconSize={8}
