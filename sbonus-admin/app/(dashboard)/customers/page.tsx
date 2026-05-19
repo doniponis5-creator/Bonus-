@@ -184,7 +184,7 @@ export default function CustomersPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Поиск по имени или телефону..."
-          onKeyDown={e => e.key === 'Enter' && { ...goToPage(1), ...loadCustomers(1) }}
+          onKeyDown={e => { if (e.key === 'Enter') { setPage(1); loadCustomers(1); } }}
         />
         <button className="btn btn-primary" onClick={() => { setPage(1); loadCustomers(1); }} disabled={loading}>
           {loading ? 'Загрузка...' : 'Найти'}
