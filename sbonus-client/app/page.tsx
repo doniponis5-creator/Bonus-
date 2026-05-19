@@ -61,9 +61,6 @@ export default function DashboardPage() {
   const [promoLoading, setPromoLoading] = useState(false);
 
   // Referral
-  const [refCode, setRefCode] = useState('');
-  const [refMsg, setRefMsg] = useState('');
-  const [refLoading, setRefLoading] = useState(false);
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [copied, setCopied] = useState(false);
 
@@ -136,20 +133,6 @@ export default function DashboardPage() {
       const d = err?.response?.data?.detail;
       setPromoMsg(`[err]${typeof d === 'string' ? d : d?.message || 'Ошибка'}`);
     } finally { setPromoLoading(false); }
-  };
-
-  const handleReferral = async () => {
-    if (!refCode.trim()) return;
-    setRefLoading(true); setRefMsg('');
-    try {
-      const { data: r } = await customerAPI.applyReferral(refCode.trim());
-      setRefMsg(`[ok]${r.message}`);
-      setRefCode('');
-      fetchData();
-    } catch (err: any) {
-      const d = err?.response?.data?.detail;
-      setRefMsg(`[err]${typeof d === 'string' ? d : d?.message || 'Ошибка'}`);
-    } finally { setRefLoading(false); }
   };
 
   const copyRef = () => {
@@ -436,27 +419,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Enter referral code */}
-          <div className="card">
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Users size={14} /> Ввести реферальный код друга
-            </h3>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-              <input className="input" style={{ flex: 1, minWidth: 0, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, fontSize: 16 }}
-                value={refCode} onChange={e => setRefCode(e.target.value)}
-                placeholder="REF-XXXXXX" maxLength={20}
-                onKeyDown={e => e.key === 'Enter' && handleReferral()} />
-              <button className="btn btn-primary" style={{ width: 'auto', flexShrink: 0, padding: '14px 20px' }} onClick={handleReferral} disabled={refLoading || !refCode.trim()}>
-                {refLoading ? '...' : 'Применить'}
-              </button>
-            </div>
-            {refMsg && (
-              <p style={{ fontSize: 13, marginTop: 8, color: refMsg.startsWith('[ok]') ? '#22c55e' : '#ff4d4d', display: 'flex', alignItems: 'center', gap: 4 }}>
-                {refMsg.startsWith('[ok]') ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                {refMsg.replace(/^\[(ok|err)\]/, '')}
-              </p>
-            )}
-          </div>
+          {/* Referral code input removed — referral applies only during registration */}
 
           {/* Coupons */}
           <MyCoupons onBalanceChange={fetchData} />
