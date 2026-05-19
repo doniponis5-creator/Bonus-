@@ -42,6 +42,7 @@ def _campaign_to_response(c: BonusCampaign, recipients_count: int = 0) -> BonusC
     return BonusCampaignResponse(
         id=c.id,
         name=c.name,
+        campaign_type=getattr(c, "campaign_type", "bonus") or "bonus",
         bonus_date=c.bonus_date,
         amount=c.amount,
         reason=c.reason,
@@ -73,10 +74,17 @@ async def create_campaign(
     if body.target_type == "individual" and not body.customer_ids:
         raise HTTPException(status_code=400, detail={"code": "MISSING_CUSTOMERS", "message": "Для individual необходимо передать customer_ids"})
 
+    c_type = body.campaign_type if body.campaign_type in ("bonus", "wheel") else "bonus"
+
+    # Для бонусных кампаний сумма обязательна
+    if c_type == "bonus" and (not body.amount or body.amount <= 0):
+        raise HTTPException(status_code=400, detail={"code": "INVALID_AMOUNT", "message": "Сумма бонуса должна быть больше 0"})
+
     campaign = BonusCampaign(
         name=body.name,
+        campaign_type=c_type,
         bonus_date=body.bonus_date,
-        amount=body.amount,
+        amount=body.amount or 0,
         reason=body.reason,
         message_template=body.message_template,
         target_type=CampaignTargetType(body.target_type),

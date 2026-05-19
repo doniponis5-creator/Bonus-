@@ -1,5 +1,5 @@
 'use client';
-import { Users, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock, Filter, CheckSquare, Square, Coins, Upload, FileSpreadsheet, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Users, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock, Filter, CheckSquare, Square, Coins, Upload, FileSpreadsheet, X, AlertTriangle, CheckCircle2, Disc } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { customersAPI, adminAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
@@ -169,6 +169,16 @@ export default function CustomersPage() {
     try {
       await customersAPI.update(c.id, { is_active: !c.is_active });
       loadCustomers(page);
+    } catch (err: any) {
+      toast('error', err?.response?.data?.detail?.message || 'Ошибка');
+    }
+  };
+
+  const handleGiftSpin = async (c: any) => {
+    if (!await confirm(`Подарить бесплатный спин колеса удачи клиенту «${c.full_name}»?`)) return;
+    try {
+      const { data } = await customersAPI.giftSpin(c.id);
+      toast('success', data.message || 'Спин подарен');
     } catch (err: any) {
       toast('error', err?.response?.data?.detail?.message || 'Ошибка');
     }
@@ -363,6 +373,7 @@ export default function CustomersPage() {
                     <button onClick={() => openModal('edit', c)} style={{ background: 'none', border: '1px solid #1c2a3a', color: '#8899aa', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Pencil size={12} /> Изм.</button>
                     <button onClick={() => openModal('earn', c)} style={{ background: 'none', border: '1px solid #FFE600', color: '#FFE600', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><PlusCircle size={12} /> Бонус</button>
                     <button onClick={() => openModal('spend', c)} style={{ background: 'none', border: '1px solid #ff4d4d', color: '#ff4d4d', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><MinusCircle size={12} /> Списать</button>
+                    <button onClick={() => handleGiftSpin(c)} style={{ background: 'none', border: '1px solid #c084fc', color: '#c084fc', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Disc size={12} /> Спин</button>
                     <button onClick={() => toggleActive(c)} style={{ background: 'none', border: '1px solid ' + (c.is_active === false ? '#22c55e' : '#f59e0b'), color: c.is_active === false ? '#22c55e' : '#f59e0b', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       {c.is_active === false ? <><Unlock size={12} /> Разблок.</> : <><Lock size={12} /> Блокир.</>}
                     </button>

@@ -372,8 +372,9 @@ class CustomerCabinetMe(BaseModel):
 class BonusCampaignCreateRequest(BaseModel):
     """Создать бонусную кампанию."""
     name: str = Field(..., min_length=2, max_length=150, example="Новогодний бонус 2026")
+    campaign_type: str = Field("bonus", description="bonus | wheel")
     bonus_date: date = Field(..., description="Дата начисления бонуса (YYYY-MM-DD)")
-    amount: Decimal = Field(..., gt=0, description="Сумма бонуса в KGS")
+    amount: Decimal = Field(Decimal("0"), ge=0, description="Сумма бонуса в KGS (0 для wheel)")
     reason: Optional[str] = Field(None, max_length=500, description="Сабаб / Повод бонуса (для админ-инфо)")
     message_template: Optional[str] = Field(None, max_length=1000, description="WhatsApp шаблон ({amount}, {balance}, {name})")
     target_type: str = Field("all", description="all | individual")
@@ -384,6 +385,7 @@ class BonusCampaignResponse(BaseModel):
     """Бонусная кампания."""
     id: uuid.UUID
     name: str
+    campaign_type: str = "bonus"
     bonus_date: date
     amount: Decimal
     reason: Optional[str] = None

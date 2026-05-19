@@ -1051,6 +1051,69 @@ class TransactionReversalRequest(BaseModel):
     reason: str
 
 
+# ═══════════════════════════════════════════
+# GIFT WHEEL SPIN
+# ═══════════════════════════════════════════
+
+@router.post(
+    "/customers/{id}/gift-spin",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def gift_spin(
+    id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Подарить бесплатный спин колеса удачи клиенту."""
+    import asyncio
+
+    result = await db.execute(select(Customer).where(Customer.id == id))
+    customer = result.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail={"code": "CUSTOMER_NOT_FOUND"})
+
+    # Increment free spins
+    free_key = f"WHEEL_FREE_SPINS_{id}"
+    result = await db.execute(select(Setting).where(Setting.key == free_key))
+    record = result.scalar_one_or_none()
+    if record:
+        record.value = str(int(record.value) + 1)
+    else:
+        db.add(Setting(key=free_key, value="1"))
+
+    # WhatsApp notification
+    wa_result = await db.execute(
+        select(Setting).where(Setting.key.in_([
+            "ENABLE_WHATSAPP_NOTIFICATIONS",
+            "GREENAPI_INSTANCE_ID",
+            "GREENAPI_API_TOKEN",
+        ]))
+    )
+    wa_cfg = {s.key: s.value for s in wa_result.scalars().all()}
+
+    if wa_cfg.get("ENABLE_WHATSAPP_NOTIFICATIONS") == "true":
+        instance_id = wa_cfg.get("GREENAPI_INSTANCE_ID")
+        api_token = wa_cfg.get("GREENAPI_API_TOKEN")
+        if instance_id and api_token:
+            from app.core.config import get_settings
+            cfg = get_settings()
+            cabinet_url = cfg.customer_cabinet_base_url.rstrip("/")
+            msg = (
+                f"Здравствуйте, {customer.full_name}!\n"
+                f"Вам подарен бесплатный спин Колеса удачи!\n"
+                f"Испытайте удачу и выиграйте бонусы!\n"
+                f"{cabinet_url}"
+            )
+            asyncio.create_task(send_whatsapp_message(
+                phone=customer.phone, message=msg,
+                instance_id=instance_id, api_token=api_token
+            ))
+
+    await db.commit()
+    return SuccessResponse(message=f"Бесплатный спин подарен клиенту {customer.full_name}")
+
+
 @router.post(
     "/transactions/{txn_id}/reverse",
     response_model=SuccessResponse,

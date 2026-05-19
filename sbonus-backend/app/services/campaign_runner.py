@@ -112,6 +112,8 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
         )
         accounts_by_cid = {a.customer_id: a for a in acct_result.scalars().all()}
 
+        is_wheel = getattr(campaign, "campaign_type", "bonus") == "wheel"
+
         for rec in batch:
             try:
                 customer = customers_by_id.get(rec.customer_id)
@@ -120,34 +122,57 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
                     rec.error = "customer_not_found_or_inactive"
                     continue
 
-                account = accounts_by_cid.get(customer.id)
-                if not account:
-                    account = BonusAccount(customer_id=customer.id)
-                    db.add(account)
-                    await db.flush()
-                    accounts_by_cid[customer.id] = account
+                if is_wheel:
+                    # Wheel campaign: gift free spins instead of bonus
+                    free_key = f"WHEEL_FREE_SPINS_{customer.id}"
+                    free_result = await db.execute(
+                        select(Setting).where(Setting.key == free_key)
+                    )
+                    free_record = free_result.scalar_one_or_none()
+                    if free_record:
+                        free_record.value = str(int(free_record.value) + 1)
+                    else:
+                        db.add(Setting(key=free_key, value="1"))
+                else:
+                    # Bonus campaign: add bonus to balance
+                    account = accounts_by_cid.get(customer.id)
+                    if not account:
+                        account = BonusAccount(customer_id=customer.id)
+                        db.add(account)
+                        await db.flush()
+                        accounts_by_cid[customer.id] = account
 
-                account.balance += campaign.amount
-                account.total_earned += campaign.amount
+                    account.balance += campaign.amount
+                    account.total_earned += campaign.amount
 
-                txn = Transaction(
-                    customer_id=customer.id,
-                    type=TransactionType.CAMPAIGN,
-                    amount=campaign.amount,
-                    note=txn_note,
-                )
-                db.add(txn)
+                    txn = Transaction(
+                        customer_id=customer.id,
+                        type=TransactionType.CAMPAIGN,
+                        amount=campaign.amount,
+                        note=txn_note,
+                    )
+                    db.add(txn)
 
                 rec.status = "sent"
                 rec.sent_at = datetime.now(timezone.utc)
                 sent_count += 1
 
                 if wa_enabled and wa_instance and wa_token and campaign.message_template:
+                    balance_str = "0"
+                    acct = accounts_by_cid.get(customer.id)
+                    if acct:
+                        balance_str = str(acct.balance)
+
+                    from app.core.config import get_settings
+                    cfg = get_settings()
+                    cabinet_link = cfg.customer_cabinet_base_url.rstrip("/")
+
                     msg = (
                         campaign.message_template
                         .replace("{amount}", str(campaign.amount))
-                        .replace("{balance}", str(account.balance))
+                        .replace("{balance}", balance_str)
                         .replace("{name}", customer.full_name)
+                        .replace("{link}", cabinet_link)
                     )
                     from app.services.whatsapp import send_whatsapp_message
                     try:

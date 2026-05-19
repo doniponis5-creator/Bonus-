@@ -50,6 +50,12 @@ class CampaignTargetType(str, enum.Enum):
     INDIVIDUAL = "individual"
 
 
+class CampaignType(str, enum.Enum):
+    """Тип кампании: бонусы или колесо удачи."""
+    BONUS = "bonus"
+    WHEEL = "wheel"
+
+
 class CampaignStatus(str, enum.Enum):
     """Статус бонусной кампании."""
     PENDING = "pending"
@@ -350,6 +356,7 @@ class BonusCampaign(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
+    campaign_type: Mapped[str] = mapped_column(String(20), nullable=False, default="bonus", server_default="bonus")
     bonus_date: Mapped[date] = mapped_column(Date, nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)

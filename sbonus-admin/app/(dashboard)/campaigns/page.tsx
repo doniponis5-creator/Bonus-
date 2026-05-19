@@ -1,5 +1,5 @@
 'use client';
-import { Gift, Loader2, Plus, XCircle, CheckCircle2, Send, Trash2, Search } from 'lucide-react';
+import { Gift, Loader2, Plus, XCircle, CheckCircle2, Send, Trash2, Search, Disc } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { adminAPI, customersAPI } from '@/lib/api';
@@ -18,6 +18,7 @@ export default function CampaignsPage() {
   const [saving, setSaving] = useState(false);
 
   // Form state
+  const [campaignType, setCampaignType] = useState<'bonus' | 'wheel'>('bonus');
   const [name, setName] = useState('');
   const [bonusDate, setBonusDate] = useState('');
   const [amount, setAmount] = useState('');
@@ -64,7 +65,8 @@ export default function CampaignsPage() {
 
   const onCreate = async (e: any) => {
     e.preventDefault();
-    if (!name || !bonusDate || !amount) return;
+    if (!name || !bonusDate) return;
+    if (campaignType === 'bonus' && !amount) return;
     if (targetType === 'individual' && selected.length === 0) {
       setMsg('error:Выберите хотя бы одного клиента');
       return;
@@ -73,15 +75,16 @@ export default function CampaignsPage() {
     try {
       await adminAPI.createCampaign({
         name,
+        campaign_type: campaignType,
         bonus_date: bonusDate,
-        amount: Number(amount),
+        amount: campaignType === 'wheel' ? 0 : Number(amount),
         reason: reason || undefined,
         message_template: template || undefined,
         target_type: targetType,
         customer_ids: targetType === 'individual' ? selected.map(s => s.id) : undefined,
       });
       setMsg('success:Кампания создана');
-      setName(''); setBonusDate(''); setAmount(''); setReason('');
+      setCampaignType('bonus'); setName(''); setBonusDate(''); setAmount(''); setReason('');
       setSelected([]); setSearch(''); setSearchResults([]);
       load();
     } catch (er: any) {
@@ -156,8 +159,12 @@ export default function CampaignsPage() {
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6' }}>
                     {new Date(c.bonus_date).toLocaleDateString('ru-RU')}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#FFE600' }}>
-                    +{Number(c.amount).toLocaleString('ru-RU')} KGS
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: c.campaign_type === 'wheel' ? '#c084fc' : '#FFE600' }}>
+                    {c.campaign_type === 'wheel' ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Disc size={14} /> Спин</span>
+                    ) : (
+                      <>+{Number(c.amount).toLocaleString('ru-RU')} KGS</>
+                    )}
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
                     {c.target_type === 'all' ? 'Все клиенты' : 'Индивидуально'}
@@ -202,20 +209,37 @@ export default function CampaignsPage() {
           <Plus size={16} /> Создать кампанию
         </h3>
         <form onSubmit={onCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Campaign type */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Название *</label>
-            <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Новогодний бонус 2026" required />
+            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Тип кампании *</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" onClick={() => { setCampaignType('bonus'); setTemplate('Здравствуйте, {name}! Вам начислен бонус +{amount} KGS. Баланс: {balance} KGS.'); }}
+                className="btn btn-secondary" style={{ flex: 1, background: campaignType === 'bonus' ? 'rgba(255,230,0,0.15)' : undefined, color: campaignType === 'bonus' ? '#FFE600' : undefined, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Gift size={14} /> Бонусы
+              </button>
+              <button type="button" onClick={() => { setCampaignType('wheel'); setTemplate('Здравствуйте, {name}! Вам подарен бесплатный спин Колеса удачи! Испытайте удачу и выиграйте бонусы!\n{link}'); }}
+                className="btn btn-secondary" style={{ flex: 1, background: campaignType === 'wheel' ? 'rgba(192,132,252,0.15)' : undefined, color: campaignType === 'wheel' ? '#c084fc' : undefined, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Disc size={14} /> Колесо удачи
+              </button>
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Название *</label>
+            <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder={campaignType === 'wheel' ? 'Колесо удачи — акция' : 'Новогодний бонус 2026'} required />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: campaignType === 'wheel' ? '1fr' : '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Дата начисления *</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Дата отправки *</label>
               <input className="input" type="date" value={bonusDate} onChange={e => setBonusDate(e.target.value)} required />
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (KGS) *</label>
-              <input className="input" type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="200" required />
-            </div>
+            {campaignType === 'bonus' && (
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (KGS) *</label>
+                <input className="input" type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="200" required />
+              </div>
+            )}
           </div>
 
           <div>
@@ -229,12 +253,16 @@ export default function CampaignsPage() {
             </label>
             {/* Quick templates */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-              {[
-                { label: 'Стандарт', text: 'Здравствуйте, {name}! Вам начислен бонус +{amount} KGS. Баланс: {balance} KGS.\n📱 {link}\n🛒 Смарт Центр' },
-                { label: 'Праздник', text: '🎉 {name}, поздравляем с праздником!\nВам начислено +{amount} KGS бонусов!\n💰 Баланс: {balance} KGS\n📱 {link}' },
-                { label: 'Скидка', text: '🔥 {name}, только для вас!\nБонус +{amount} KGS уже на счёте!\nИспользуйте при следующей покупке.\n📱 {link}' },
-                { label: 'VIP', text: '⭐ {name}, спасибо за лояльность!\nВам начислено +{amount} KGS как VIP клиенту.\nБаланс: {balance} KGS\n📱 {link}' },
-              ].map(t => (
+              {(campaignType === 'wheel' ? [
+                { label: 'Стандарт', text: 'Здравствуйте, {name}! Вам подарен бесплатный спин Колеса удачи! Испытайте удачу и выиграйте бонусы!\n{link}' },
+                { label: 'Праздник', text: '{name}, с праздником! Дарим вам спин Колеса удачи! Крутите и выигрывайте!\n{link}' },
+                { label: 'VIP', text: '{name}, спасибо за лояльность! Дарим бесплатный спин Колеса удачи! Попробуйте свою удачу!\n{link}' },
+              ] : [
+                { label: 'Стандарт', text: 'Здравствуйте, {name}! Вам начислен бонус +{amount} KGS. Баланс: {balance} KGS.\n{link}\nСмарт Центр' },
+                { label: 'Праздник', text: '{name}, поздравляем с праздником!\nВам начислено +{amount} KGS бонусов!\nБаланс: {balance} KGS\n{link}' },
+                { label: 'Скидка', text: '{name}, только для вас!\nБонус +{amount} KGS уже на счёте!\nИспользуйте при следующей покупке.\n{link}' },
+                { label: 'VIP', text: '{name}, спасибо за лояльность!\nВам начислено +{amount} KGS как VIP клиенту.\nБаланс: {balance} KGS\n{link}' },
+              ]).map(t => (
                 <button key={t.label} type="button" onClick={() => setTemplate(t.text)}
                   style={{
                     padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer',
@@ -256,7 +284,7 @@ export default function CampaignsPage() {
                 <div style={{ fontSize: 10, color: '#25D366', fontWeight: 700, marginBottom: 4 }}>Предпросмотр WhatsApp:</div>
                 {template
                   .replace(/\{name\}/g, 'Алексей')
-                  .replace(/\{amount\}/g, amount || '200')
+                  .replace(/\{amount\}/g, campaignType === 'wheel' ? '1 спин' : (amount || '200'))
                   .replace(/\{balance\}/g, '1,500')
                   .replace(/\{link\}/g, 'cabinet.smartcentr.store')}
               </div>

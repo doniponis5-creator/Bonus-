@@ -97,6 +97,7 @@ export const adminAPI = {
   campaign: (id: string) => api.get(`/api/v1/admin/campaigns/${id}`),
   createCampaign: (d: {
     name: string;
+    campaign_type?: 'bonus' | 'wheel';
     bonus_date: string;
     amount: number;
     reason?: string;
@@ -166,10 +167,12 @@ export const customersAPI = {
       timeout: 120000,
     });
   },
-  adminEarn: (id: string, amount: number, note: string) => 
+  adminEarn: (id: string, amount: number, note: string) =>
     api.post(`/api/v1/admin/customers/${id}/bonus/earn`, { amount, note }),
-  adminSpend: (id: string, amount: number, note: string) => 
+  adminSpend: (id: string, amount: number, note: string) =>
     api.post(`/api/v1/admin/customers/${id}/bonus/spend`, { amount, note }),
+  giftSpin: (id: string) =>
+    api.post(`/api/v1/admin/customers/${id}/gift-spin`),
 };
 
 export default api;
