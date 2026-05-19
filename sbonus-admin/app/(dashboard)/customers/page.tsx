@@ -464,7 +464,7 @@ export default function CustomersPage() {
               <FileSpreadsheet size={20} /> Excel dan import
             </h2>
             <p style={{ fontSize: 13, color: '#8899aa', marginBottom: 24 }}>
-              Excel fayldagi FIO va telefon raqamlar bilan klientlar avtomatik ro'yxatdan o'tadi. QR kod va referral kod har biriga yaratiladi.
+              Клиенты из Excel файла будут автоматически зарегистрированы. QR-код и реферальный код создаются автоматически.
             </p>
 
             {!importResult ? (
@@ -493,7 +493,7 @@ export default function CustomersPage() {
                   ) : (
                     <>
                       <Upload size={32} color="#64748b" style={{ marginBottom: 12 }} />
-                      <div style={{ color: '#8899aa', fontSize: 14 }}>Faylni shu yerga tashlang yoki bosing</div>
+                      <div style={{ color: '#8899aa', fontSize: 14 }}>Перетащите файл сюда или нажмите</div>
                       <div style={{ color: '#556677', fontSize: 12, marginTop: 6 }}>.xlsx format</div>
                     </>
                   )}
@@ -501,21 +501,21 @@ export default function CustomersPage() {
 
                 {/* Format hint */}
                 <div style={{ background: '#141c2b', borderRadius: 12, padding: '12px 16px', marginTop: 16, fontSize: 12, color: '#8899aa' }}>
-                  <div style={{ fontWeight: 700, color: '#94a3b8', marginBottom: 6 }}>Kutilgan format:</div>
-                  <div>1-ustun: FIO (ism-familiya)</div>
-                  <div>2-ustun: Telefon raqam (0555123456 yoki +996555123456)</div>
-                  <div style={{ marginTop: 4, color: '#556677' }}>Sarlavha qatori bo'lsa avtomatik o'tkaziladi. Tartib raqami ustuni ham qo'llab-quvvatlanadi.</div>
+                  <div style={{ fontWeight: 700, color: '#94a3b8', marginBottom: 6 }}>Ожидаемый формат:</div>
+                  <div>1-й столбец: ФИО (имя и фамилия)</div>
+                  <div>2-й столбец: Номер телефона (0555123456 или +996555123456)</div>
+                  <div style={{ marginTop: 4, color: '#556677' }}>Строка заголовка пропускается автоматически. Столбец с порядковым номером также поддерживается.</div>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                  <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setImportModal(false)}>Bekor qilish</button>
+                  <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setImportModal(false)}>Отмена</button>
                   <button
                     className="btn btn-primary"
                     style={{ flex: 1, opacity: !importFile || importLoading ? 0.5 : 1 }}
                     disabled={!importFile || importLoading}
                     onClick={handleImport}
                   >
-                    {importLoading ? 'Yuklanmoqda...' : 'Import qilish'}
+                    {importLoading ? 'Загрузка...' : 'Импортировать'}
                   </button>
                 </div>
               </>
@@ -526,7 +526,7 @@ export default function CustomersPage() {
                   <AlertTriangle size={20} color="#ef4444" />
                   <div style={{ color: '#ef4444', fontWeight: 600 }}>{importResult.error}</div>
                 </div>
-                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setImportResult(null); setImportFile(null); }}>Qayta urinish</button>
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setImportResult(null); setImportFile(null); }}>Попробовать снова</button>
               </div>
             ) : (
               /* Success result */
@@ -538,27 +538,27 @@ export default function CustomersPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
                   <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
                     <div style={{ fontSize: 24, fontWeight: 800, color: '#22c55e' }}>{importResult.created}</div>
-                    <div style={{ fontSize: 11, color: '#8899aa' }}>Qo'shildi</div>
+                    <div style={{ fontSize: 11, color: '#8899aa' }}>Добавлено</div>
                   </div>
                   <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
                     <div style={{ fontSize: 24, fontWeight: 800, color: '#f59e0b' }}>{importResult.skipped}</div>
-                    <div style={{ fontSize: 11, color: '#8899aa' }}>Dublikat</div>
+                    <div style={{ fontSize: 11, color: '#8899aa' }}>Дубликат</div>
                   </div>
                   <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
                     <div style={{ fontSize: 24, fontWeight: 800, color: '#ef4444' }}>{importResult.errors_count}</div>
-                    <div style={{ fontSize: 11, color: '#8899aa' }}>Xatolar</div>
+                    <div style={{ fontSize: 11, color: '#8899aa' }}>Ошибки</div>
                   </div>
                 </div>
                 {importResult.errors?.length > 0 && (
                   <div style={{ maxHeight: 150, overflowY: 'auto', background: '#141c2b', borderRadius: 12, padding: 12, marginBottom: 16 }}>
                     {importResult.errors.map((err: any, i: number) => (
                       <div key={i} style={{ fontSize: 12, color: '#ef4444', padding: '4px 0', borderBottom: '1px solid #1c2a3a' }}>
-                        Qator {err.row}: {err.reason} — {err.data}
+                        Строка {err.row}: {err.reason} — {err.data}
                       </div>
                     ))}
                   </div>
                 )}
-                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setImportModal(false)}>Yopish</button>
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setImportModal(false)}>Закрыть</button>
               </div>
             )}
           </div>

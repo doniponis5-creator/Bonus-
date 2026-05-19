@@ -1,9 +1,9 @@
 """
 Sbonus+ — Bonus Wheel (Fortune Wheel) API.
-Mijoz xarid qilgandan keyin g'ildirak aylantirish imkoniyati.
-Har bir EARN tranzaksiyasiga 1 ta spin huquqi beriladi.
+Клиент получает возможность крутить колесо после покупки.
+За каждую EARN транзакцию даётся 1 право на спин.
 
-Segmentlar va ehtimolliklar admin tomonidan sozlanadi.
+Сегменты и вероятности настраиваются администратором.
 """
 
 import random

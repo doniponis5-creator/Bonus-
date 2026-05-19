@@ -1627,22 +1627,22 @@ async def import_customers_from_excel(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Excel fayldan klientlarni bulk import qilish.
-    Kutilgan ustunlar: FIO (ism-familiya) va telefon raqam.
-    Har bir klient uchun QR kod, referral kod, Bronze tier va BonusAccount yaratiladi.
-    Dublikatlar (telefon raqami mavjud) o'tkazib yuboriladi.
+    Массовый импорт клиентов из Excel файла.
+    Ожидаемые столбцы: ФИО и номер телефона.
+    Для каждого клиента создаются QR-код, реферальный код, уровень Bronze и бонусный аккаунт.
+    Дубликаты (существующий номер телефона) пропускаются.
     """
     import openpyxl
     from app.utils import normalize_phone
 
-    # Fayl turini tekshirish
+    # Проверка типа файла
     if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
         raise HTTPException(
             status_code=400,
-            detail={"message": "Faqat .xlsx yoki .xls fayllar qabul qilinadi"},
+            detail={"message": "Принимаются только файлы .xlsx или .xls"},
         )
 
-    # Faylni o'qish
+    # Чтение файла
     try:
         content = await file.read()
         wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
@@ -1650,16 +1650,16 @@ async def import_customers_from_excel(
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail={"message": "Excel faylni o'qib bo'lmadi. Format to'g'riligini tekshiring."},
+            detail={"message": "Не удалось прочитать Excel файл. Проверьте формат."},
         )
 
-    # Default tier (Bronze — eng past sort_order)
+    # Уровень по умолчанию (Bronze — минимальный sort_order)
     tier_result = await db.execute(
         select(Tier).order_by(Tier.sort_order.asc()).limit(1)
     )
     default_tier = tier_result.scalar_one_or_none()
 
-    # Mavjud telefonlarni oldindan yuklash (tezlik uchun)
+    # Предварительная загрузка существующих телефонов (для скорости)
     existing_phones_result = await db.execute(select(Customer.phone))
     existing_phones = {row[0] for row in existing_phones_result.all()}
 
@@ -1671,66 +1671,66 @@ async def import_customers_from_excel(
     for row in ws.iter_rows(min_row=1, values_only=True):
         row_num += 1
 
-        # Bo'sh qatorlarni o'tkazish
+        # Пропуск пустых строк
         if not row or not any(row):
             continue
 
-        # Ustunlarni aniqlash (2 yoki undan ko'p ustun)
+        # Определение столбцов (2 или более)
         cells = [str(c).strip() if c is not None else "" for c in row]
 
-        # Sarlavha qatorini o'tkazish
+        # Пропуск строки заголовка
         lower_cells = [c.lower() for c in cells]
         if any(kw in lower_cells for kw in ["фио", "fio", "имя", "ism", "name", "телефон", "phone", "номер"]):
             continue
 
-        # FIO va telefon topish
+        # Поиск ФИО и телефона
         fio = ""
         phone_raw = ""
 
         if len(cells) >= 2:
-            # Birinchi ustunda raqam bo'lsa — bu tartib raqami, keyingisi FIO
+            # Если первый столбец — порядковый номер, следующий — ФИО
             first_clean = cells[0].replace(" ", "").replace("+", "").replace("-", "")
             if first_clean.isdigit() and len(first_clean) <= 5 and len(cells) >= 3:
-                # Tartib raqami | FIO | Telefon
+                # Порядковый номер | ФИО | Телефон
                 fio = cells[1]
                 phone_raw = cells[2]
             else:
-                # FIO | Telefon
+                # ФИО | Телефон
                 fio = cells[0]
                 phone_raw = cells[1]
 
         if not fio or not phone_raw:
             if any(cells):
-                errors.append({"row": row_num, "reason": "FIO yoki telefon topilmadi", "data": " | ".join(cells[:3])})
+                errors.append({"row": row_num, "reason": "ФИО или телефон не найден", "data": " | ".join(cells[:3])})
             continue
 
-        # FIO validatsiya
+        # Валидация ФИО
         fio = fio.strip()
         if len(fio) < 2 or len(fio) > 100:
-            errors.append({"row": row_num, "reason": f"FIO noto'g'ri uzunlik: {len(fio)}", "data": fio})
+            errors.append({"row": row_num, "reason": f"Неверная длина ФИО: {len(fio)}", "data": fio})
             continue
 
-        # Telefon normalizatsiya
+        # Нормализация телефона
         try:
             phone = normalize_phone(phone_raw)
         except Exception:
-            errors.append({"row": row_num, "reason": "Telefon raqami noto'g'ri", "data": phone_raw})
+            errors.append({"row": row_num, "reason": "Неверный номер телефона", "data": phone_raw})
             continue
 
         if not phone or len(phone) < 10:
-            errors.append({"row": row_num, "reason": "Telefon raqami noto'g'ri", "data": phone_raw})
+            errors.append({"row": row_num, "reason": "Неверный номер телефона", "data": phone_raw})
             continue
 
-        # Dublikat tekshirish
+        # Проверка дубликатов
         if phone in existing_phones:
             skipped += 1
             continue
 
-        # QR va referral kod generatsiya
+        # Генерация QR и реферального кода
         qr_code = f"SB-{uuid.uuid4().hex[:10].upper()}"
         referral_code = f"REF-{uuid.uuid4().hex[:8].upper()}"
 
-        # Klient yaratish
+        # Создание клиента
         customer = Customer(
             phone=phone,
             full_name=fio,
@@ -1740,9 +1740,9 @@ async def import_customers_from_excel(
             is_active=True,
         )
         db.add(customer)
-        await db.flush()  # ID olish uchun
+        await db.flush()  # Получение ID
 
-        # Bonus account yaratish (0 balans)
+        # Создание бонусного аккаунта (баланс 0)
         bonus_account = BonusAccount(
             customer_id=customer.id,
             balance=0,
@@ -1758,11 +1758,11 @@ async def import_customers_from_excel(
     wb.close()
 
     return {
-        "message": f"Import tugadi: {created} ta yangi klient qo'shildi",
+        "message": f"Импорт завершён: добавлено {created} новых клиентов",
         "created": created,
         "skipped": skipped,
         "errors_count": len(errors),
-        "errors": errors[:50],  # Birinchi 50 ta xato
+        "errors": errors[:50],  # Первые 50 ошибок
         "total_rows": row_num,
     }
 
