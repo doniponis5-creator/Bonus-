@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -1613,4 +1613,156 @@ async def reset_wheel_config(db: AsyncSession = Depends(get_db)) -> SuccessRespo
 
     await db.commit()
     return SuccessResponse(message="Конфигурация колеса сброшена к значениям по умолчанию")
+
+
+# ─── Excel Bulk Import ──────────────────────────────────────────
+
+@router.post(
+    "/customers/import",
+    summary="Импорт клиентов из Excel",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def import_customers_from_excel(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Excel fayldan klientlarni bulk import qilish.
+    Kutilgan ustunlar: FIO (ism-familiya) va telefon raqam.
+    Har bir klient uchun QR kod, referral kod, Bronze tier va BonusAccount yaratiladi.
+    Dublikatlar (telefon raqami mavjud) o'tkazib yuboriladi.
+    """
+    import openpyxl
+    from app.utils import normalize_phone
+
+    # Fayl turini tekshirish
+    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Faqat .xlsx yoki .xls fayllar qabul qilinadi"},
+        )
+
+    # Faylni o'qish
+    try:
+        content = await file.read()
+        wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
+        ws = wb.active
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Excel faylni o'qib bo'lmadi. Format to'g'riligini tekshiring."},
+        )
+
+    # Default tier (Bronze — eng past sort_order)
+    tier_result = await db.execute(
+        select(Tier).order_by(Tier.sort_order.asc()).limit(1)
+    )
+    default_tier = tier_result.scalar_one_or_none()
+
+    # Mavjud telefonlarni oldindan yuklash (tezlik uchun)
+    existing_phones_result = await db.execute(select(Customer.phone))
+    existing_phones = {row[0] for row in existing_phones_result.all()}
+
+    created = 0
+    skipped = 0
+    errors = []
+    row_num = 0
+
+    for row in ws.iter_rows(min_row=1, values_only=True):
+        row_num += 1
+
+        # Bo'sh qatorlarni o'tkazish
+        if not row or not any(row):
+            continue
+
+        # Ustunlarni aniqlash (2 yoki undan ko'p ustun)
+        cells = [str(c).strip() if c is not None else "" for c in row]
+
+        # Sarlavha qatorini o'tkazish
+        lower_cells = [c.lower() for c in cells]
+        if any(kw in lower_cells for kw in ["фио", "fio", "имя", "ism", "name", "телефон", "phone", "номер"]):
+            continue
+
+        # FIO va telefon topish
+        fio = ""
+        phone_raw = ""
+
+        if len(cells) >= 2:
+            # Birinchi ustunda raqam bo'lsa — bu tartib raqami, keyingisi FIO
+            first_clean = cells[0].replace(" ", "").replace("+", "").replace("-", "")
+            if first_clean.isdigit() and len(first_clean) <= 5 and len(cells) >= 3:
+                # Tartib raqami | FIO | Telefon
+                fio = cells[1]
+                phone_raw = cells[2]
+            else:
+                # FIO | Telefon
+                fio = cells[0]
+                phone_raw = cells[1]
+
+        if not fio or not phone_raw:
+            if any(cells):
+                errors.append({"row": row_num, "reason": "FIO yoki telefon topilmadi", "data": " | ".join(cells[:3])})
+            continue
+
+        # FIO validatsiya
+        fio = fio.strip()
+        if len(fio) < 2 or len(fio) > 100:
+            errors.append({"row": row_num, "reason": f"FIO noto'g'ri uzunlik: {len(fio)}", "data": fio})
+            continue
+
+        # Telefon normalizatsiya
+        try:
+            phone = normalize_phone(phone_raw)
+        except Exception:
+            errors.append({"row": row_num, "reason": "Telefon raqami noto'g'ri", "data": phone_raw})
+            continue
+
+        if not phone or len(phone) < 10:
+            errors.append({"row": row_num, "reason": "Telefon raqami noto'g'ri", "data": phone_raw})
+            continue
+
+        # Dublikat tekshirish
+        if phone in existing_phones:
+            skipped += 1
+            continue
+
+        # QR va referral kod generatsiya
+        qr_code = f"SB-{uuid.uuid4().hex[:10].upper()}"
+        referral_code = f"REF-{uuid.uuid4().hex[:8].upper()}"
+
+        # Klient yaratish
+        customer = Customer(
+            phone=phone,
+            full_name=fio,
+            qr_code=qr_code,
+            referral_code=referral_code,
+            tier_id=default_tier.id if default_tier else None,
+            is_active=True,
+        )
+        db.add(customer)
+        await db.flush()  # ID olish uchun
+
+        # Bonus account yaratish (0 balans)
+        bonus_account = BonusAccount(
+            customer_id=customer.id,
+            balance=0,
+            total_earned=0,
+            total_spent=0,
+        )
+        db.add(bonus_account)
+
+        existing_phones.add(phone)
+        created += 1
+
+    await db.commit()
+    wb.close()
+
+    return {
+        "message": f"Import tugadi: {created} ta yangi klient qo'shildi",
+        "created": created,
+        "skipped": skipped,
+        "errors_count": len(errors),
+        "errors": errors[:50],  # Birinchi 50 ta xato
+        "total_rows": row_num,
+    }
 

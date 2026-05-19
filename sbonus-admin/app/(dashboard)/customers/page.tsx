@@ -1,5 +1,5 @@
 'use client';
-import { Users, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock, Filter, CheckSquare, Square, Coins } from 'lucide-react';
+import { Users, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock, Filter, CheckSquare, Square, Coins, Upload, FileSpreadsheet, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { customersAPI, adminAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
@@ -42,6 +42,13 @@ export default function CustomersPage() {
 
   const [tiers, setTiers] = useState<any[]>([]);
 
+  // Import states
+  const [importModal, setImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [dragOver, setDragOver] = useState(false);
+
   useEffect(() => {
     adminAPI.tiers().then(r => setTiers(r.data)).catch(() => {});
   }, []);
@@ -83,6 +90,22 @@ export default function CustomersPage() {
       setSelected(new Set());
     } else {
       setSelected(new Set(customers.map(c => c.id)));
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    setImportLoading(true);
+    setImportResult(null);
+    try {
+      const { data } = await customersAPI.importExcel(importFile);
+      setImportResult(data);
+      if (data.created > 0) loadCustomers(1);
+    } catch (err: any) {
+      const msg = err.response?.data?.detail?.message || err.response?.data?.detail || 'Import xatolik';
+      setImportResult({ error: msg });
+    } finally {
+      setImportLoading(false);
     }
   };
 
@@ -159,6 +182,13 @@ export default function CustomersPage() {
           <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text2)', marginLeft: 8 }}>{total} всего</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => { setImportModal(true); setImportFile(null); setImportResult(null); }}
+            style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+          >
+            <Upload size={14} /> Excel Import
+          </button>
           <button
             className="btn btn-secondary"
             onClick={() => { setBulkMode(!bulkMode); setSelected(new Set()); }}
@@ -419,6 +449,118 @@ export default function CustomersPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {importModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '500px', position: 'relative' }}>
+            <button onClick={() => setImportModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+              <X size={20} />
+            </button>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FileSpreadsheet size={20} /> Excel dan import
+            </h2>
+            <p style={{ fontSize: 13, color: '#8899aa', marginBottom: 24 }}>
+              Excel fayldagi FIO va telefon raqamlar bilan klientlar avtomatik ro'yxatdan o'tadi. QR kod va referral kod har biriga yaratiladi.
+            </p>
+
+            {!importResult ? (
+              <>
+                {/* Drop zone */}
+                <div
+                  onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) setImportFile(f); }}
+                  onClick={() => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.xlsx,.xls'; inp.onchange = (e: any) => { const f = e.target.files?.[0]; if (f) setImportFile(f); }; inp.click(); }}
+                  style={{
+                    border: `2px dashed ${dragOver ? 'var(--accent)' : '#1e293b'}`,
+                    borderRadius: 16, padding: '32px 24px', textAlign: 'center', cursor: 'pointer',
+                    background: dragOver ? 'rgba(255,230,0,0.05)' : 'transparent',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {importFile ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                      <FileSpreadsheet size={24} color="#22c55e" />
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#e2eaf6' }}>{importFile.name}</div>
+                        <div style={{ fontSize: 12, color: '#8899aa' }}>{(importFile.size / 1024).toFixed(1)} KB</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload size={32} color="#64748b" style={{ marginBottom: 12 }} />
+                      <div style={{ color: '#8899aa', fontSize: 14 }}>Faylni shu yerga tashlang yoki bosing</div>
+                      <div style={{ color: '#556677', fontSize: 12, marginTop: 6 }}>.xlsx format</div>
+                    </>
+                  )}
+                </div>
+
+                {/* Format hint */}
+                <div style={{ background: '#141c2b', borderRadius: 12, padding: '12px 16px', marginTop: 16, fontSize: 12, color: '#8899aa' }}>
+                  <div style={{ fontWeight: 700, color: '#94a3b8', marginBottom: 6 }}>Kutilgan format:</div>
+                  <div>1-ustun: FIO (ism-familiya)</div>
+                  <div>2-ustun: Telefon raqam (0555123456 yoki +996555123456)</div>
+                  <div style={{ marginTop: 4, color: '#556677' }}>Sarlavha qatori bo'lsa avtomatik o'tkaziladi. Tartib raqami ustuni ham qo'llab-quvvatlanadi.</div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                  <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setImportModal(false)}>Bekor qilish</button>
+                  <button
+                    className="btn btn-primary"
+                    style={{ flex: 1, opacity: !importFile || importLoading ? 0.5 : 1 }}
+                    disabled={!importFile || importLoading}
+                    onClick={handleImport}
+                  >
+                    {importLoading ? 'Yuklanmoqda...' : 'Import qilish'}
+                  </button>
+                </div>
+              </>
+            ) : importResult.error ? (
+              /* Error result */
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(239,68,68,0.1)', borderRadius: 12, padding: '16px', marginBottom: 20 }}>
+                  <AlertTriangle size={20} color="#ef4444" />
+                  <div style={{ color: '#ef4444', fontWeight: 600 }}>{importResult.error}</div>
+                </div>
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setImportResult(null); setImportFile(null); }}>Qayta urinish</button>
+              </div>
+            ) : (
+              /* Success result */
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(34,197,94,0.1)', borderRadius: 12, padding: '16px', marginBottom: 20 }}>
+                  <CheckCircle2 size={20} color="#22c55e" />
+                  <div style={{ color: '#22c55e', fontWeight: 700 }}>{importResult.message}</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+                  <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: '#22c55e' }}>{importResult.created}</div>
+                    <div style={{ fontSize: 11, color: '#8899aa' }}>Qo'shildi</div>
+                  </div>
+                  <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: '#f59e0b' }}>{importResult.skipped}</div>
+                    <div style={{ fontSize: 11, color: '#8899aa' }}>Dublikat</div>
+                  </div>
+                  <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: '#ef4444' }}>{importResult.errors_count}</div>
+                    <div style={{ fontSize: 11, color: '#8899aa' }}>Xatolar</div>
+                  </div>
+                </div>
+                {importResult.errors?.length > 0 && (
+                  <div style={{ maxHeight: 150, overflowY: 'auto', background: '#141c2b', borderRadius: 12, padding: 12, marginBottom: 16 }}>
+                    {importResult.errors.map((err: any, i: number) => (
+                      <div key={i} style={{ fontSize: 12, color: '#ef4444', padding: '4px 0', borderBottom: '1px solid #1c2a3a' }}>
+                        Qator {err.row}: {err.reason} — {err.data}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setImportModal(false)}>Yopish</button>
+              </div>
+            )}
           </div>
         </div>
       )}

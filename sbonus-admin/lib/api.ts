@@ -157,6 +157,14 @@ export const customersAPI = {
   bulkBonus: (customer_ids: string[], type: 'earn' | 'spend', amount: number, note: string) =>
     api.post('/api/v1/admin/customers/bulk-bonus', { customer_ids, type, amount, note }),
   update: (id: string, data: any) => api.put(`/api/v1/admin/customers/${id}`, data),
+  importExcel: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/api/v1/admin/customers/import', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+  },
   adminEarn: (id: string, amount: number, note: string) => 
     api.post(`/api/v1/admin/customers/${id}/bonus/earn`, { amount, note }),
   adminSpend: (id: string, amount: number, note: string) => 
