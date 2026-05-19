@@ -1,5 +1,5 @@
 "use client";
-import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift } from 'lucide-react';
+import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift, Timer } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -56,6 +56,8 @@ export default function SettingsPage() {
     BALANCE_REMINDER_MIN_BALANCE: "100",
     WA_MESSAGE_INTERVAL: "3",
     WHEEL_FREE_SPINS_ON_REGISTER: "1",
+    BONUS_EXPIRATION_DAYS: "365",
+    BONUS_EXPIRATION_WARNING_DAYS: "14",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
@@ -541,6 +543,57 @@ export default function SettingsPage() {
             <span style={{ fontSize: "13px", color: colors.textMuted }}>
               0 = без бесплатных спинов. Рекомендуется 1-3.
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* BONUS EXPIRATION CARD */}
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardTitleWrapper}>
+            <Timer size={24} color={colors.accent} />
+            <div>
+              <h2 style={styles.cardTitle}>Срок действия бонусов</h2>
+              <p style={styles.cardDesc}>Автоматическое списание просроченных бонусов и напоминания через WhatsApp</p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div>
+            <label style={styles.inputLabel}>Срок действия бонусов (дней)</label>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <input
+                style={{ ...styles.input, maxWidth: "140px" }}
+                type="number"
+                min={30}
+                max={3650}
+                value={settings.BONUS_EXPIRATION_DAYS}
+                onChange={(e) => handleChange("BONUS_EXPIRATION_DAYS", e.target.value)}
+                placeholder="365"
+              />
+              <span style={{ fontSize: "13px", color: colors.textMuted }}>
+                Бонусы старше этого срока будут автоматически списаны
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label style={styles.inputLabel}>Интервал напоминаний (дней до истечения)</label>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <input
+                style={{ ...styles.input, maxWidth: "140px" }}
+                type="number"
+                min={1}
+                max={90}
+                value={settings.BONUS_EXPIRATION_WARNING_DAYS}
+                onChange={(e) => handleChange("BONUS_EXPIRATION_WARNING_DAYS", e.target.value)}
+                placeholder="14"
+              />
+              <span style={{ fontSize: "13px", color: colors.textMuted }}>
+                WhatsApp напоминание за N дней до списания
+              </span>
+            </div>
           </div>
         </div>
       </div>

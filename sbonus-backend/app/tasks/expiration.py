@@ -47,14 +47,29 @@ _CONSUME_TYPES = (
 )
 
 
+async def _get_expiration_settings(db) -> tuple[int, int]:
+    """Получить настройки срока из БД (fallback на config)."""
+    from app.models import Setting
+    result = await db.execute(
+        select(Setting).where(Setting.key.in_([
+            "BONUS_EXPIRATION_DAYS",
+            "BONUS_EXPIRATION_WARNING_DAYS",
+        ]))
+    )
+    s_map = {s.key: s.value for s in result.scalars().all()}
+    exp_days = int(s_map.get("BONUS_EXPIRATION_DAYS", settings.bonus_expiration_days))
+    warn_days = int(s_map.get("BONUS_EXPIRATION_WARNING_DAYS", settings.bonus_expiration_warning_days))
+    return exp_days, warn_days
+
+
 async def expire_old_bonuses() -> None:
     """
     Основная cron-задача: списание просроченных бонусов.
     Запускается ежедневно в 02:00.
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.bonus_expiration_days)
-
     async with async_session() as db:
+        exp_days, _ = await _get_expiration_settings(db)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=exp_days)
         # Все клиенты с балансом > 0
         accounts_result = await db.execute(
             select(BonusAccount).where(BonusAccount.balance > Decimal("0"))
@@ -79,7 +94,7 @@ async def expire_old_bonuses() -> None:
                     customer_id=account.customer_id,
                     type=TransactionType.EXPIRE,
                     amount=expire_amount,
-                    note=f"⏰ Автоматическое истечение бонусов (>{settings.bonus_expiration_days} дней)",
+                    note=f"Автоматическое истечение бонусов (>{exp_days} дней)",
                 )
                 db.add(txn)
 
@@ -101,15 +116,13 @@ async def expire_old_bonuses() -> None:
 
 async def warn_expiring_bonuses() -> None:
     """
-    Предупреждение: бонусы скоро истекут (за 30 дней).
+    Предупреждение: бонусы скоро истекут.
     Запускается ежедневно в 10:00.
     """
-    warning_cutoff = datetime.now(timezone.utc) - timedelta(
-        days=settings.bonus_expiration_days - settings.bonus_expiration_warning_days
-    )
-    expire_cutoff = datetime.now(timezone.utc) - timedelta(days=settings.bonus_expiration_days)
-
     async with async_session() as db:
+        exp_days, warn_days = await _get_expiration_settings(db)
+        warning_cutoff = datetime.now(timezone.utc) - timedelta(days=exp_days - warn_days)
+        expire_cutoff = datetime.now(timezone.utc) - timedelta(days=exp_days)
         accounts_result = await db.execute(
             select(BonusAccount).where(BonusAccount.balance > Decimal("0"))
         )
@@ -130,7 +143,7 @@ async def warn_expiring_bonuses() -> None:
                 about_to_expire = min(about_to_expire, account.balance)
 
                 await _notify_expiration_warning(
-                    db, account.customer_id, about_to_expire, account.balance
+                    db, account.customer_id, about_to_expire, account.balance, warn_days
                 )
                 warned_count += 1
 
@@ -222,7 +235,7 @@ async def _notify_expiration(db, customer_id, expired_amount: Decimal, new_balan
     ))
 
 
-async def _notify_expiration_warning(db, customer_id, amount: Decimal, balance: Decimal):
+async def _notify_expiration_warning(db, customer_id, amount: Decimal, balance: Decimal, warn_days: int = 30):
     """Уведомление: бонусы скоро истекут."""
     import asyncio
     from app.models import Customer, Setting
@@ -257,7 +270,7 @@ async def _notify_expiration_warning(db, customer_id, amount: Decimal, balance: 
         .replace("{amount}", str(amount))
         .replace("{balance}", str(balance))
         .replace("{name}", customer.full_name)
-        .replace("{days}", str(settings.bonus_expiration_warning_days))
+        .replace("{days}", str(warn_days))
     )
     asyncio.create_task(send_whatsapp_message(
         phone=customer.phone, message=msg,
