@@ -24,6 +24,12 @@ from app.tasks.expiration import expire_old_bonuses, warn_expiring_bonuses
 from app.tasks.notification_retry import retry_failed_notifications
 from app.tasks.weekly_report import send_weekly_report
 from app.tasks.balance_reminder import send_balance_reminders
+from app.services.telegram_bot import (
+    send_daily_morning_report,
+    send_daily_evening_report,
+    start_polling as start_tg_polling,
+    stop_polling as stop_tg_polling,
+)
 
 settings = get_settings()
 logger = get_logger("main")
@@ -104,19 +110,41 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
+    # Cron: Telegram утренний отчёт — 09:00
+    scheduler.add_job(
+        send_daily_morning_report,
+        CronTrigger(hour=9, minute=0),
+        id="tg_morning_report",
+        replace_existing=True,
+    )
+
+    # Cron: Telegram вечерний отчёт — 21:00
+    scheduler.add_job(
+        send_daily_evening_report,
+        CronTrigger(hour=21, minute=0),
+        id="tg_evening_report",
+        replace_existing=True,
+    )
+
     scheduler.start()
+
+    # Telegram bot polling (обработка команд)
+    start_tg_polling()
+
     logger.info("Cron: bonus campaigns scheduled at 09:00 daily")
     logger.info("Cron: bonus expiration scheduled at 02:00 daily")
     logger.info("Cron: expiration warnings scheduled at 10:00 daily")
     logger.info("Cron: notification retry scheduled every 15 min")
     logger.info("Cron: weekly report scheduled at Mon 08:00")
     logger.info("Cron: balance reminder scheduled at 12:00 daily")
+    logger.info("Cron: Telegram reports at 09:00 & 21:00 daily")
     logger.info("Server started! Swagger: http://localhost:8000/docs")
     logger.info("=" * 50)
 
     yield
 
     # Shutdown
+    stop_tg_polling()
     scheduler.shutdown()
     await engine.dispose()
     logger.info("Server stopped")

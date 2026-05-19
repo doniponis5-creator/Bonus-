@@ -145,6 +145,11 @@ export const adminAPI = {
   updateCashierBonusConfig: (config: any) => api.put('/api/v1/admin/cashier-bonuses/config', config),
   cashierBonusProgress: () => api.get('/api/v1/admin/cashier-bonuses/progress'),
   cashierBonusProgressById: (id: string) => api.get(`/api/v1/admin/cashier-bonuses/progress/${id}`),
+
+  // Telegram bot
+  telegramConfig: () => api.get('/api/v1/admin/telegram/config'),
+  updateTelegramConfig: (config: any) => api.put('/api/v1/admin/telegram/config', config),
+  testTelegram: () => api.post('/api/v1/admin/telegram/test'),
 };
 
 export const customersAPI = {

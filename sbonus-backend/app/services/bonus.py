@@ -4,6 +4,7 @@ Sbonus+ — Бонусный движок.
 Все операции внутри PostgreSQL транзакции.
 """
 
+import asyncio
 import time
 import uuid
 from decimal import Decimal
@@ -148,6 +149,11 @@ class BonusService:
             customer_name=customer.full_name,
         )
 
+        # Telegram алерт: крупная покупка
+        if purchase_amount >= 50000:
+            from app.services.telegram_bot import notify_large_earn
+            asyncio.ensure_future(notify_large_earn(customer.full_name, float(purchase_amount), float(bonus_amount)))
+
         return BonusResult(
             transaction_id=txn.id,
             type="earn",
@@ -243,6 +249,11 @@ class BonusService:
             event_type="spend",
             customer_name=customer.full_name,
         )
+
+        # Telegram алерт: крупное списание
+        if spend_amount >= 5000:
+            from app.services.telegram_bot import notify_large_spend
+            asyncio.ensure_future(notify_large_spend(customer.full_name, float(spend_amount), float(account.balance)))
 
         return BonusResult(
             transaction_id=txn.id,
