@@ -125,6 +125,11 @@ export const adminAPI = {
     api.get(`/api/v1/admin/reviews?page=${page}&limit=${limit}${status ? `&status=${status}` : ''}`),
   actionReview: (id: string, action: 'approve' | 'reject', note?: string) =>
     api.post(`/api/v1/admin/reviews/${id}`, { action, note }),
+
+  // Wheel config
+  wheelConfig: () => api.get('/api/v1/admin/wheel/config'),
+  updateWheelConfig: (segments: any[]) => api.put('/api/v1/admin/wheel/config', { segments }),
+  resetWheelConfig: () => api.post('/api/v1/admin/wheel/config/reset'),
 };
 
 export const customersAPI = {

@@ -50,6 +50,7 @@ from app.schemas import (
 from app.models import Setting
 from app.services.whatsapp import send_whatsapp_message
 from app.services.bonus import BonusService
+from app.api.v1.wheel import DEFAULT_SEGMENTS
 
 router = APIRouter(prefix="/admin", tags=["Админ-панель"])
 
@@ -1492,4 +1493,124 @@ async def action_review(
 
     else:
         raise HTTPException(status_code=400, detail={"message": "Действие: approve или reject"})
+
+
+# ═══════════════════════════════════════════
+# WHEEL CONFIGURATION (Колесо удачи)
+# ═══════════════════════════════════════════
+
+class WheelSegmentInput(BaseModel):
+    id: int
+    label: str
+    value: int  # bonus amount (0 = no prize)
+    color: str
+    probability: float  # 0.0 - 1.0
+
+
+class WheelConfigUpdateRequest(BaseModel):
+    segments: list[WheelSegmentInput]
+
+
+@router.get(
+    "/wheel/config",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def get_wheel_config(db: AsyncSession = Depends(get_db)) -> dict:
+    """Получить текущую конфигурацию колеса удачи."""
+    import json
+    result = await db.execute(
+        select(Setting).where(Setting.key == "WHEEL_SEGMENTS")
+    )
+    setting = result.scalar_one_or_none()
+    if setting and setting.value:
+        try:
+            segments = json.loads(setting.value)
+            return {"segments": segments, "source": "database"}
+        except Exception:
+            pass
+    return {"segments": DEFAULT_SEGMENTS, "source": "default"}
+
+
+@router.put(
+    "/wheel/config",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def update_wheel_config(
+    body: WheelConfigUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> SuccessResponse:
+    """Обновить конфигурацию колеса удачи (сегменты, вероятности, бонусы)."""
+    import json
+
+    if len(body.segments) < 2:
+        raise HTTPException(status_code=400, detail={"message": "Минимум 2 сегмента"})
+    if len(body.segments) > 12:
+        raise HTTPException(status_code=400, detail={"message": "Максимум 12 сегментов"})
+
+    # Validate probabilities
+    total_prob = sum(s.probability for s in body.segments)
+    if abs(total_prob - 1.0) > 0.01:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": f"Сумма вероятностей должна быть 1.0 (сейчас: {total_prob:.4f})"},
+        )
+
+    # Validate each segment
+    for s in body.segments:
+        if s.probability < 0 or s.probability > 1:
+            raise HTTPException(status_code=400, detail={"message": f"Вероятность сегмента '{s.label}' вне диапазона 0-1"})
+        if s.value < 0:
+            raise HTTPException(status_code=400, detail={"message": f"Бонус сегмента '{s.label}' не может быть отрицательным"})
+        if not s.label.strip():
+            raise HTTPException(status_code=400, detail={"message": "Название сегмента не может быть пустым"})
+        if not s.color.strip():
+            raise HTTPException(status_code=400, detail={"message": "Цвет сегмента обязателен"})
+
+    # Re-assign sequential IDs
+    segments_data = []
+    for i, s in enumerate(body.segments, 1):
+        segments_data.append({
+            "id": i,
+            "label": s.label.strip(),
+            "value": s.value,
+            "color": s.color.strip(),
+            "probability": round(s.probability, 4),
+        })
+
+    # Save to DB
+    result = await db.execute(
+        select(Setting).where(Setting.key == "WHEEL_SEGMENTS")
+    )
+    setting = result.scalar_one_or_none()
+    json_value = json.dumps(segments_data, ensure_ascii=False)
+
+    if setting:
+        setting.value = json_value
+    else:
+        db.add(Setting(key="WHEEL_SEGMENTS", value=json_value))
+
+    await db.commit()
+    return SuccessResponse(message=f"Конфигурация колеса сохранена: {len(segments_data)} сегментов")
+
+
+@router.post(
+    "/wheel/config/reset",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def reset_wheel_config(db: AsyncSession = Depends(get_db)) -> SuccessResponse:
+    """Сбросить конфигурацию колеса к значениям по умолчанию."""
+    import json
+    result = await db.execute(
+        select(Setting).where(Setting.key == "WHEEL_SEGMENTS")
+    )
+    setting = result.scalar_one_or_none()
+    if setting:
+        setting.value = json.dumps(DEFAULT_SEGMENTS, ensure_ascii=False)
+    else:
+        db.add(Setting(key="WHEEL_SEGMENTS", value=json.dumps(DEFAULT_SEGMENTS, ensure_ascii=False)))
+
+    await db.commit()
+    return SuccessResponse(message="Конфигурация колеса сброшена к значениям по умолчанию")
 
