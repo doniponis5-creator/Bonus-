@@ -177,7 +177,10 @@ export default function DashboardPage() {
     <div className="app">
       {/* Header */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px 12px' }}>
-        <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--accent)' }}>S Bonus</div>
+        <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <img src="/icon-32.png" alt="S" width={24} height={24} style={{ borderRadius: 4 }} />
+          S Bonus
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button onClick={fetchData} disabled={refreshing} aria-label="Обновить"
             style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer', padding: 8, display: 'flex', opacity: refreshing ? 0.4 : 1, animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>

@@ -85,6 +85,7 @@ export default function LoginPage() {
     <div className="center">
       <div style={{ maxWidth: 360, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <img src="/icon-192.png" alt="S Bonus" width={72} height={72} style={{ borderRadius: 20, marginBottom: 12 }} />
           <div
             style={{
               fontSize: 32,

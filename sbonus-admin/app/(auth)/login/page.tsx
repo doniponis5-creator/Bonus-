@@ -29,7 +29,7 @@ export default function LoginPage() {
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',padding:24}}>
       <form onSubmit={handleLogin} style={{width:'100%',maxWidth:400}}>
         <div style={{textAlign:'center',marginBottom:40}}>
-          <div style={{width:72,height:72,borderRadius:24,background:'#FFE600',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:32,fontWeight:900,color:'#0a0f1a',marginBottom:16}}>S</div>
+          <img src="/icon-192.png" alt="S Bonus" width={72} height={72} style={{borderRadius:24,marginBottom:16}} />
           <h1 style={{fontSize:28,fontWeight:900,color:'var(--text)',marginBottom:4}}>S Bonus</h1>
           <p style={{color:'var(--text2)',fontSize:14}}>Админ-панель • Смарт Центр</p>
         </div>
