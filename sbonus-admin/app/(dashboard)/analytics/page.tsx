@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { adminAPI } from '@/lib/api';
-import { BarChart3, Loader2, TrendingUp, TrendingDown, Users, Repeat, Clock } from 'lucide-react';
+import { BarChart3, Loader2, TrendingUp, TrendingDown, Users, Repeat, Clock, Moon, AlertTriangle } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -37,14 +37,27 @@ const tooltipStyle = {
   padding: '10px 14px',
 };
 
+const BUCKET_COLORS: Record<string, string> = {
+  '7_days': '#22c55e',
+  '14_days': '#FFE600',
+  '30_days': '#f97316',
+  '60_days': '#ef4444',
+  '90_days': '#dc2626',
+  'never': '#8899aa',
+};
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<any>(null);
+  const [inactive, setInactive] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(30);
 
   useEffect(() => {
     setLoading(true);
-    adminAPI.analytics(period).then(r => setData(r.data)).catch(() => {}).finally(() => setLoading(false));
+    Promise.all([
+      adminAPI.analytics(period).then(r => setData(r.data)).catch(() => {}),
+      adminAPI.inactiveCustomers().then(r => setInactive(r.data)).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, [period]);
 
   if (loading) return (
@@ -206,6 +219,66 @@ export default function AnalyticsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* SLEEPING CUSTOMERS */}
+      {inactive && (
+        <div style={{ marginTop: 24 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <Moon size={20} /> Спящие клиенты
+          </h2>
+
+          {/* Summary cards */}
+          <div className="grid-3" style={{ marginBottom: 20 }}>
+            <div className="card" style={{ padding: 20 }}>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Всего активных</div>
+              <div style={{ fontSize: 28, fontWeight: 800 }}>{inactive.total_active}</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <AlertTriangle size={12} /> Спящих клиентов
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: '#f97316' }}>{inactive.total_sleeping}</div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>% спящих</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: inactive.sleeping_pct > 50 ? '#ef4444' : '#FFE600' }}>
+                {inactive.sleeping_pct}%
+              </div>
+            </div>
+          </div>
+
+          {/* Buckets */}
+          <div className="grid-3" style={{ gap: 12 }}>
+            {Object.entries(inactive.buckets as Record<string, any>).map(([key, bucket]: [string, any]) => (
+              <div key={key} className="card" style={{ padding: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: BUCKET_COLORS[key] || '#8899aa' }} />
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{bucket.label}</span>
+                  </div>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: BUCKET_COLORS[key] || '#8899aa' }}>{bucket.count}</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+                  Бонусов на счетах: <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{bucket.total_balance.toLocaleString('ru-RU')} KGS</span>
+                </div>
+                {bucket.customers.length > 0 && (
+                  <div style={{ borderTop: '1px solid #1c2a3a', paddingTop: 10 }}>
+                    {bucket.customers.map((c: any) => (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', fontSize: 12 }}>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>{c.name}</span>
+                          <span style={{ color: 'var(--text3)', marginLeft: 8 }}>{c.phone}</span>
+                        </div>
+                        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{c.balance.toLocaleString('ru-RU')} KGS</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -440,6 +440,104 @@ async def dashboard_analytics(
 
 
 @router.get(
+    "/dashboard/inactive-customers",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def inactive_customers(db: AsyncSession = Depends(get_db)) -> dict:
+    """Спящие клиенты — кто давно не покупал, с разбивкой по периодам."""
+    now = datetime.now(timezone.utc)
+
+    # Последняя покупка каждого клиента
+    last_txn_sub = (
+        select(
+            Transaction.customer_id,
+            func.max(Transaction.created_at).label("last_purchase"),
+        )
+        .where(Transaction.type == TransactionType.EARN)
+        .group_by(Transaction.customer_id)
+        .subquery()
+    )
+
+    # Все активные клиенты с балансом и последней покупкой
+    query = (
+        select(
+            Customer.id,
+            Customer.full_name,
+            Customer.phone,
+            Customer.created_at,
+            BonusAccount.balance,
+            last_txn_sub.c.last_purchase,
+        )
+        .outerjoin(BonusAccount, BonusAccount.customer_id == Customer.id)
+        .outerjoin(last_txn_sub, last_txn_sub.c.customer_id == Customer.id)
+        .where(Customer.is_active == True)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    # Разбивка по периодам
+    buckets = {
+        "7_days": {"label": "7 дней", "count": 0, "total_balance": 0, "customers": []},
+        "14_days": {"label": "14 дней", "count": 0, "total_balance": 0, "customers": []},
+        "30_days": {"label": "30 дней", "count": 0, "total_balance": 0, "customers": []},
+        "60_days": {"label": "60 дней", "count": 0, "total_balance": 0, "customers": []},
+        "90_days": {"label": "90+ дней", "count": 0, "total_balance": 0, "customers": []},
+        "never": {"label": "Ни разу не покупал", "count": 0, "total_balance": 0, "customers": []},
+    }
+
+    total_active = len(rows)
+    total_sleeping = 0
+
+    for row in rows:
+        cid, name, phone, created_at, balance, last_purchase = row
+        bal = float(balance) if balance else 0
+
+        if last_purchase is None:
+            bucket_key = "never"
+        else:
+            # Ensure timezone-aware comparison
+            lp = last_purchase if last_purchase.tzinfo else last_purchase.replace(tzinfo=timezone.utc)
+            days_ago = (now - lp).days
+            if days_ago < 7:
+                continue  # Активный — пропускаем
+            elif days_ago < 14:
+                bucket_key = "7_days"
+            elif days_ago < 30:
+                bucket_key = "14_days"
+            elif days_ago < 60:
+                bucket_key = "30_days"
+            elif days_ago < 90:
+                bucket_key = "60_days"
+            else:
+                bucket_key = "90_days"
+
+        total_sleeping += 1
+        buckets[bucket_key]["count"] += 1
+        buckets[bucket_key]["total_balance"] += bal
+        # Топ-5 клиентов в каждый бакет (по балансу desc)
+        if len(buckets[bucket_key]["customers"]) < 5:
+            buckets[bucket_key]["customers"].append({
+                "id": str(cid),
+                "name": name or "—",
+                "phone": phone,
+                "balance": bal,
+                "last_purchase": last_purchase.isoformat() if last_purchase else None,
+            })
+
+    # Сортируем клиентов по балансу внутри каждого бакета
+    for b in buckets.values():
+        b["customers"].sort(key=lambda x: x["balance"], reverse=True)
+        b["total_balance"] = round(b["total_balance"], 2)
+
+    return {
+        "total_active": total_active,
+        "total_sleeping": total_sleeping,
+        "sleeping_pct": round(total_sleeping / total_active * 100, 1) if total_active else 0,
+        "buckets": buckets,
+    }
+
+
+@router.get(
     "/tiers",
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
 )

@@ -57,6 +57,7 @@ export const adminAPI = {
   trends: (days = 30) => api.get(`/api/v1/admin/dashboard/trends?days=${days}`),
   notificationStats: (days = 7) => api.get(`/api/v1/admin/dashboard/notifications?days=${days}`),
   analytics: (days = 30) => api.get(`/api/v1/admin/dashboard/analytics?days=${days}`),
+  inactiveCustomers: () => api.get('/api/v1/admin/dashboard/inactive-customers'),
   integrationStatus: () => api.get('/api/v1/admin/integration/1c-status'),
 
   // Tiers
