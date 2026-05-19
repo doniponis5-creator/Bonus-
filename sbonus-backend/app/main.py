@@ -24,6 +24,10 @@ from app.tasks.expiration import expire_old_bonuses, warn_expiring_bonuses
 from app.tasks.notification_retry import retry_failed_notifications
 from app.tasks.weekly_report import send_weekly_report
 from app.tasks.balance_reminder import send_balance_reminders
+from app.services.wa_broadcast import (
+    auto_trigger_sleeping_customers,
+    auto_trigger_birthday,
+)
 from app.services.telegram_bot import (
     send_daily_morning_report,
     send_daily_evening_report,
@@ -110,6 +114,22 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
+    # Cron: WhatsApp авто-триггер спящие — 11:00
+    scheduler.add_job(
+        auto_trigger_sleeping_customers,
+        CronTrigger(hour=11, minute=0),
+        id="wa_sleeping_trigger",
+        replace_existing=True,
+    )
+
+    # Cron: WhatsApp авто-триггер ДР — 09:30
+    scheduler.add_job(
+        auto_trigger_birthday,
+        CronTrigger(hour=9, minute=30),
+        id="wa_birthday_trigger",
+        replace_existing=True,
+    )
+
     # Cron: Telegram утренний отчёт — 09:00
     scheduler.add_job(
         send_daily_morning_report,
@@ -137,6 +157,7 @@ async def lifespan(app: FastAPI):
     logger.info("Cron: notification retry scheduled every 15 min")
     logger.info("Cron: weekly report scheduled at Mon 08:00")
     logger.info("Cron: balance reminder scheduled at 12:00 daily")
+    logger.info("Cron: WA auto-triggers: sleeping 11:00, birthday 09:30")
     logger.info("Cron: Telegram reports at 09:00 & 21:00 daily")
     logger.info("Server started! Swagger: http://localhost:8000/docs")
     logger.info("=" * 50)

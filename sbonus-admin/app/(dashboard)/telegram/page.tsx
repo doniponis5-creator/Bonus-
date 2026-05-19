@@ -128,7 +128,7 @@ export default function TelegramPage() {
   const [testing, setTesting] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [tokenEdited, setTokenEdited] = useState(false);
-  const toast = useToast();
+  const { toast } = useToast();
 
   const load = useCallback(async () => {
     try {

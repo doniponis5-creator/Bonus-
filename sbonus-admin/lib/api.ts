@@ -146,6 +146,15 @@ export const adminAPI = {
   cashierBonusProgress: () => api.get('/api/v1/admin/cashier-bonuses/progress'),
   cashierBonusProgressById: (id: string) => api.get(`/api/v1/admin/cashier-bonuses/progress/${id}`),
 
+  // WhatsApp broadcast
+  waBroadcastSegments: () => api.get('/api/v1/admin/wa-broadcast/segments'),
+  waBroadcastPreview: (segment: string, message: string, threshold?: number) =>
+    api.post('/api/v1/admin/wa-broadcast/preview', { segment, message, threshold }),
+  waBroadcastSend: (segment: string, message: string, threshold?: number) =>
+    api.post('/api/v1/admin/wa-broadcast/send', { segment, message, threshold }),
+  waTriggersConfig: () => api.get('/api/v1/admin/wa-broadcast/triggers'),
+  updateWaTriggersConfig: (config: any) => api.put('/api/v1/admin/wa-broadcast/triggers', config),
+
   // Telegram bot
   telegramConfig: () => api.get('/api/v1/admin/telegram/config'),
   updateTelegramConfig: (config: any) => api.put('/api/v1/admin/telegram/config', config),
