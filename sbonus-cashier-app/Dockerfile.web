@@ -17,6 +17,12 @@ RUN npx expo export --platform web --output-dir dist
 # Expo SDK 54 bundle uses import.meta — inject type="module" into script tags
 RUN sed -i 's|<script src=|<script type="module" src=|g' dist/index.html
 
+# PWA: inject manifest + service worker + theme-color into <head>
+RUN sed -i 's|</head>|<link rel="manifest" href="/manifest.json"/><meta name="theme-color" content="#FFE600"/><link rel="apple-touch-icon" href="/icon-192.png"/><script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js")}</script></head>|' dist/index.html
+
+# Copy PWA assets into dist
+COPY public/ dist/
+
 # ─── 2. Runtime: Nginx serve static ───────────────────
 FROM nginx:1.27-alpine AS runner
 
