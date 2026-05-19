@@ -68,12 +68,12 @@ class TelegramBot:
             return None
 
     async def get_updates(self, offset: int = 0) -> list:
-        """Получить обновления (для привязки chat_id)."""
+        """Получить обновления (long polling 25 сек)."""
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(timeout=35) as client:
                 resp = await client.get(
                     f"{self.base_url}/getUpdates",
-                    params={"offset": offset, "limit": 10},
+                    params={"offset": offset, "limit": 10, "timeout": 25},
                 )
                 data = resp.json()
                 return data.get("result", [])
@@ -450,13 +450,24 @@ async def _handle_command(bot: TelegramBot, chat_id: str, command: str):
 
 
 async def _poll_loop():
-    """Polling цикл для обработки команд."""
+    """Polling цикл для обработки команд (с Redis lock для single-instance)."""
+    from app.core.redis import redis_client
+
     offset = 0
+    lock_key = "tg_bot_poll_lock"
+
     while True:
         try:
+            # Redis lock: только один воркер обрабатывает updates
+            acquired = await redis_client.set(lock_key, "1", nx=True, ex=60)
+            if not acquired:
+                await asyncio.sleep(10)
+                continue
+
             async with async_session() as db:
                 bot = await _get_bot(db)
                 if not bot:
+                    await redis_client.delete(lock_key)
                     await asyncio.sleep(30)
                     continue
 
@@ -469,10 +480,16 @@ async def _poll_loop():
                     if text.startswith("/"):
                         cmd = text.split()[0].split("@")[0].lower()
                         await _handle_command(bot, chat_id, cmd)
+
+            # Продлить lock
+            await redis_client.expire(lock_key, 60)
+
         except Exception as e:
             logger.error("Telegram poll error: %s", e)
+            await asyncio.sleep(5)
+            continue
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(1)
 
 
 def start_polling():
