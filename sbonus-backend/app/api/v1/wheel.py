@@ -373,16 +373,20 @@ async def _notify_wheel_whatsapp(
         if not instance_id or not api_token:
             return
 
+        cabinet_url = get_settings().customer_cabinet_base_url.rstrip("/")
+
         if prize_type == "physical":
             msg = (
                 f"🎉 Поздравляем! Вы выиграли на Колесе Удачи: *{prize_label}*!\n\n"
                 f"📍 Обратитесь к кассиру в Смарт Центр для получения приза.\n\n"
+                f"👤 Личный кабинет: {cabinet_url}\n\n"
                 f"Спасибо что вы с нами! 💛"
             )
         elif bonus_amount > 0:
             msg = (
                 f"🎉 Поздравляем! Вы выиграли на Колесе Удачи: *+{bonus_amount:,.0f} KGS*!\n\n"
                 f"💰 Ваш баланс: *{new_balance:,.0f} KGS*\n\n"
+                f"👤 Личный кабинет: {cabinet_url}\n\n"
                 f"Спасибо что вы с нами! 💛"
             )
         else:
