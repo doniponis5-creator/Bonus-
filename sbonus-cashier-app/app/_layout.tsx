@@ -22,6 +22,7 @@ import CustomerScreen from './(main)/customer/[id]';
 import EarnScreen from './(main)/earn';
 import SpendScreen from './(main)/spend';
 import HistoryScreen from './(main)/history';
+import MotivationScreen from './(main)/motivation';
 
 const Stack = createNativeStackNavigator();
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ export default function RootLayout() {
           <Stack.Screen name="Earn" component={EarnScreen} options={{ headerShown: true, title: 'Начислить бонусы' }} />
           <Stack.Screen name="Spend" component={SpendScreen} options={{ headerShown: true, title: 'Списать бонусы' }} />
           <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: true, title: 'История' }} />
+          <Stack.Screen name="Motivation" component={MotivationScreen} options={{ headerShown: true, title: 'Моя мотивация' }} />
         </Stack.Navigator>
       </NavigationContainer>
       <Toast />

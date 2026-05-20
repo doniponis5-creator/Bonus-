@@ -126,4 +126,8 @@ export const customerAuthAPI = {
     api.post(`/api/v1/customer-auth/send-link-by-cashier/${customerId}`),
 };
 
+export const cashierBonusAPI = {
+  myProgress: () => api.get('/api/v1/admin/cashier-bonuses/my-progress'),
+};
+
 export default api;

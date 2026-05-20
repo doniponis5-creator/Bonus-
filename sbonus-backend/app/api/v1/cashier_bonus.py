@@ -110,5 +110,15 @@ async def single_cashier_progress(
     cashier_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Прогресс конкретного кассира."""
+    """Прогресс конкретного кассира (для админов)."""
+    return await get_cashier_progress(db, cashier_id)
+
+
+@router.get("/my-progress")
+async def my_progress(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Прогресс текущего кассира (для POS)."""
+    cashier_id = uuid.UUID(current_user["sub"])
     return await get_cashier_progress(db, cashier_id)
