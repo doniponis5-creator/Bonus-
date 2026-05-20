@@ -143,7 +143,7 @@ export default function TelegramPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = { ...config };
+      const { bot_token_masked, ...payload } = config;
       if (!tokenEdited) payload.bot_token = '';
       await adminAPI.updateTelegramConfig(payload);
       toast('success', 'Конфигурация Telegram сохранена');

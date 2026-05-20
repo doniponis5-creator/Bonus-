@@ -9,7 +9,7 @@ import json
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,7 @@ router = APIRouter(prefix="/admin/telegram", tags=["Telegram бот"])
 # ═══════════════════════════════════════════
 
 class TelegramConfigRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     enabled: bool = False
     bot_token: str = ""
     chat_id: str = ""
