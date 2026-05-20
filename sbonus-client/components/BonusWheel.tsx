@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Disc3, Ticket, ShoppingCart, Gift, Meh } from 'lucide-react';
 import { wheelAPI } from '@/lib/api';
 
@@ -21,48 +21,130 @@ interface SpinResult {
   spins_remaining: number;
 }
 
+/* ── constants ─────────────────────────────────────────── */
+const CANVAS_SIZE = 360;           // logical px (retina handled by dpr)
+const OUTER_RING = 18;             // width of LED ring
+const LED_COUNT = 28;              // number of LED dots
+const GOLD = '#FFE600';
+const GOLD_DARK = '#c9a800';
+const BG = '#0a0f1a';
+
+/* ── easing: custom elastic-out for satisfying bounce ──── */
+function elasticOut(t: number): number {
+  if (t === 0 || t === 1) return t;
+  return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+}
+
+/* ── darken / lighten color helpers ───────────────────── */
+function shadeColor(hex: string, pct: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, Math.max(0, ((num >> 16) & 0xff) + Math.round(255 * pct)));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + Math.round(255 * pct)));
+  const b = Math.min(255, Math.max(0, (num & 0xff) + Math.round(255 * pct)));
+  return `rgb(${r},${g},${b})`;
+}
+
 export default function BonusWheel() {
   const [segments, setSegments] = useState<Segment[]>([]);
   const [spins, setSpins] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<SpinResult | null>(null);
-  const [rotation, setRotation] = useState(0);
   const [loading, setLoading] = useState(true);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rotRef = useRef(0);           // accumulated rotation (degrees)
+  const rafRef = useRef(0);           // rAF id
+  const ledPhaseRef = useRef(0);      // LED animation phase
+
+  /* ── load wheel config ─────────────────────────────── */
   useEffect(() => {
-    loadConfig();
+    (async () => {
+      try {
+        const { data } = await wheelAPI.config();
+        setSegments(data.segments);
+        setSpins(data.spins_available);
+      } catch { /* fallback */ }
+      finally { setLoading(false); }
+    })();
   }, []);
 
-  useEffect(() => {
-    if (segments.length > 0) drawWheel(rotation);
-  }, [segments, rotation]);
-
-  const loadConfig = async () => {
-    try {
-      const { data } = await wheelAPI.config();
-      setSegments(data.segments);
-      setSpins(data.spins_available);
-    } catch {
-      // fallback
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const drawWheel = (rot: number) => {
+  /* ── draw wheel on canvas ──────────────────────────── */
+  const drawWheel = useCallback((rot: number, ledPhase: number) => {
     const canvas = canvasRef.current;
     if (!canvas || segments.length === 0) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== CANVAS_SIZE * dpr) {
+      canvas.width = CANVAS_SIZE * dpr;
+      canvas.height = CANVAS_SIZE * dpr;
+      canvas.style.width = `${CANVAS_SIZE}px`;
+      canvas.style.height = `${CANVAS_SIZE}px`;
+    }
 
-    const size = canvas.width;
+    const ctx = canvas.getContext('2d')!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const size = CANVAS_SIZE;
     const center = size / 2;
-    const radius = center - 8;
+    const outerR = center - 4;
+    const innerR = outerR - OUTER_RING;
+    const segR = innerR - 2;
     const arc = (2 * Math.PI) / segments.length;
 
     ctx.clearRect(0, 0, size, size);
+
+    /* ── outer metallic ring ──────────────────────────── */
+    const ringGrad = ctx.createRadialGradient(center, center, innerR, center, center, outerR);
+    ringGrad.addColorStop(0, '#2a2a2a');
+    ringGrad.addColorStop(0.3, '#4a4a4a');
+    ringGrad.addColorStop(0.6, '#3a3a3a');
+    ringGrad.addColorStop(1, '#1a1a1a');
+    ctx.beginPath();
+    ctx.arc(center, center, outerR, 0, 2 * Math.PI);
+    ctx.arc(center, center, innerR, 0, 2 * Math.PI, true);
+    ctx.fillStyle = ringGrad;
+    ctx.fill();
+
+    // Metallic ring border lines
+    ctx.beginPath();
+    ctx.arc(center, center, outerR, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(255,230,0,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(center, center, innerR, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(255,230,0,0.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    /* ── LED dots ─────────────────────────────────────── */
+    const ledR = (outerR + innerR) / 2;
+    for (let i = 0; i < LED_COUNT; i++) {
+      const a = (2 * Math.PI * i) / LED_COUNT - Math.PI / 2;
+      const x = center + Math.cos(a) * ledR;
+      const y = center + Math.sin(a) * ledR;
+
+      // Alternate colors, phase-shifted for chase animation
+      const on = (i + Math.floor(ledPhase)) % 3 === 0;
+      const glow = on ? 1 : 0.25;
+
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
+      const ledColor = i % 2 === 0 ? GOLD : '#fff';
+      ctx.fillStyle = on ? ledColor : 'rgba(80,80,80,0.5)';
+      ctx.fill();
+
+      if (on) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, 7, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(255,230,0,${0.25 * glow})`;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    /* ── wheel segments ───────────────────────────────── */
     ctx.save();
     ctx.translate(center, center);
     ctx.rotate((rot * Math.PI) / 180);
@@ -70,90 +152,190 @@ export default function BonusWheel() {
     segments.forEach((seg, i) => {
       const angle = arc * i;
 
-      // Segment fill
+      // Segment fill with gradient for 3D depth
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.arc(0, 0, radius, angle, angle + arc);
+      ctx.arc(0, 0, segR, angle, angle + arc);
       ctx.closePath();
-      ctx.fillStyle = seg.color;
+
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, segR);
+      grad.addColorStop(0, shadeColor(seg.color, 0.15));
+      grad.addColorStop(0.6, seg.color);
+      grad.addColorStop(1, shadeColor(seg.color, -0.12));
+      ctx.fillStyle = grad;
       ctx.fill();
 
-      // Border
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      // Inner shadow overlay for 3D effect
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, segR, angle, angle + arc);
+      ctx.closePath();
+      ctx.clip();
+      const shadow = ctx.createRadialGradient(0, 0, segR * 0.2, 0, 0, segR);
+      shadow.addColorStop(0, 'rgba(255,255,255,0.08)');
+      shadow.addColorStop(0.5, 'transparent');
+      shadow.addColorStop(1, 'rgba(0,0,0,0.15)');
+      ctx.fillStyle = shadow;
+      ctx.fill();
+      ctx.restore();
 
-      // Text
+      // Gold divider lines
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(segR, 0);
+      ctx.strokeStyle = 'rgba(255,230,0,0.5)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      // Text with shadow
       ctx.save();
       ctx.rotate(angle + arc / 2);
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetY = 1;
       ctx.fillStyle = '#fff';
-      ctx.font = `bold ${size < 300 ? 11 : 14}px system-ui`;
+      ctx.font = 'bold 14px "Inter", system-ui, sans-serif';
       ctx.textAlign = 'right';
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 3;
-      ctx.fillText(seg.label, radius - 16, 5);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(seg.label, segR - 18, 0);
+      ctx.shadowBlur = 0;
       ctx.restore();
     });
 
     ctx.restore();
 
-    // Center circle
+    /* ── premium center hub ───────────────────────────── */
+    // Outer shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.arc(center, center, 28, 0, 2 * Math.PI);
-    ctx.fillStyle = '#0a0f1a';
+    ctx.arc(center, center, 32, 0, 2 * Math.PI);
+    ctx.fillStyle = '#111';
     ctx.fill();
-    ctx.strokeStyle = '#FFE600';
-    ctx.lineWidth = 3;
+    ctx.restore();
+
+    // Metallic gradient
+    const hubGrad = ctx.createRadialGradient(center - 6, center - 6, 4, center, center, 32);
+    hubGrad.addColorStop(0, '#333');
+    hubGrad.addColorStop(0.4, '#1a1a1a');
+    hubGrad.addColorStop(1, '#0d0d0d');
+    ctx.beginPath();
+    ctx.arc(center, center, 30, 0, 2 * Math.PI);
+    ctx.fillStyle = hubGrad;
+    ctx.fill();
+
+    // Gold border ring
+    ctx.beginPath();
+    ctx.arc(center, center, 30, 0, 2 * Math.PI);
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // Center text
-    ctx.fillStyle = '#FFE600';
-    ctx.font = 'bold 11px system-ui';
-    ctx.textAlign = 'center';
-    ctx.fillText('SPIN', center, center + 4);
-  };
+    // Inner accent ring
+    ctx.beginPath();
+    ctx.arc(center, center, 24, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(255,230,0,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
+    // SPIN text
+    ctx.fillStyle = GOLD;
+    ctx.font = 'bold 13px "Inter", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SPIN', center, center);
+
+  }, [segments]);
+
+  /* ── idle LED animation ─────────────────────────────── */
+  useEffect(() => {
+    if (segments.length === 0) return;
+    let running = true;
+    const tick = () => {
+      if (!running) return;
+      ledPhaseRef.current += 0.06;
+      drawWheel(rotRef.current, ledPhaseRef.current);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { running = false; cancelAnimationFrame(rafRef.current); };
+  }, [segments, drawWheel]);
+
+  /* ── handle spin ────────────────────────────────────── */
   const handleSpin = async () => {
     if (spinning || spins <= 0) return;
     setSpinning(true);
     setResult(null);
+
+    // Haptic feedback
+    if (navigator.vibrate) navigator.vibrate(30);
 
     try {
       const { data } = await wheelAPI.spin();
       const segIndex = segments.findIndex(s => s.id === data.segment_id);
       const arc = 360 / segments.length;
 
-      // Calculate winning angle (pointer at top = 270deg visual)
+      // Target angle: pointer is at top (0°/360°), segments start at 0°
       const targetAngle = 360 - (segIndex * arc + arc / 2);
-      const totalRotation = rotation + 360 * 5 + targetAngle; // 5 full spins + target
+      const startRot = rotRef.current;
+      const totalSpin = 360 * 7 + targetAngle + (Math.random() * 10 - 5); // 7 full spins + target + slight randomness
+      const endRot = startRot + totalSpin;
 
-      setRotation(totalRotation);
+      const duration = 5500; // longer for more drama
+      const startTime = performance.now();
 
-      // Animate
-      const startRot = rotation;
-      const totalDelta = totalRotation - startRot;
-      const duration = 4000;
-      const startTime = Date.now();
+      cancelAnimationFrame(rafRef.current);
 
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
+      const animate = (now: number) => {
+        const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        // Ease out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const currentRot = startRot + totalDelta * eased;
 
-        drawWheel(currentRot);
+        // Two-phase easing: fast start → elastic bounce end
+        let eased: number;
+        if (progress < 0.7) {
+          // First 70%: cubic ease-in-out for smooth acceleration
+          const t = progress / 0.7;
+          eased = 0.7 * (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+        } else {
+          // Last 30%: elastic deceleration with subtle bounce
+          const t = (progress - 0.7) / 0.3;
+          eased = 0.7 + 0.3 * elasticOut(t);
+        }
+
+        const currentRot = startRot + totalSpin * eased;
+        rotRef.current = currentRot;
+
+        // Speed up LED chase when spinning fast
+        const speed = Math.max(0.06, (1 - progress) * 0.8);
+        ledPhaseRef.current += speed;
+
+        drawWheel(currentRot, ledPhaseRef.current);
 
         if (progress < 1) {
-          requestAnimationFrame(animate);
+          rafRef.current = requestAnimationFrame(animate);
         } else {
+          rotRef.current = endRot;
+          // Haptic on result
+          if (navigator.vibrate) navigator.vibrate([50, 30, 80]);
           setResult(data);
           setSpins(data.spins_remaining);
           setSpinning(false);
+          // Resume idle LED animation
+          const idle = () => {
+            ledPhaseRef.current += 0.06;
+            drawWheel(rotRef.current, ledPhaseRef.current);
+            rafRef.current = requestAnimationFrame(idle);
+          };
+          rafRef.current = requestAnimationFrame(idle);
         }
       };
 
-      requestAnimationFrame(animate);
+      rafRef.current = requestAnimationFrame(animate);
     } catch (err: any) {
       const msg = err?.response?.data?.detail?.message || 'Ошибка';
       setResult({ segment_id: 0, label: '', value: 0, message: msg, new_balance: 0, spins_remaining: spins });
@@ -173,7 +355,7 @@ export default function BonusWheel() {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '20px 16px' }}>
       {/* Title */}
       <div style={{ textAlign: 'center' }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: '#FFE600' }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: GOLD }}>
           <Disc3 size={22} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} /> Колесо Удачи
         </h2>
         <p style={{ fontSize: 13, color: '#8899aa', margin: '6px 0 0' }}>
@@ -186,10 +368,12 @@ export default function BonusWheel() {
         background: spins > 0 ? 'rgba(255,230,0,0.12)' : 'rgba(100,116,139,0.12)',
         borderRadius: 12, padding: '10px 24px',
         display: 'flex', alignItems: 'center', gap: 8,
+        border: spins > 0 ? '1px solid rgba(255,230,0,0.2)' : '1px solid transparent',
+        transition: 'all 0.3s',
       }}>
-        <Ticket size={24} color={spins > 0 ? '#FFE600' : '#64748b'} />
+        <Ticket size={24} color={spins > 0 ? GOLD : '#64748b'} />
         <div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: spins > 0 ? '#FFE600' : '#64748b' }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: spins > 0 ? GOLD : '#64748b' }}>
             {spins}
           </div>
           <div style={{ fontSize: 11, color: '#8899aa' }}>попыток</div>
@@ -198,37 +382,35 @@ export default function BonusWheel() {
 
       {/* Wheel */}
       <div style={{ position: 'relative' }}>
-        {/* Pointer */}
+        {/* Premium pointer */}
         <div style={{
-          position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)',
-          width: 0, height: 0,
-          borderLeft: '12px solid transparent',
-          borderRight: '12px solid transparent',
-          borderTop: '24px solid #FFE600',
+          position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)',
           zIndex: 10,
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
+          width: 0, height: 0,
+          borderLeft: '14px solid transparent',
+          borderRight: '14px solid transparent',
+          borderTop: `28px solid ${GOLD}`,
+          filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.6)) drop-shadow(0 0 8px rgba(255,230,0,0.3))',
+        }} />
+
+        {/* Ambient glow behind wheel */}
+        <div style={{
+          position: 'absolute',
+          inset: -20,
+          borderRadius: '50%',
+          background: spinning
+            ? 'radial-gradient(circle, rgba(255,230,0,0.12) 0%, transparent 65%)'
+            : 'radial-gradient(circle, rgba(255,230,0,0.05) 0%, transparent 65%)',
+          transition: 'background 0.5s',
+          pointerEvents: 'none',
         }} />
 
         <canvas
           ref={canvasRef}
-          width={320}
-          height={320}
-          style={{
-            width: 320, height: 320,
-            filter: spinning ? 'brightness(1.1)' : 'brightness(1)',
-            transition: 'filter 0.3s',
-          }}
+          width={CANVAS_SIZE}
+          height={CANVAS_SIZE}
+          style={{ width: CANVAS_SIZE, height: CANVAS_SIZE, display: 'block' }}
         />
-
-        {/* Glow effect when spinning */}
-        {spinning && (
-          <div style={{
-            position: 'absolute', inset: -10,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,230,0,0.15) 0%, transparent 70%)',
-            animation: 'pulse 1s ease-in-out infinite',
-          }} />
-        )}
       </div>
 
       {/* Spin Button */}
@@ -243,25 +425,33 @@ export default function BonusWheel() {
           fontSize: 18, fontWeight: 800,
           cursor: spinning || spins <= 0 ? 'not-allowed' : 'pointer',
           background: spins > 0
-            ? 'linear-gradient(135deg, #FFE600, #f59e0b)'
+            ? `linear-gradient(135deg, ${GOLD}, #f59e0b)`
             : '#1c2a3a',
-          color: spins > 0 ? '#0a0f1a' : '#64748b',
+          color: spins > 0 ? BG : '#64748b',
           opacity: spinning ? 0.7 : 1,
           transition: 'all 0.3s',
-          boxShadow: spins > 0 ? '0 4px 20px rgba(255,230,0,0.3)' : 'none',
+          boxShadow: spins > 0 ? '0 4px 24px rgba(255,230,0,0.35), 0 0 60px rgba(255,230,0,0.08)' : 'none',
+          letterSpacing: spins > 0 ? 1 : 0,
         }}
       >
-        {spinning ? (<><Disc3 size={18} style={{ display: 'inline', verticalAlign: 'middle' }} /> Крутится...</>) : spins > 0 ? (<><Disc3 size={18} style={{ display: 'inline', verticalAlign: 'middle' }} /> КРУТИТЬ!</>) : (<><ShoppingCart size={18} style={{ display: 'inline', verticalAlign: 'middle' }} /> Сделайте покупку</>)}
+        {spinning
+          ? (<><Disc3 size={18} style={{ display: 'inline', verticalAlign: 'middle', animation: 'spinIcon 1s linear infinite' }} /> Крутится...</>)
+          : spins > 0
+            ? (<><Disc3 size={18} style={{ display: 'inline', verticalAlign: 'middle' }} /> КРУТИТЬ!</>)
+            : (<><ShoppingCart size={18} style={{ display: 'inline', verticalAlign: 'middle' }} /> Сделайте покупку</>)
+        }
       </button>
 
       {/* Result */}
       {result && (
         <div style={{
           width: '100%', maxWidth: 300,
-          background: result.value > 0 ? 'rgba(34,197,94,0.12)' : 'rgba(100,116,139,0.1)',
+          background: result.value > 0
+            ? 'linear-gradient(135deg, rgba(34,197,94,0.12), rgba(255,230,0,0.06))'
+            : 'rgba(100,116,139,0.1)',
           border: `1px solid ${result.value > 0 ? 'rgba(34,197,94,0.3)' : 'rgba(100,116,139,0.2)'}`,
           borderRadius: 16, padding: 20, textAlign: 'center',
-          animation: 'fadeIn 0.5s ease',
+          animation: 'resultPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
         }}>
           <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
             {result.value > 0 ? <Gift size={32} color="#22c55e" /> : <Meh size={32} color="#8899aa" />}
@@ -273,7 +463,11 @@ export default function BonusWheel() {
             {result.message}
           </div>
           {result.value > 0 && (
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFE600', marginTop: 8 }}>
+            <div style={{
+              fontSize: 32, fontWeight: 800, color: GOLD, marginTop: 8,
+              textShadow: '0 0 20px rgba(255,230,0,0.4)',
+              animation: 'countUp 0.6s ease-out',
+            }}>
               +{result.value} KGS
             </div>
           )}
@@ -290,13 +484,18 @@ export default function BonusWheel() {
       </div>
 
       <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.5; }
-          50% { opacity: 1; }
+        @keyframes spinIcon {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes resultPopIn {
+          from { opacity: 0; transform: scale(0.8) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes countUp {
+          from { opacity: 0; transform: scale(0.5); }
+          50% { transform: scale(1.15); }
+          to { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>
