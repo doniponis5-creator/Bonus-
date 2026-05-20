@@ -10,6 +10,7 @@ interface Segment {
   value: number;
   color: string;
   probability: number;
+  prize_type: "bonus" | "physical" | "none";
 }
 
 const PRESET_COLORS = [
@@ -29,7 +30,12 @@ export default function WheelSettingsPage() {
   const fetchConfig = useCallback(async () => {
     try {
       const { data } = await adminAPI.wheelConfig();
-      setSegments(data.segments);
+      // Ensure prize_type exists for each segment (backward compat)
+      const segs = (data.segments || []).map((s: any) => ({
+        ...s,
+        prize_type: s.prize_type || (s.value > 0 ? "bonus" : "none"),
+      }));
+      setSegments(segs);
       setSource(data.source);
     } catch (err) {
       console.error(err);
@@ -83,6 +89,7 @@ export default function WheelSettingsPage() {
       value: 0,
       color: freeColor,
       probability: 0,
+      prize_type: "bonus",
     }]);
   };
 
@@ -191,12 +198,12 @@ export default function WheelSettingsPage() {
             {segments.map((seg, idx) => (
               <div key={idx} style={{
                 display: "grid",
-                gridTemplateColumns: "36px 40px 1fr 100px 120px 36px",
-                gap: 10, alignItems: "center",
+                gridTemplateColumns: "36px 40px 1fr 90px 90px 100px 36px",
+                gap: 8, alignItems: "center",
                 background: colors.cardBg, border: `1px solid ${colors.border}`,
-                borderRadius: 12, padding: "12px 16px",
+                borderRadius: 12, padding: "12px 14px",
               }}>
-                {/* Drag handle / index */}
+                {/* Index */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: colors.textMuted }}>
                   <span style={{ fontSize: 13, fontWeight: 700 }}>#{idx + 1}</span>
                 </div>
@@ -236,6 +243,24 @@ export default function WheelSettingsPage() {
                     fontSize: 11, color: colors.textMuted, fontWeight: 600,
                   }}>KGS</span>
                 </div>
+
+                {/* Prize type */}
+                <select
+                  value={seg.prize_type || (seg.value > 0 ? "bonus" : "none")}
+                  onChange={e => updateSegment(idx, "prize_type", e.target.value)}
+                  style={{
+                    ...inputStyle(colors),
+                    cursor: "pointer", fontSize: 12, padding: "8px 6px",
+                    appearance: "auto",
+                    color: seg.prize_type === "physical" ? "#a855f7"
+                      : seg.prize_type === "bonus" || (!seg.prize_type && seg.value > 0) ? colors.success
+                      : colors.textMuted,
+                  }}
+                >
+                  <option value="bonus">💰 Бонус</option>
+                  <option value="physical">🎁 Приз</option>
+                  <option value="none">— Пусто</option>
+                </select>
 
                 {/* Probability */}
                 <div style={{ position: "relative" }}>
@@ -329,8 +354,8 @@ export default function WheelSettingsPage() {
                 }}>
                   <div style={{ width: 12, height: 12, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
                   <span style={{ flex: 1, color: colors.text }}>{seg.label}</span>
-                  <span style={{ color: colors.textMuted, fontWeight: 600 }}>
-                    {seg.value > 0 ? `+${seg.value}` : "—"}
+                  <span style={{ color: seg.prize_type === "physical" ? "#a855f7" : colors.textMuted, fontWeight: 600 }}>
+                    {seg.prize_type === "physical" ? "🎁" : seg.value > 0 ? `+${seg.value}` : "—"}
                   </span>
                   <span style={{ color: colors.accent, fontWeight: 700, width: 45, textAlign: "right" }}>
                     {(seg.probability * 100).toFixed(1)}%
