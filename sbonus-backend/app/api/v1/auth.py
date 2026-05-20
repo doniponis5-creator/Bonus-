@@ -22,7 +22,7 @@ from app.core.security import (
     verify_password,
 )
 from pydantic import BaseModel, Field
-from app.models import User
+from app.models import Branch, User
 from app.schemas import (
     AdminLoginRequest,
     CashierLoginRequest,
@@ -67,6 +67,14 @@ async def cashier_login(
             detail={"code": "AUTH_INSUFFICIENT_ROLE", "message": "Этот вход только для кассиров"},
         )
 
+    # Branch name
+    branch_name = None
+    if user.branch_id:
+        branch_result = await db.execute(select(Branch).where(Branch.id == user.branch_id))
+        branch = branch_result.scalar_one_or_none()
+        if branch:
+            branch_name = branch.name
+
     access = create_access_token(str(user.id), UserRole(user.role.value), str(user.branch_id) if user.branch_id else None)
     refresh = create_refresh_token(str(user.id))
 
@@ -77,6 +85,7 @@ async def cashier_login(
         user_id=str(user.id),
         role=user.role.value,
         branch_id=str(user.branch_id) if user.branch_id else None,
+        branch_name=branch_name,
     )
 
 

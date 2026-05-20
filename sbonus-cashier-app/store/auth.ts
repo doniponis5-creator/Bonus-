@@ -11,6 +11,7 @@ interface UserData {
   user_id: string;
   role: string;
   branch_id: string | null;
+  branch_name?: string | null;
   full_name?: string;
 }
 
@@ -42,6 +43,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         user_id: data.user_id,
         role: data.role,
         branch_id: data.branch_id,
+        branch_name: data.branch_name || null,
       }));
 
       set({
@@ -51,6 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           user_id: data.user_id,
           role: data.role,
           branch_id: data.branch_id,
+          branch_name: data.branch_name || null,
         },
       });
       return true;

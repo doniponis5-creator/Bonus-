@@ -51,6 +51,7 @@ class TokenResponse(BaseModel):
     user_id: str
     role: str
     branch_id: Optional[str] = None
+    branch_name: Optional[str] = None
 
 
 # ═══════════════════════════════════════════

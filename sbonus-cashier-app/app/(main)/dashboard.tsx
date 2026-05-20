@@ -17,18 +17,10 @@ import api from '@/api/client';
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const { user, logout } = useAuthStore();
-  const [branchName, setBranchName] = useState('Смарт Центр');
+  const branchName = user?.branch_name || 'Смарт Центр';
   const [todayStats, setTodayStats] = useState({ count: 0, total: 0 });
 
   useEffect(() => {
-    if (user?.branch_id) {
-      api.get('/api/v1/admin/branches')
-        .then(res => {
-          const branch = res.data.find((b: any) => b.id === user.branch_id);
-          if (branch) setBranchName(branch.name);
-        })
-        .catch(() => {});
-    }
     // Load today's quick stats (uses /my-progress — no admin role needed)
     api.get('/api/v1/admin/cashier-bonuses/my-progress')
       .then(res => {
@@ -39,7 +31,7 @@ export default function DashboardScreen() {
         });
       })
       .catch(() => {});
-  }, [user?.branch_id]);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
