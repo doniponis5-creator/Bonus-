@@ -354,9 +354,22 @@ async def _notify_wheel_whatsapp(
     try:
         from app.services.whatsapp import send_whatsapp_message
 
-        settings = get_settings()
-        instance_id = settings.greenapi_instance_id
-        api_token = settings.greenapi_api_token
+        # Read credentials from DB Settings (same as all other services)
+        async with db_factory() as db:
+            result = await db.execute(
+                select(Setting).where(Setting.key.in_([
+                    "ENABLE_WHATSAPP_NOTIFICATIONS",
+                    "GREENAPI_INSTANCE_ID",
+                    "GREENAPI_API_TOKEN",
+                ]))
+            )
+            cfg = {s.key: s.value for s in result.scalars().all()}
+
+        if cfg.get("ENABLE_WHATSAPP_NOTIFICATIONS") != "true":
+            return
+
+        instance_id = cfg.get("GREENAPI_INSTANCE_ID")
+        api_token = cfg.get("GREENAPI_API_TOKEN")
         if not instance_id or not api_token:
             return
 
