@@ -280,10 +280,16 @@ export default function BonusWheel() {
       const segIndex = segments.findIndex(s => s.id === data.segment_id);
       const arc = 360 / segments.length;
 
-      // Target angle: pointer is at top (0°/360°), segments start at 0°
-      const targetAngle = 360 - (segIndex * arc + arc / 2);
+      // Pointer is at TOP = 270° in canvas coords (0°=3 o'clock, clockwise)
+      // Segment i center = segIndex * arc + arc/2 degrees
+      // After rotating wheel by R degrees, segment appears at (θ + R) mod 360
+      // We need: θ + startRot + totalSpin ≡ 270 (mod 360)
+      // So: targetAngle = (270 - θ - startNorm + 360) % 360
       const startRot = rotRef.current;
-      const totalSpin = 360 * 7 + targetAngle + (Math.random() * 10 - 5); // 7 full spins + target + slight randomness
+      const segCenterDeg = segIndex * arc + arc / 2;
+      const startNorm = ((startRot % 360) + 360) % 360;
+      const targetAngle = ((270 - segCenterDeg - startNorm) % 360 + 360) % 360;
+      const totalSpin = 360 * 7 + targetAngle; // 7 full spins + precise target (NO random offset!)
       const endRot = startRot + totalSpin;
 
       const duration = 5500; // longer for more drama
