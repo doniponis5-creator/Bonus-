@@ -1,8 +1,9 @@
 "use client";
-import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift, Timer } from 'lucide-react';
+import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift, Timer, Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { authAPI } from "@/lib/api";
 import { useToast } from '@/components/Toast';
 
 // ─── Кастомный Toggle ───
@@ -134,7 +135,7 @@ export default function SettingsPage() {
     container: {
       maxWidth: "900px",
       margin: "0 auto",
-      padding: "20px",
+      padding: "4px 0",
       color: colors.text,
       fontFamily: "system-ui, -apple-system, sans-serif",
     },
@@ -640,6 +641,9 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* PASSWORD CHANGE CARD */}
+      <PasswordChangeCard />
+
       {/* SAVE BUTTON */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "32px", position: "sticky", bottom: "24px", zIndex: 10 }}>
         <button
@@ -654,6 +658,136 @@ export default function SettingsPage() {
           <Save size={20} />
           {saving ? "Сохранение..." : "Сохранить все изменения"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Password Change Component ───
+function PasswordChangeCard() {
+  const { toast } = useToast();
+  const [currentPwd, setCurrentPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [changing, setChanging] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const isValid = currentPwd.length > 0 && newPwd.length >= 6 && newPwd === confirmPwd;
+
+  const handleChange = async () => {
+    if (!isValid) return;
+    setChanging(true);
+    try {
+      await authAPI.changePassword(currentPwd, newPwd);
+      toast('success', 'Пароль успешно изменён!');
+      setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail?.message || 'Ошибка смены пароля';
+      toast('error', msg);
+    } finally { setChanging(false); }
+  };
+
+  const colors = { bg: "#07090f", cardBg: "#0d1117", border: "#1c2a3a", accent: "#FFE600", text: "#e2eaf6", textMuted: "#8899aa" };
+
+  return (
+    <div style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}`, paddingBottom: 16, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Lock size={24} color={colors.accent} />
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Смена пароля</h2>
+            <p style={{ fontSize: 13, color: colors.textMuted, margin: '4px 0 0 0' }}>Изменить пароль для входа в админ-панель</p>
+          </div>
+        </div>
+        {success && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#22c55e', fontSize: 14, fontWeight: 600 }}>
+            <CheckCircle2 size={16} /> Изменён
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Current password */}
+        <div>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: colors.textMuted, marginBottom: 8 }}>
+            Текущий пароль
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showCurrent ? 'text' : 'password'}
+              value={currentPwd}
+              onChange={e => setCurrentPwd(e.target.value)}
+              placeholder="Введите текущий пароль"
+              style={{ width: '100%', padding: '12px 44px 12px 16px', background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 10, color: colors.text, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
+            />
+            <button onClick={() => setShowCurrent(!showCurrent)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+              {showCurrent ? <EyeOff size={16} color="#556677" /> : <Eye size={16} color="#556677" />}
+            </button>
+          </div>
+        </div>
+
+        {/* New password */}
+        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: colors.textMuted, marginBottom: 8 }}>
+              Новый пароль
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showNew ? 'text' : 'password'}
+                value={newPwd}
+                onChange={e => setNewPwd(e.target.value)}
+                placeholder="Минимум 6 символов"
+                style={{ width: '100%', padding: '12px 44px 12px 16px', background: colors.bg, border: `1px solid ${newPwd.length > 0 && newPwd.length < 6 ? '#ef4444' : colors.border}`, borderRadius: 10, color: colors.text, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
+              />
+              <button onClick={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                {showNew ? <EyeOff size={16} color="#556677" /> : <Eye size={16} color="#556677" />}
+              </button>
+            </div>
+            {newPwd.length > 0 && newPwd.length < 6 && (
+              <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>Минимум 6 символов</p>
+            )}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: colors.textMuted, marginBottom: 8 }}>
+              Подтвердите пароль
+            </label>
+            <input
+              type="password"
+              value={confirmPwd}
+              onChange={e => setConfirmPwd(e.target.value)}
+              placeholder="Повторите новый пароль"
+              style={{ width: '100%', padding: '12px 16px', background: colors.bg, border: `1px solid ${confirmPwd.length > 0 && confirmPwd !== newPwd ? '#ef4444' : colors.border}`, borderRadius: 10, color: colors.text, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
+            />
+            {confirmPwd.length > 0 && confirmPwd !== newPwd && (
+              <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>Пароли не совпадают</p>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+          <button
+            onClick={handleChange}
+            disabled={!isValid || changing}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '12px 28px', borderRadius: 12, fontSize: 14, fontWeight: 700,
+              background: isValid ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#1c2a3a',
+              color: isValid ? '#fff' : '#556677', border: 'none',
+              cursor: isValid && !changing ? 'pointer' : 'not-allowed',
+              opacity: changing ? 0.6 : 1, transition: 'all 0.2s',
+            }}
+          >
+            <Lock size={16} />
+            {changing ? 'Сохранение...' : 'Изменить пароль'}
+          </button>
+        </div>
       </div>
     </div>
   );

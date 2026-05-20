@@ -18,8 +18,10 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     get_current_user,
+    hash_password,
     verify_password,
 )
+from pydantic import BaseModel, Field
 from app.models import User
 from app.schemas import (
     AdminLoginRequest,
@@ -169,6 +171,54 @@ async def refresh_token(
         role=user.role.value,
         branch_id=str(user.branch_id) if user.branch_id else None,
     )
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Смена пароля текущим пользователем."""
+    # Rate limit: 5 attempts per 15 min
+    client_ip = request.client.host if request.client else "unknown"
+    if not await check_rate_limit(f"change_pwd:{current_user['sub']}", 5, 900):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "RATE_LIMIT", "message": "Слишком много попыток. Подождите 15 минут."},
+        )
+
+    result = await db.execute(
+        select(User).where(User.id == current_user["sub"], User.is_active == True)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail={"code": "USER_NOT_FOUND"})
+
+    # Verify current password
+    if not user.password_hash or not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "WRONG_PASSWORD", "message": "Текущий пароль неверен"},
+        )
+
+    # Prevent same password
+    if verify_password(body.new_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "SAME_PASSWORD", "message": "Новый пароль совпадает с текущим"},
+        )
+
+    user.password_hash = hash_password(body.new_password)
+    await db.commit()
+
+    return {"status": "ok", "message": "Пароль успешно изменён"}
 
 
 @router.post("/logout", response_model=SuccessResponse)

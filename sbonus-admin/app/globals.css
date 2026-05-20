@@ -57,3 +57,24 @@ a { text-decoration: none; color: inherit; }
 
 @media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+/* ─── Mobile responsive ─── */
+@media (max-width: 767px) {
+  /* Tables: horizontal scroll */
+  .table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .table th, .table td { padding: 10px 12px; font-size: 13px; }
+
+  /* Cards: tighter padding */
+  .card { padding: 16px; border-radius: 14px; }
+
+  /* Hide desktop sidebar */
+  aside { display: none !important; }
+
+  /* Full-width inputs */
+  input, textarea, select { font-size: 16px !important; /* prevents iOS zoom */ }
+}
+
+/* Safe area for iOS notch */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}

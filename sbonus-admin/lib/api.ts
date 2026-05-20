@@ -51,6 +51,8 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: (email: string, password: string) => api.post('/api/v1/auth/admin/login', { email, password }),
+  changePassword: (current_password: string, new_password: string) =>
+    api.post('/api/v1/auth/change-password', { current_password, new_password }),
 };
 
 export const adminAPI = {

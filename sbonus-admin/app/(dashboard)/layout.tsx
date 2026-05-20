@@ -94,9 +94,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar />
-      <main style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
+      <main className="main-content" style={{ flex: 1, overflowY: 'auto' }}>
         {children}
       </main>
+      <style>{`
+        .main-content { padding: 32px; }
+        @media (max-width: 767px) {
+          .main-content { padding: 16px 12px 80px 12px !important; }
+        }
+      `}</style>
     </div>
   );
 }
