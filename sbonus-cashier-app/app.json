@@ -4,12 +4,12 @@
     "slug": "sbonus-cashier",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "sbonus",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash.png",
-      "backgroundColor": "#FFE600",
+      "image": "./assets/images/icon.png",
+      "backgroundColor": "#0b1120",
       "resizeMode": "contain"
     },
     "assetBundlePatterns": ["**/*"],
@@ -22,14 +22,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFE600"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0b1120"
       },
       "package": "kg.smartcenter.sbonus.cashier",
       "permissions": ["CAMERA"]
     },
     "web": {
-      "favicon": "./assets/icon.png",
+      "favicon": "./assets/images/icon.png",
       "bundler": "metro",
       "name": "S Bonus — Кассир",
       "shortName": "Кассир"
