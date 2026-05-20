@@ -69,8 +69,8 @@ DEFAULT_SEGMENTS = [
     {"id": 2, "label": "+100 KGS",    "value": 100,  "color": "#22c55e", "probability": 0.15, "prize_type": "bonus"},
     {"id": 3, "label": "+200 KGS",    "value": 200,  "color": "#3b82f6", "probability": 0.08, "prize_type": "bonus"},
     {"id": 4, "label": "+500 KGS",    "value": 500,  "color": "#a855f7", "probability": 0.02, "prize_type": "bonus"},
-    {"id": 5, "label": "x2 Bonus",    "value": 0,    "color": "#f97316", "probability": 0.10, "prize_type": "bonus"},
-    {"id": 6, "label": "Удача!",      "value": 25,   "color": "#06b6d4", "probability": 0.20, "prize_type": "bonus"},
+    {"id": 5, "label": "Пылесос",     "value": 0,    "color": "#f97316", "probability": 0.01, "prize_type": "physical"},
+    {"id": 6, "label": "Удача!",      "value": 25,   "color": "#06b6d4", "probability": 0.29, "prize_type": "bonus"},
     {"id": 7, "label": "Попробуйте!", "value": 0,    "color": "#64748b", "probability": 0.15, "prize_type": "none"},
     {"id": 8, "label": "+150 KGS",    "value": 150,  "color": "#ec4899", "probability": 0.05, "prize_type": "bonus"},
 ]
@@ -176,23 +176,6 @@ async def spin_wheel(
     customer = result.scalar_one_or_none()
 
     bonus_amount = Decimal(str(winner["value"]))
-
-    # Обработка x2 бонуса — удваиваем последний EARN
-    if winner["label"] == "x2 Bonus" and prize_type == "bonus":
-        last_earn = await db.execute(
-            select(Transaction)
-            .where(
-                Transaction.customer_id == customer_id,
-                Transaction.type == TransactionType.EARN,
-            )
-            .order_by(Transaction.created_at.desc())
-            .limit(1)
-        )
-        last_earn_txn = last_earn.scalar_one_or_none()
-        if last_earn_txn:
-            bonus_amount = last_earn_txn.amount
-        else:
-            bonus_amount = Decimal("50")
 
     # Начислить бонус или обработать приз
     message = ""
