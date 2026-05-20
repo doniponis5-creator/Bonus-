@@ -44,7 +44,7 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <View style={styles.logoRow}>
           <Image
-            source={require('@/assets/images/s-logo.jpeg')}
+            source={require('@/assets/images/icon.png')}
             style={styles.logoImg}
           />
           <View>
