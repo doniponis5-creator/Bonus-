@@ -42,9 +42,9 @@ export default function CouponsPage() {
     setDeleting(id);
     try {
       await adminAPI.deleteCoupon(id);
-      toast('Купон деактивирован', 'success');
+      toast('success', 'Купон деактивирован');
       load(page);
-    } catch { toast('Ошибка', 'error'); } finally {
+    } catch { toast('error', 'Ошибка'); } finally {
       setDeleting(null);
     }
   };

@@ -48,9 +48,9 @@ export default function ReviewsPage() {
     setActing(id);
     try {
       await adminAPI.actionReview(id, action);
-      toast(action === 'approve' ? 'Отзыв одобрен' : 'Отзыв отклонён', 'success');
+      toast('success', action === 'approve' ? 'Отзыв одобрен' : 'Отзыв отклонён');
       load(page, filter);
-    } catch { toast('Ошибка', 'error'); } finally {
+    } catch { toast('error', 'Ошибка'); } finally {
       setActing(null);
     }
   };

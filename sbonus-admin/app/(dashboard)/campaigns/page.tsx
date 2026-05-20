@@ -100,10 +100,10 @@ export default function CampaignsPage() {
     if (!await confirm(`Отправить кампанию "${n}" немедленно?`)) return;
     try {
       await adminAPI.sendCampaign(id);
-      toast('Кампания отправлена', 'success');
+      toast('success', 'Кампания отправлена');
       load();
     } catch (er: any) {
-      toast(er?.response?.data?.detail?.message || 'Ошибка отправки', 'error');
+      toast('error', er?.response?.data?.detail?.message || 'Ошибка отправки');
     }
   };
 
@@ -111,10 +111,10 @@ export default function CampaignsPage() {
     if (!await confirm('Отменить кампанию?')) return;
     try {
       await adminAPI.cancelCampaign(id);
-      toast('Кампания отменена', 'success');
+      toast('success', 'Кампания отменена');
       load();
     } catch (er: any) {
-      toast(er?.response?.data?.detail?.message || 'Ошибка', 'error');
+      toast('error', er?.response?.data?.detail?.message || 'Ошибка');
     }
   };
 
@@ -122,10 +122,10 @@ export default function CampaignsPage() {
     if (!await confirm('Удалить кампанию?')) return;
     try {
       await adminAPI.deleteCampaign(id);
-      toast('Кампания удалена', 'success');
+      toast('success', 'Кампания удалена');
       load();
     } catch (er: any) {
-      toast(er?.response?.data?.detail?.message || 'Ошибка', 'error');
+      toast('error', er?.response?.data?.detail?.message || 'Ошибка');
     }
   };
 
