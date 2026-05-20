@@ -105,10 +105,12 @@ def _parse_json(raw: Optional[str], default: list) -> list:
 async def check_cashier_milestones(
     db: AsyncSession,
     cashier_id: uuid.UUID,
+    purchase_amount: Decimal = Decimal("0"),
 ) -> None:
     """
     Проверить вехи кассира после новой EARN-транзакции.
     Вызывается из BonusService.earn().
+    Отправляет прогресс + поздравления после каждой продажи.
     """
     config = await get_cashier_bonus_config(db)
     if not config["enabled"]:
@@ -117,7 +119,7 @@ async def check_cashier_milestones(
     today = date.today()
     month_start = today.replace(day=1)
 
-    # Подсчёт продаж за сегодня (количество EARN-транзакций этого кассира)
+    # Подсчёт продаж за сегодня
     daily_result = await db.execute(
         select(sa_func.count()).where(
             Transaction.cashier_id == cashier_id,
@@ -126,6 +128,16 @@ async def check_cashier_milestones(
         )
     )
     daily_sales = daily_result.scalar() or 0
+
+    # Дневная выручка
+    daily_rev_result = await db.execute(
+        select(sa_func.coalesce(sa_func.sum(Transaction.purchase_amount), 0)).where(
+            Transaction.cashier_id == cashier_id,
+            Transaction.type == TransactionType.EARN,
+            sa_func.date(Transaction.created_at) == today,
+        )
+    )
+    daily_revenue = float(daily_rev_result.scalar() or 0)
 
     # Подсчёт за месяц
     monthly_result = await db.execute(
@@ -137,29 +149,49 @@ async def check_cashier_milestones(
     )
     monthly_sales = monthly_result.scalar() or 0
 
+    # Месячная выручка
+    monthly_rev_result = await db.execute(
+        select(sa_func.coalesce(sa_func.sum(Transaction.purchase_amount), 0)).where(
+            Transaction.cashier_id == cashier_id,
+            Transaction.type == TransactionType.EARN,
+            sa_func.date(Transaction.created_at) >= month_start,
+        )
+    )
+    monthly_revenue = float(monthly_rev_result.scalar() or 0)
+
     # Получить лог уже выданных вех
     awarded = await _get_awarded_milestones(db, cashier_id, today, month_start)
 
-    notifications = []
+    milestone_msgs = []
+    progress_parts = []
 
     # === Дневные вехи ===
-    for m in sorted(config["daily_milestones"], key=lambda x: x["sales"]):
+    sorted_daily = sorted(config["daily_milestones"], key=lambda x: x["sales"])
+    daily_next = None
+    for m in sorted_daily:
         milestone_key = f"daily_{today.isoformat()}_{m['sales']}"
         if daily_sales >= m["sales"] and milestone_key not in awarded:
             await _award_milestone(db, cashier_id, milestone_key, m["bonus"], f"Дневная веха: {m['sales']} продаж")
-            notifications.append(
-                f"Вы достигли {m['sales']} продаж сегодня! Бонус: {m['bonus']} KGS"
+            milestone_msgs.append(
+                f"🏆 *Дневная цель — {m['sales']} продаж!*\n"
+                f"💰 Бонус: +{m['bonus']:,} KGS"
             )
+        elif daily_sales < m["sales"] and daily_next is None:
+            daily_next = m
 
     # === Месячные вехи ===
     month_key_prefix = f"monthly_{today.strftime('%Y-%m')}"
+    monthly_next = None
     for m in sorted(config["monthly_milestones"], key=lambda x: x["sales"]):
         milestone_key = f"{month_key_prefix}_{m['sales']}"
         if monthly_sales >= m["sales"] and milestone_key not in awarded:
             await _award_milestone(db, cashier_id, milestone_key, m["bonus"], f"Месячная веха: {m['sales']} продаж")
-            notifications.append(
-                f"Месячный итог: {monthly_sales} продаж! Бонус: {m['bonus']} KGS"
+            milestone_msgs.append(
+                f"🎯 *Месячная цель — {m['sales']} продаж!*\n"
+                f"💰 Бонус: +{m['bonus']:,} KGS"
             )
+        elif monthly_sales < m["sales"] and monthly_next is None:
+            monthly_next = m
 
     # === Стрик ===
     streak_days = await _calculate_streak(db, cashier_id, today, config["streak_min_sales"])
@@ -167,13 +199,42 @@ async def check_cashier_milestones(
         milestone_key = f"streak_{today.isoformat()}_{m['days']}"
         if streak_days >= m["days"] and milestone_key not in awarded:
             await _award_milestone(db, cashier_id, milestone_key, m["bonus"], f"Стрик: {m['days']} дней подряд")
-            notifications.append(
-                f"{m['days']} дней подряд! Стрик-бонус: {m['bonus']} KGS"
+            milestone_msgs.append(
+                f"🔥 *Стрик {m['days']} дней подряд!*\n"
+                f"💰 Бонус: +{m['bonus']:,} KGS"
             )
 
-    # WhatsApp уведомления
-    if notifications:
-        await _notify_cashier(db, cashier_id, notifications)
+    # === Прогресс после каждой продажи ===
+    if daily_next:
+        remaining = daily_next["sales"] - daily_sales
+        progress_parts.append(
+            f"📊 Сегодня: *{daily_sales}/{daily_next['sales']}* продаж"
+            + (f" (осталось {remaining}!)" if remaining <= 5 else "")
+        )
+
+    if monthly_next:
+        m_remaining = monthly_next["sales"] - monthly_sales
+        progress_parts.append(
+            f"📅 Месяц: *{monthly_sales}/{monthly_next['sales']}* продаж"
+            + (f" (осталось {m_remaining}!)" if m_remaining <= 20 else "")
+        )
+
+    # Выручка
+    progress_parts.append(f"💵 Выручка: {daily_revenue:,.0f} KGS за сегодня")
+
+    if streak_days > 0:
+        progress_parts.append(f"🔥 Стрик: {streak_days} дн. подряд")
+
+    # Мотивационная фраза
+    motivational = _get_motivational_phrase(daily_sales, daily_next)
+
+    # === Отправка ===
+    if milestone_msgs:
+        # Веха достигнута — праздничное сообщение
+        await _notify_cashier_milestone(db, cashier_id, milestone_msgs, progress_parts)
+    else:
+        # Обычный прогресс после продажи
+        await _notify_cashier_progress(db, cashier_id, daily_sales, progress_parts, motivational, float(purchase_amount))
 
 
 # ═══════════════════════════════════════════
@@ -389,19 +450,52 @@ async def _calculate_streak(
     return streak
 
 
-async def _notify_cashier(
-    db: AsyncSession, cashier_id: uuid.UUID, messages: list[str]
-) -> None:
-    """Отправить WhatsApp уведомление кассиру."""
-    from app.services.whatsapp import send_whatsapp_message
+def _get_motivational_phrase(daily_sales: int, daily_next: dict | None) -> str:
+    """Мотивационная фраза в зависимости от прогресса."""
+    import random
 
-    # Получить кассира
-    result = await db.execute(select(User).where(User.id == cashier_id))
-    cashier = result.scalar_one_or_none()
-    if not cashier or not cashier.phone:
-        return
+    if daily_next:
+        remaining = daily_next["sales"] - daily_sales
+        if remaining == 1:
+            return random.choice([
+                "🚀 Ещё одна — и цель покорена!",
+                "💪 Последний рывок! Вы почти у цели!",
+                "⭐ Одна продажа до победы!",
+            ])
+        elif remaining <= 3:
+            return random.choice([
+                f"🔥 Осталось всего {remaining}! Вы на финишной прямой!",
+                f"💪 Ещё {remaining} — и бонус ваш!",
+                f"⚡ {remaining} до цели! Не останавливайтесь!",
+            ])
+        elif remaining <= 5:
+            return random.choice([
+                f"📈 До цели {remaining} продаж — темп отличный!",
+                f"👊 {remaining} осталось! Продолжайте в том же духе!",
+            ])
 
-    # WA конфиг
+    if daily_sales == 1:
+        return random.choice([
+            "☀️ Отличное начало дня!",
+            "🌟 Первая продажа — старт дан!",
+            "💫 День начался продуктивно!",
+        ])
+    elif daily_sales <= 3:
+        return random.choice([
+            "👍 Хороший разгон!",
+            "📈 Набираете обороты!",
+        ])
+
+    return random.choice([
+        "💪 Отличная работа!",
+        "⭐ Так держать!",
+        "🏃 Вы в ударе!",
+        "🎯 Продолжайте!",
+    ])
+
+
+async def _get_wa_config(db: AsyncSession) -> tuple:
+    """Получить WhatsApp конфиг. Возвращает (instance_id, api_token) или (None, None)."""
     wa_result = await db.execute(
         select(Setting).where(Setting.key.in_([
             "ENABLE_WHATSAPP_NOTIFICATIONS",
@@ -412,20 +506,72 @@ async def _notify_cashier(
     wa_cfg = {s.key: s.value for s in wa_result.scalars().all()}
 
     if wa_cfg.get("ENABLE_WHATSAPP_NOTIFICATIONS") != "true":
-        return
+        return None, None
 
     instance_id = wa_cfg.get("GREENAPI_INSTANCE_ID")
     api_token = wa_cfg.get("GREENAPI_API_TOKEN")
-    if not instance_id or not api_token:
+    return (instance_id, api_token) if instance_id and api_token else (None, None)
+
+
+async def _notify_cashier_milestone(
+    db: AsyncSession, cashier_id: uuid.UUID,
+    milestone_msgs: list[str], progress_parts: list[str],
+) -> None:
+    """Праздничное WhatsApp уведомление при достижении вехи."""
+    from app.services.whatsapp import send_whatsapp_message
+
+    result = await db.execute(select(User).where(User.id == cashier_id))
+    cashier = result.scalar_one_or_none()
+    if not cashier or not cashier.phone:
         return
 
-    # Формируем сообщение
-    msg = f"{cashier.full_name}, поздравляем!\n\n"
-    for m in messages:
-        msg += f"  {m}\n"
-    msg += "\nПродолжайте в том же духе!"
+    instance_id, api_token = await _get_wa_config(db)
+    if not instance_id:
+        return
+
+    msg = f"🎉 *{cashier.full_name}, поздравляем!*\n\n"
+    msg += "\n\n".join(milestone_msgs)
+    if progress_parts:
+        msg += "\n\n───────────\n"
+        msg += "\n".join(progress_parts)
+    msg += "\n\n🚀 Вы — лучший! Продолжайте покорять вершины!"
 
     asyncio.create_task(send_whatsapp_message(
         phone=cashier.phone, message=msg,
         instance_id=instance_id, api_token=api_token,
     ))
+
+
+async def _notify_cashier_progress(
+    db: AsyncSession, cashier_id: uuid.UUID,
+    daily_sales: int, progress_parts: list[str],
+    motivational: str, purchase_amount: float,
+) -> None:
+    """Прогресс-уведомление после каждой продажи."""
+    from app.services.whatsapp import send_whatsapp_message
+
+    result = await db.execute(select(User).where(User.id == cashier_id))
+    cashier = result.scalar_one_or_none()
+    if not cashier or not cashier.phone:
+        return
+
+    instance_id, api_token = await _get_wa_config(db)
+    if not instance_id:
+        return
+
+    msg = f"✅ Продажа #{daily_sales} — *{purchase_amount:,.0f} KGS*\n\n"
+    msg += "\n".join(progress_parts)
+    msg += f"\n\n{motivational}"
+
+    asyncio.create_task(send_whatsapp_message(
+        phone=cashier.phone, message=msg,
+        instance_id=instance_id, api_token=api_token,
+    ))
+
+
+# Legacy wrapper (backward-compatible)
+async def _notify_cashier(
+    db: AsyncSession, cashier_id: uuid.UUID, messages: list[str]
+) -> None:
+    """Отправить WhatsApp уведомление кассиру (legacy)."""
+    await _notify_cashier_milestone(db, cashier_id, messages, [])

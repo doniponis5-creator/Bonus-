@@ -27,6 +27,8 @@ from app.models import (
     Setting,
     Transaction,
     TransactionType,
+    User,
+    UserRoleEnum,
 )
 
 router = APIRouter(prefix="/wheel", tags=["Bonus Wheel"])
