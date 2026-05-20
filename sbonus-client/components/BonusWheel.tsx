@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Disc3, Ticket, ShoppingCart, Gift, Meh } from 'lucide-react';
+import { Disc3, Ticket, ShoppingCart, Gift, Meh, Package } from 'lucide-react';
 import { wheelAPI } from '@/lib/api';
 
 interface Segment {
@@ -19,6 +19,7 @@ interface SpinResult {
   message: string;
   new_balance: number;
   spins_remaining: number;
+  prize_type?: string;  // "bonus" | "physical" | "none"
 }
 
 /* ── constants ─────────────────────────────────────────── */
@@ -449,26 +450,40 @@ export default function BonusWheel() {
       </button>
 
       {/* Result */}
-      {result && (
+      {result && (() => {
+        const isPhysical = result.prize_type === 'physical';
+        const isWin = result.value > 0 || isPhysical;
+        return (
         <div style={{
           width: '100%', maxWidth: 300,
-          background: result.value > 0
-            ? 'linear-gradient(135deg, rgba(34,197,94,0.12), rgba(255,230,0,0.06))'
-            : 'rgba(100,116,139,0.1)',
-          border: `1px solid ${result.value > 0 ? 'rgba(34,197,94,0.3)' : 'rgba(100,116,139,0.2)'}`,
+          background: isPhysical
+            ? 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(255,230,0,0.08))'
+            : isWin
+              ? 'linear-gradient(135deg, rgba(34,197,94,0.12), rgba(255,230,0,0.06))'
+              : 'rgba(100,116,139,0.1)',
+          border: `1px solid ${isPhysical ? 'rgba(168,85,247,0.4)' : isWin ? 'rgba(34,197,94,0.3)' : 'rgba(100,116,139,0.2)'}`,
           borderRadius: 16, padding: 20, textAlign: 'center',
           animation: 'resultPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
         }}>
           <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
-            {result.value > 0 ? <Gift size={32} color="#22c55e" /> : <Meh size={32} color="#8899aa" />}
+            {isPhysical ? <Package size={36} color="#a855f7" /> : isWin ? <Gift size={32} color="#22c55e" /> : <Meh size={32} color="#8899aa" />}
           </div>
           <div style={{
             fontSize: 16, fontWeight: 700,
-            color: result.value > 0 ? '#22c55e' : '#8899aa',
+            color: isPhysical ? '#a855f7' : isWin ? '#22c55e' : '#8899aa',
           }}>
             {result.message}
           </div>
-          {result.value > 0 && (
+          {isPhysical && (
+            <div style={{
+              fontSize: 24, fontWeight: 800, color: GOLD, marginTop: 8,
+              textShadow: '0 0 20px rgba(255,230,0,0.4)',
+              animation: 'countUp 0.6s ease-out',
+            }}>
+              {result.label}
+            </div>
+          )}
+          {!isPhysical && result.value > 0 && (
             <div style={{
               fontSize: 32, fontWeight: 800, color: GOLD, marginTop: 8,
               textShadow: '0 0 20px rgba(255,230,0,0.4)',
@@ -478,7 +493,8 @@ export default function BonusWheel() {
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* Info */}
       <div style={{

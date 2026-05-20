@@ -17,9 +17,10 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.database import get_db
+from app.core.database import get_db, async_session
 from app.core.redis import check_rate_limit
 from app.core.security import get_current_customer
+from app.core.config import get_settings
 from app.models import (
     BonusAccount,
     Customer,
@@ -41,9 +42,10 @@ class WheelStatusResponse(BaseModel):
 class WheelSegment(BaseModel):
     id: int
     label: str
-    value: int          # bonus amount (0 = no prize)
+    value: int          # bonus amount (0 = no prize / physical prize)
     color: str
     probability: float  # 0.0 - 1.0
+    prize_type: str = "bonus"  # "bonus" | "physical" | "none"
 
 
 class WheelConfigResponse(BaseModel):
@@ -58,18 +60,19 @@ class SpinResultResponse(BaseModel):
     message: str
     new_balance: float
     spins_remaining: int
+    prize_type: str = "bonus"  # "bonus" | "physical" | "none"
 
 
 # ─── Default segments ───
 DEFAULT_SEGMENTS = [
-    {"id": 1, "label": "+50 KGS",     "value": 50,   "color": "#FFE600", "probability": 0.25},
-    {"id": 2, "label": "+100 KGS",    "value": 100,  "color": "#22c55e", "probability": 0.15},
-    {"id": 3, "label": "+200 KGS",    "value": 200,  "color": "#3b82f6", "probability": 0.08},
-    {"id": 4, "label": "+500 KGS",    "value": 500,  "color": "#a855f7", "probability": 0.02},
-    {"id": 5, "label": "x2 Bonus",    "value": 0,    "color": "#f97316", "probability": 0.10},
-    {"id": 6, "label": "Удача!",      "value": 25,   "color": "#06b6d4", "probability": 0.20},
-    {"id": 7, "label": "Попробуйте!", "value": 0,    "color": "#64748b", "probability": 0.15},
-    {"id": 8, "label": "+150 KGS",    "value": 150,  "color": "#ec4899", "probability": 0.05},
+    {"id": 1, "label": "+50 KGS",     "value": 50,   "color": "#FFE600", "probability": 0.25, "prize_type": "bonus"},
+    {"id": 2, "label": "+100 KGS",    "value": 100,  "color": "#22c55e", "probability": 0.15, "prize_type": "bonus"},
+    {"id": 3, "label": "+200 KGS",    "value": 200,  "color": "#3b82f6", "probability": 0.08, "prize_type": "bonus"},
+    {"id": 4, "label": "+500 KGS",    "value": 500,  "color": "#a855f7", "probability": 0.02, "prize_type": "bonus"},
+    {"id": 5, "label": "x2 Bonus",    "value": 0,    "color": "#f97316", "probability": 0.10, "prize_type": "bonus"},
+    {"id": 6, "label": "Удача!",      "value": 25,   "color": "#06b6d4", "probability": 0.20, "prize_type": "bonus"},
+    {"id": 7, "label": "Попробуйте!", "value": 0,    "color": "#64748b", "probability": 0.15, "prize_type": "none"},
+    {"id": 8, "label": "+150 KGS",    "value": 150,  "color": "#ec4899", "probability": 0.05, "prize_type": "bonus"},
 ]
 
 
@@ -156,6 +159,7 @@ async def spin_wheel(
     # Выбрать сегмент
     segments = await _get_segments(db)
     winner = _pick_segment(segments)
+    prize_type = winner.get("prize_type", "bonus")
 
     # Получить аккаунт (locked)
     result = await db.execute(
@@ -174,7 +178,7 @@ async def spin_wheel(
     bonus_amount = Decimal(str(winner["value"]))
 
     # Обработка x2 бонуса — удваиваем последний EARN
-    if winner["label"] == "x2 Bonus":
+    if winner["label"] == "x2 Bonus" and prize_type == "bonus":
         last_earn = await db.execute(
             select(Transaction)
             .where(
@@ -190,9 +194,19 @@ async def spin_wheel(
         else:
             bonus_amount = Decimal("50")
 
-    # Начислить бонус если > 0
+    # Начислить бонус или обработать приз
     message = ""
-    if bonus_amount > 0:
+    if prize_type == "physical":
+        # Физический приз — НЕ начисляем на счёт, записываем как транзакцию-запись
+        txn = Transaction(
+            customer_id=customer_id,
+            type=TransactionType.PROMO,
+            amount=Decimal("0"),
+            note=f"Колесо удачи — приз: {winner['label']}",
+        )
+        db.add(txn)
+        message = f"Поздравляем! Вы выиграли: {winner['label']}! Обратитесь к кассиру для получения приза."
+    elif bonus_amount > 0:
         account.balance += bonus_amount
         account.total_earned += bonus_amount
 
@@ -209,6 +223,31 @@ async def spin_wheel(
 
     await db.commit()
 
+    # ── Уведомления (fire-and-forget, не блокируют ответ) ──
+    customer_name = customer.full_name if customer else "Неизвестный"
+    customer_phone = customer.phone if customer else ""
+
+    # 1) Telegram алерт владельцу
+    import asyncio
+    asyncio.create_task(_notify_wheel_telegram(
+        customer_name=customer_name,
+        prize_label=winner["label"],
+        prize_type=prize_type,
+        bonus_amount=float(bonus_amount),
+        new_balance=float(account.balance),
+    ))
+
+    # 2) WhatsApp уведомление клиенту
+    if customer_phone:
+        asyncio.create_task(_notify_wheel_whatsapp(
+            db_factory=async_session,
+            phone=customer_phone,
+            prize_label=winner["label"],
+            prize_type=prize_type,
+            bonus_amount=float(bonus_amount),
+            new_balance=float(account.balance),
+        ))
+
     return SpinResultResponse(
         segment_id=winner["id"],
         label=winner["label"],
@@ -216,6 +255,7 @@ async def spin_wheel(
         message=message,
         new_balance=float(account.balance),
         spins_remaining=spins - 1,
+        prize_type=prize_type,
     )
 
 
@@ -274,3 +314,84 @@ async def _get_available_spins(db: AsyncSession, customer_id: uuid.UUID) -> int:
 
     total = max(0, earn_count + free_spins - used_spins)
     return min(total, 1)  # Максимум 1 спин за раз
+
+
+# ═══════════════════════════════════════════
+# WHEEL NOTIFICATIONS (fire-and-forget)
+# ═══════════════════════════════════════════
+
+async def _notify_wheel_telegram(
+    customer_name: str,
+    prize_label: str,
+    prize_type: str,
+    bonus_amount: float,
+    new_balance: float,
+):
+    """Telegram алерт владельцу о выигрыше на колесе."""
+    try:
+        from app.services.telegram_bot import _get_bot, _get_chat_id, _get_tg_config
+        async with async_session() as db:
+            bot = await _get_bot(db)
+            chat_id = await _get_chat_id(db)
+            if not bot or not chat_id:
+                return
+
+            if prize_type == "physical":
+                text = (
+                    "🎰 <b>Колесо удачи — ПРИЗ!</b>\n"
+                    f"👤 {customer_name}\n"
+                    f"🎁 Приз: <b>{prize_label}</b>\n"
+                    f"📋 Тип: Физический приз\n"
+                    "⚠️ Клиент придёт за призом к кассиру!"
+                )
+            elif bonus_amount > 0:
+                text = (
+                    "🎰 <b>Колесо удачи — выигрыш!</b>\n"
+                    f"👤 {customer_name}\n"
+                    f"🏆 Выигрыш: <b>+{bonus_amount:,.0f} KGS</b>\n"
+                    f"💰 Баланс: {new_balance:,.0f} KGS"
+                )
+            else:
+                return  # Не уведомляем о пустых спинах
+
+            await bot.send_message(chat_id, text)
+    except Exception:
+        pass  # Не ломаем основной flow
+
+
+async def _notify_wheel_whatsapp(
+    db_factory,
+    phone: str,
+    prize_label: str,
+    prize_type: str,
+    bonus_amount: float,
+    new_balance: float,
+):
+    """WhatsApp уведомление клиенту о выигрыше на колесе."""
+    try:
+        from app.services.whatsapp import send_whatsapp_message
+
+        settings = get_settings()
+        instance_id = settings.GREENAPI_INSTANCE_ID
+        api_token = settings.GREENAPI_API_TOKEN
+        if not instance_id or not api_token:
+            return
+
+        if prize_type == "physical":
+            msg = (
+                f"🎉 Поздравляем! Вы выиграли на Колесе Удачи: *{prize_label}*!\n\n"
+                f"📍 Обратитесь к кассиру в Смарт Центр для получения приза.\n\n"
+                f"Спасибо что вы с нами! 💛"
+            )
+        elif bonus_amount > 0:
+            msg = (
+                f"🎉 Поздравляем! Вы выиграли на Колесе Удачи: *+{bonus_amount:,.0f} KGS*!\n\n"
+                f"💰 Ваш баланс: *{new_balance:,.0f} KGS*\n\n"
+                f"Спасибо что вы с нами! 💛"
+            )
+        else:
+            return  # Не уведомляем о пустых спинах
+
+        await send_whatsapp_message(phone, msg, instance_id, api_token)
+    except Exception:
+        pass  # Не ломаем основной flow
