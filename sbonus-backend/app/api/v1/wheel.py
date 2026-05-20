@@ -372,8 +372,8 @@ async def _notify_wheel_whatsapp(
         from app.services.whatsapp import send_whatsapp_message
 
         settings = get_settings()
-        instance_id = settings.GREENAPI_INSTANCE_ID
-        api_token = settings.GREENAPI_API_TOKEN
+        instance_id = settings.greenapi_instance_id
+        api_token = settings.greenapi_api_token
         if not instance_id or not api_token:
             return
 
