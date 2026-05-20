@@ -5,11 +5,23 @@ POST /api/v1/bonus/earn, spend, check-spend, birthday, referral/apply, promo/app
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+
+
+def _validate_branch(current_user: dict, request_branch_id: uuid.UUID | None):
+    """Validate cashier operates within their assigned branch."""
+    user_branch = current_user.get("branch_id")
+    if not user_branch or not request_branch_id:
+        return  # no branch constraint (super_admin or legacy)
+    if str(request_branch_id) != str(user_branch):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "BRANCH_MISMATCH", "message": "Операция запрещена: неверный филиал."},
+        )
 from app.schemas import (
     BonusCheckSpendRequest,
     BonusEarnRequest,
@@ -33,6 +45,7 @@ async def earn_bonus(
     Начислить бонус за покупку.
     Кассир вводит сумму вручную → бонус рассчитывается автоматически.
     """
+    _validate_branch(current_user, body.branch_id)
     svc = BonusService(db)
     return await svc.earn(
         customer_id=body.customer_id,
@@ -51,6 +64,7 @@ async def spend_bonus(
     current_user: dict = Depends(get_current_user),
 ) -> BonusResult:
     """Списать бонус при оплате. Макс 30% от суммы покупки."""
+    _validate_branch(current_user, body.branch_id)
     svc = BonusService(db)
     return await svc.spend(
         customer_id=body.customer_id,

@@ -98,7 +98,25 @@ class BonusService:
                     },
                 )
         else:
-            # Генерация UUID для ручного ввода
+            # Manual entry — cap at 5 per day per customer to prevent abuse
+            from datetime import datetime, timezone, timedelta
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            manual_count = (await self.db.execute(
+                select(func.count(Transaction.id)).where(
+                    Transaction.customer_id == customer_id,
+                    Transaction.type == TransactionType.EARN,
+                    Transaction.receipt_number.like("MANUAL-%"),
+                    Transaction.created_at >= today_start,
+                )
+            )).scalar() or 0
+            if manual_count >= 5:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "MANUAL_EARN_LIMIT",
+                        "message": "Достигнут дневной лимит ручных начислений (5) для этого клиента",
+                    },
+                )
             receipt_number = f"MANUAL-{uuid.uuid4().hex[:12].upper()}"
 
         # Получение клиента + аккаунта + tier

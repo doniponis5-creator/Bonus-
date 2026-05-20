@@ -25,21 +25,30 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Basic JWT format check — expiry and auth handled client-side via refresh interceptor
+  // JWT validation: format, expiry, and role check
+  // Note: Full signature verification happens server-side on every API call.
+  // This middleware prevents rendering admin pages with invalid/expired/customer tokens.
   try {
     const parts = token.split('.');
     if (parts.length !== 3) throw new Error('Invalid JWT');
     const payload = JSON.parse(atob(parts[1]));
+
+    // Check expiry
+    if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
+      throw new Error('Token expired');
+    }
+
     // Block customer tokens from accessing admin
     if (payload.role === 'customer') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      const response = NextResponse.redirect(url);
-      response.cookies.delete('admin_token');
-      return response;
+      throw new Error('Customer token not allowed');
+    }
+
+    // Require admin roles only
+    const allowedRoles = ['super_admin', 'branch_admin', 'cashier'];
+    if (!allowedRoles.includes(payload.role)) {
+      throw new Error('Invalid role');
     }
   } catch {
-    // Malformed token — redirect to login
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     const response = NextResponse.redirect(url);

@@ -2,13 +2,20 @@ const STORAGE_KEY = 'sbonus_client_token';
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
+  // Primary: read from cookie (set by backend as httpOnly, or by setToken)
+  const cookie = document.cookie
+    .split('; ')
+    .find(c => c.startsWith('customer_token='));
+  if (cookie) return cookie.split('=')[1] || null;
+  // Fallback: localStorage (for backward compat during transition)
   return localStorage.getItem(STORAGE_KEY);
 }
 
 export function setToken(token: string): void {
+  // Store in localStorage (fallback) + cookie with Secure flag
   localStorage.setItem(STORAGE_KEY, token);
-  // Sync to cookie for middleware server-side auth check
-  document.cookie = `customer_token=${token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict`;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `customer_token=${token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${secure}`;
 }
 
 export function clearToken(): void {

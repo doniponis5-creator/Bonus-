@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db, async_session
-from app.core.redis import check_rate_limit
+from app.core.redis import check_rate_limit, redis_client
 from app.core.security import get_current_customer
 from app.core.config import get_settings
 from app.models import (
@@ -121,7 +121,22 @@ async def spin_wheel(
             detail={"code": "RATE_LIMIT", "message": "Слишком много попыток. Подождите минуту."},
         )
 
-    # ── ATOMIC: Lock spin counter FIRST to prevent race condition ──
+    # ── Redis distributed lock: prevent concurrent spin for same customer ──
+    lock_key = f"wheel:lock:{customer_id}"
+    acquired = await redis_client.set(lock_key, "1", nx=True, ex=10)  # 10s TTL
+    if not acquired:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "SPIN_IN_PROGRESS", "message": "Спин уже выполняется. Подождите."},
+        )
+    try:
+        return await _do_spin(db, customer_id)
+    finally:
+        await redis_client.delete(lock_key)
+
+
+async def _do_spin(db: AsyncSession, customer_id: uuid.UUID) -> SpinResultResponse:
+    """Core spin logic — executed under Redis distributed lock."""
     spin_key = f"WHEEL_SPINS_USED_{customer_id}"
     result = await db.execute(
         select(Setting).where(Setting.key == spin_key).with_for_update()
@@ -182,7 +197,6 @@ async def spin_wheel(
     # Начислить бонус или обработать приз
     message = ""
     if prize_type == "physical":
-        # Физический приз — НЕ начисляем на счёт, записываем как транзакцию-запись
         txn = Transaction(
             customer_id=customer_id,
             type=TransactionType.PROMO,
@@ -208,11 +222,10 @@ async def spin_wheel(
 
     await db.commit()
 
-    # ── Уведомления (fire-and-forget, не блокируют ответ) ──
+    # ── Уведомления (fire-and-forget) ──
     customer_name = customer.full_name if customer else "Неизвестный"
     customer_phone = customer.phone if customer else ""
 
-    # 1) Telegram алерт владельцу
     import asyncio
     asyncio.create_task(_notify_wheel_telegram(
         customer_name=customer_name,
@@ -222,7 +235,6 @@ async def spin_wheel(
         new_balance=float(account.balance),
     ))
 
-    # 2) WhatsApp уведомление клиенту
     if customer_phone:
         asyncio.create_task(_notify_wheel_whatsapp(
             db_factory=async_session,

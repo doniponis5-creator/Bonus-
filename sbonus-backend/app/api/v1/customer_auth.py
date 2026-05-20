@@ -11,7 +11,7 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -115,7 +115,7 @@ async def request_magic_link(
     instance_id, api_token, enabled = await _get_whatsapp_credentials(db)
     if not enabled or not instance_id or not api_token:
         logger.warning(
-            f"WhatsApp not configured — magic link for {phone} not sent. Link: {link}"
+            f"WhatsApp not configured — magic link for {phone} not sent"
         )
         # В dev режиме это нормально — токен сохранён, можно протестировать вручную
         return generic_response
@@ -156,9 +156,16 @@ async def send_link_by_cashier(
     либо не получается войти самостоятельно.
 
     Использует тот же механизм magic-link, но не имеет защиты от phone enumeration
-    (кассир уже знает клиента) и не имеет публичного rate limit.
+    (кассир уже знает клиента).
     """
     ip = request.client.host if request.client else "unknown"
+
+    # Rate limit: 10 links per hour per IP (prevent WhatsApp spam)
+    if not await check_rate_limit(f"cashier_link:{ip}", max_attempts=10, window_seconds=3600):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "RATE_LIMIT", "message": "Слишком много ссылок. Подождите."},
+        )
 
     result = await db.execute(select(Customer).where(Customer.id == customer_id))
     customer = result.scalar_one_or_none()
@@ -189,8 +196,8 @@ async def send_link_by_cashier(
 
     instance_id, api_token, enabled = await _get_whatsapp_credentials(db)
     if not enabled or not instance_id or not api_token:
-        logger.warning(f"WhatsApp not configured — link for {customer.phone}: {link}")
-        return SuccessResponse(message=f"Ссылка создана (WhatsApp отключён): {link}")
+        logger.warning(f"WhatsApp not configured — link for {customer.phone} not sent")
+        return SuccessResponse(message="Ссылка создана, но WhatsApp отключён. Включите WhatsApp в настройках.")
 
     message = (
         f"🔐 *{settings.shop_bonus_name}* — личный кабинет\n\n"
@@ -222,6 +229,7 @@ async def send_link_by_cashier(
 async def verify_magic_link(
     body: CustomerMagicLinkVerifyRequest,
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> CustomerTokenResponse:
     """
@@ -278,6 +286,17 @@ async def verify_magic_link(
     # Выдаём JWT
     days = settings.customer_token_expire_days
     jwt_token = create_customer_token(str(customer.id), days=days)
+
+    # Set httpOnly cookie (secure token storage, not accessible via JS)
+    response.set_cookie(
+        key="customer_token",
+        value=jwt_token,
+        max_age=days * 24 * 3600,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        path="/",
+    )
 
     return CustomerTokenResponse(
         access_token=jwt_token,

@@ -120,9 +120,18 @@ async def admin_login(
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
     body: RefreshRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     """Обновление access токена через refresh токен с ротацией."""
+    # Rate limit: 5 refresh per minute per IP
+    client_ip = request.client.host if request.client else "unknown"
+    if not await check_rate_limit(f"auth:refresh:{client_ip}", max_attempts=5, window_seconds=60):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "RATE_LIMIT", "message": "Слишком много попыток. Подождите минуту."},
+        )
+
     payload = decode_token(body.refresh_token)
 
     if payload.get("type") != "refresh":
@@ -131,9 +140,15 @@ async def refresh_token(
             detail={"code": "AUTH_INVALID_TOKEN_TYPE", "message": "Требуется refresh токен"},
         )
 
-    # Отзываем старый refresh
+    # Check blacklist BEFORE issuing new tokens (prevent reuse)
     old_jti = payload.get("jti")
     if old_jti:
+        from app.core.redis import is_token_blacklisted
+        if await is_token_blacklisted(old_jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"code": "AUTH_TOKEN_REVOKED", "message": "Refresh токен уже использован"},
+            )
         await blacklist_token(old_jti, 30 * 24 * 3600)
 
     user_id = payload["sub"]
