@@ -1770,6 +1770,7 @@ class WheelSegmentInput(BaseModel):
     value: int  # bonus amount (0 = no prize)
     color: str
     probability: float  # 0.0 - 1.0
+    prize_type: str = "bonus"  # "bonus" | "physical" | "none"
 
 
 class WheelConfigUpdateRequest(BaseModel):
@@ -1843,6 +1844,7 @@ async def update_wheel_config(
             "value": s.value,
             "color": s.color.strip(),
             "probability": round(s.probability, 4),
+            "prize_type": s.prize_type if s.prize_type in ("bonus", "physical", "none") else "bonus",
         })
 
     # Save to DB

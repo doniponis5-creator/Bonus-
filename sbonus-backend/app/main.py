@@ -192,12 +192,38 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
 )
+
+# Request ID middleware for tracing
+import uuid as _uuid
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        request_id = request.headers.get("X-Request-ID", str(_uuid.uuid4())[:8])
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+app.add_middleware(RequestIDMiddleware)
 
 # API Routes
 app.include_router(api_router)
+
+
+# Global exception handler — hide internals in production
+import logging as _logging
+_logger = _logging.getLogger("sbonus")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    from fastapi.responses import JSONResponse
+    _logger.error(f"Unhandled error: {exc}", exc_info=True)
+    if settings.app_env == "production":
+        return JSONResponse(status_code=500, content={"detail": {"code": "INTERNAL_ERROR", "message": "Внутренняя ошибка сервера"}})
+    raise exc
 
 
 @app.get("/", tags=["Здоровье"])

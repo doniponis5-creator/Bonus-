@@ -309,8 +309,7 @@ async def _get_available_spins(db: AsyncSession, customer_id: uuid.UUID) -> int:
     spin_record = result.scalar_one_or_none()
     used_spins = int(spin_record.value) if spin_record else 0
 
-    total = max(0, earn_count + free_spins - used_spins)
-    return min(total, 1)  # Максимум 1 спин за раз
+    return max(0, earn_count + free_spins - used_spins)
 
 
 # ═══════════════════════════════════════════

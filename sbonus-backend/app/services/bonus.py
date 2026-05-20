@@ -484,12 +484,13 @@ class BonusService:
                 detail={"code": "PROMO_CODE_INVALID", "message": "Промокод не найден или неактивен"},
             )
 
-        # Check if customer already used this promo code
+        # Check if customer already used this promo code (exact note match)
+        promo_note = f"🎟 Промокод: {promo_code}"
         used_check = await self.db.execute(
             select(Transaction).where(
                 Transaction.customer_id == customer_id,
                 Transaction.type == TransactionType.PROMO,
-                Transaction.note.contains(promo_code),
+                Transaction.note == promo_note,
             )
         )
         if used_check.scalar_one_or_none():

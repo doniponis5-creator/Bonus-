@@ -38,7 +38,7 @@ export default function WheelSettingsPage() {
       setSegments(segs);
       setSource(data.source);
     } catch (err) {
-      console.error(err);
+      // error handled by toast
       toast("error", "Ошибка загрузки конфигурации");
     } finally {
       setLoading(false);

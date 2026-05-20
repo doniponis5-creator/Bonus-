@@ -65,6 +65,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     })();
   }, []);
 
+  // Inactivity timeout: 30 min without interaction → logout
+  useEffect(() => {
+    if (!ok) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const TIMEOUT = 30 * 60 * 1000; // 30 min
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_refresh');
+        localStorage.removeItem('admin_user');
+        document.cookie = 'admin_token=; path=/; max-age=0';
+        router.push('/login');
+      }, TIMEOUT);
+    };
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(e => window.addEventListener(e, resetTimer));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      events.forEach(e => window.removeEventListener(e, resetTimer));
+    };
+  }, [ok, router]);
+
   if (!ok) return null;
 
   return (

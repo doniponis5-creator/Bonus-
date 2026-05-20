@@ -16,6 +16,8 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 
+from zoneinfo import ZoneInfo
+
 from sqlalchemy import select, func as sa_func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -116,7 +118,9 @@ async def check_cashier_milestones(
     if not config["enabled"]:
         return
 
-    today = date.today()
+    from app.core.config import get_settings
+    biz_tz = ZoneInfo(get_settings().shop_timezone)
+    today = datetime.now(biz_tz).date()
     month_start = today.replace(day=1)
 
     # Подсчёт продаж за сегодня
@@ -244,7 +248,9 @@ async def check_cashier_milestones(
 async def get_cashier_progress(db: AsyncSession, cashier_id: uuid.UUID) -> dict:
     """Прогресс кассира: дневной, месячный, стрик."""
     config = await get_cashier_bonus_config(db)
-    today = date.today()
+    from app.core.config import get_settings
+    biz_tz = ZoneInfo(get_settings().shop_timezone)
+    today = datetime.now(biz_tz).date()
     month_start = today.replace(day=1)
 
     # Дневные продажи

@@ -71,7 +71,7 @@ export default function SettingsPage() {
       const { data } = await api.get("/api/v1/admin/settings");
       setSettings((prev) => ({ ...prev, ...data }));
     } catch (err) {
-      console.error(err);
+      // error handled by toast
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export default function SettingsPage() {
       await api.post("/api/v1/admin/settings", settings);
       toast('success', 'Настройки успешно сохранены!');
     } catch (err) {
-      console.error(err);
+      // error handled by toast
       toast('error', 'Ошибка при сохранении настроек');
     } finally {
       setSaving(false);
@@ -102,7 +102,7 @@ export default function SettingsPage() {
       );
       toast('success', 'Тестовое сообщение успешно отправлено!');
     } catch (err: any) {
-      console.error(err);
+      // error handled by toast
       toast('error', err.response?.data?.detail?.message || 'Ошибка при отправке тестового сообщения');
     } finally {
       setTesting(false);
