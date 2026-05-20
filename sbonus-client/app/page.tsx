@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   LogOut, QrCode, Loader2, RefreshCw, Home, History, User, Gift,
   PlusCircle, MinusCircle, Clock, Users, Ticket, RefreshCcw,
@@ -33,13 +33,25 @@ const TX_META: Record<string, { label: string; color: string; sign: '+' | '-' }>
   campaign: { label: 'Кампания',      color: '#22c55e', sign: '+' },
 };
 
-export default function DashboardPage() {
+export default function Page() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>Загрузка...</div>}>
+      <DashboardPage />
+    </Suspense>
+  );
+}
+
+function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = (['home', 'history', 'wheel', 'promo', 'rank', 'profile'] as Tab[]).includes(searchParams.get('tab') as Tab)
+    ? (searchParams.get('tab') as Tab)
+    : 'home';
   const [data, setData] = useState<CabinetMe | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<Tab>('home');
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   // Transaction history
   const [txns, setTxns] = useState<any[]>([]);
