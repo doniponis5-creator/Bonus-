@@ -336,7 +336,7 @@ async def dashboard_notifications(
         .where(Notification.created_at >= since)
         .group_by(Notification.status)
     )
-    status_map = {row.status.value: row.count for row in stats.all()}
+    status_map = {row.status: row.count for row in stats.all()}
 
     return {
         "sent": status_map.get("sent", 0),

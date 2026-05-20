@@ -68,8 +68,8 @@ async def send_tracked_whatsapp(
     # Создаём запись
     notification = Notification(
         customer_id=customer_id,
-        channel=NotificationChannel.WHATSAPP,
-        status=NotificationStatus.PENDING,
+        channel=NotificationChannel.WHATSAPP.value,
+        status=NotificationStatus.PENDING.value,
         message=message,
         phone=phone,
         event_type=event_type,
@@ -88,18 +88,18 @@ async def send_tracked_whatsapp(
 
             if response.status_code == 200:
                 data = response.json()
-                notification.status = NotificationStatus.SENT
+                notification.status = NotificationStatus.SENT.value
                 notification.sent_at = datetime.now(timezone.utc)
                 notification.external_id = data.get("idMessage", "")
                 logger.info("WhatsApp tracked sent to %s [%s]", phone, event_type)
             else:
-                notification.status = NotificationStatus.FAILED
+                notification.status = NotificationStatus.FAILED.value
                 notification.error = f"HTTP {response.status_code}: {response.text[:500]}"
                 notification.retry_count += 1
                 logger.error("WhatsApp tracked failed %s: %s", phone, notification.error)
 
     except Exception as e:
-        notification.status = NotificationStatus.FAILED
+        notification.status = NotificationStatus.FAILED.value
         notification.error = str(e)[:500]
         notification.retry_count += 1
         logger.error("WhatsApp tracked error %s: %s", phone, e)
@@ -130,7 +130,7 @@ async def retry_failed_notification(
 
             if response.status_code == 200:
                 data = response.json()
-                notification.status = NotificationStatus.SENT
+                notification.status = NotificationStatus.SENT.value
                 notification.sent_at = datetime.now(timezone.utc)
                 notification.external_id = data.get("idMessage", "")
                 logger.info("WhatsApp retry OK for %s (attempt %d)", notification.phone, notification.retry_count)

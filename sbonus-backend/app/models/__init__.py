@@ -416,15 +416,15 @@ class Notification(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
-    channel: Mapped[NotificationChannel] = mapped_column(
-        SAEnum(NotificationChannel, values_callable=lambda x: [e.value for e in x]),
+    channel: Mapped[str] = mapped_column(
+        String(20),
         nullable=False,
-        default=NotificationChannel.WHATSAPP,
+        default=NotificationChannel.WHATSAPP.value,
     )
-    status: Mapped[NotificationStatus] = mapped_column(
-        SAEnum(NotificationStatus, values_callable=lambda x: [e.value for e in x]),
+    status: Mapped[str] = mapped_column(
+        String(20),
         nullable=False,
-        default=NotificationStatus.PENDING,
+        default=NotificationStatus.PENDING.value,
     )
     message: Mapped[str] = mapped_column(Text, nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=False)

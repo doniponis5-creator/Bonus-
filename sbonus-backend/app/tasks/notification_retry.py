@@ -35,7 +35,7 @@ async def retry_failed_notifications() -> None:
         # Находим FAILED уведомления, которые можно повторить
         result = await db.execute(
             select(Notification).where(
-                Notification.status == NotificationStatus.FAILED,
+                Notification.status == NotificationStatus.FAILED.value,
                 Notification.retry_count < Notification.max_retries,
             ).order_by(Notification.created_at.asc()).limit(50)
         )
