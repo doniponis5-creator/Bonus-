@@ -106,21 +106,23 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
-    # Cron: напоминание о бонусах неактивным — каждый день 12:00
+    # Cron: Smart Comeback Reminder — каждый день 12:00
+    # Макс 2 напоминания за цикл, 14 дней cooldown, 50 за запуск
     scheduler.add_job(
         send_balance_reminders,
         CronTrigger(hour=12, minute=0),
-        id="balance_reminder",
+        id="comeback_reminder",
         replace_existing=True,
     )
 
-    # Cron: WhatsApp авто-триггер спящие — 11:00
-    scheduler.add_job(
-        auto_trigger_sleeping_customers,
-        CronTrigger(hour=11, minute=0),
-        id="wa_sleeping_trigger",
-        replace_existing=True,
-    )
+    # ❌ DISABLED: sleeping trigger — spamил 800+ клиентам без лимита
+    # Заменён на smart_comeback_reminder (12:00) с лимитом 2 сообщения на клиента
+    # scheduler.add_job(
+    #     auto_trigger_sleeping_customers,
+    #     CronTrigger(hour=11, minute=0),
+    #     id="wa_sleeping_trigger",
+    #     replace_existing=True,
+    # )
 
     # Cron: WhatsApp авто-триггер ДР — 09:30
     scheduler.add_job(
@@ -156,8 +158,8 @@ async def lifespan(app: FastAPI):
     logger.info("Cron: expiration warnings scheduled at 10:00 daily")
     logger.info("Cron: notification retry scheduled every 15 min")
     logger.info("Cron: weekly report scheduled at Mon 08:00")
-    logger.info("Cron: balance reminder scheduled at 12:00 daily")
-    logger.info("Cron: WA auto-triggers: sleeping 11:00, birthday 09:30")
+    logger.info("Cron: smart comeback reminder at 12:00 daily (max 2 per cycle, 50/run)")
+    logger.info("Cron: WA auto-triggers: birthday 09:30 (sleeping DISABLED → smart reminder)")
     logger.info("Cron: Telegram reports at 09:00 & 21:00 daily")
     logger.info("Server started! Swagger: http://localhost:8000/docs")
     logger.info("=" * 50)
