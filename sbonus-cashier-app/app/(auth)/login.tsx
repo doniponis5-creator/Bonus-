@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Image, KeyboardAvoidingView, Platform,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -18,9 +18,12 @@ export default function LoginScreen() {
   const [pin, setPin] = useState('');
   const { login, isLoading, error } = useAuthStore();
 
+  const [localError, setLocalError] = useState('');
+
   const handleLogin = async () => {
-    if (phone.length < 13) return Alert.alert('Ошибка', 'Введите номер телефона');
-    if (pin.length < 4) return Alert.alert('Ошибка', 'PIN должен быть 4 цифры');
+    if (phone.length < 13) { setLocalError('Введите номер телефона'); return; }
+    if (pin.length < 4) { setLocalError('PIN должен быть 4 цифры'); return; }
+    setLocalError('');
 
     const success = await login(phone, pin);
     if (success) {
@@ -32,9 +35,10 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.content}>
         {/* Логотип */}
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoText}>S</Text>
-        </View>
+        <Image
+          source={require('@/assets/images/icon.png')}
+          style={styles.logoImg}
+        />
         <Text style={styles.title}>S Bonus</Text>
         <Text style={styles.subtitle}>Кассир • Смарт Центр</Text>
 
@@ -79,12 +83,12 @@ export default function LoginScreen() {
             name="pin"
           />
 
-          {error && (
+          {(error || localError) ? (
             <View style={styles.errorBox}>
               <XCircle size={14} color={COLORS.danger} />
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{error || localError}</Text>
             </View>
-          )}
+          ) : null}
 
           <TouchableOpacity
             style={[styles.btn, (isLoading || pin.length < 4) && styles.btnDisabled]}
@@ -109,12 +113,9 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  logoCircle: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: 'rgba(255,230,0,0.12)', borderWidth: 2, borderColor: COLORS.accent,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 12,
+  logoImg: {
+    width: 88, height: 88, borderRadius: 22, marginBottom: 16,
   },
-  logoText: { fontSize: 36, fontWeight: '900', color: COLORS.accent },
   title: { fontSize: 32, fontWeight: '900', color: COLORS.text, marginBottom: 4 },
   subtitle: { fontSize: 14, color: COLORS.text2, marginBottom: 40 },
 
