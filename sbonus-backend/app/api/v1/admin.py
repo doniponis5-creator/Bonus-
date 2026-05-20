@@ -47,7 +47,7 @@ from app.schemas import (
     AdminBonusAdjustmentRequest,
     BonusResult,
 )
-from app.models import Setting
+from app.models import Setting, CustomerAuthToken
 from app.services.whatsapp import send_whatsapp_message
 from app.services.bonus import BonusService
 from app.services.audit import log_audit
@@ -1124,6 +1124,8 @@ async def gift_spin(
 ):
     """Подарить бесплатный спин колеса удачи клиенту."""
     import asyncio
+    import secrets
+    from datetime import timedelta
 
     result = await db.execute(select(Customer).where(Customer.id == id))
     customer = result.scalar_one_or_none()
@@ -1139,7 +1141,22 @@ async def gift_spin(
     else:
         db.add(Setting(key=free_key, value="1"))
 
-    # WhatsApp notification
+    # Generate magic-link token for direct access
+    from app.core.config import get_settings
+    cfg = get_settings()
+    token_value = secrets.token_urlsafe(32)[:64]
+    auth_token = CustomerAuthToken(
+        customer_id=id,
+        token=token_value,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(auth_token)
+
+    cabinet_url = cfg.customer_cabinet_base_url.rstrip("/")
+    direct_link = f"{cabinet_url}/wheel?token={token_value}"
+
+    # WhatsApp notification with direct link
     wa_result = await db.execute(
         select(Setting).where(Setting.key.in_([
             "ENABLE_WHATSAPP_NOTIFICATIONS",
@@ -1153,14 +1170,11 @@ async def gift_spin(
         instance_id = wa_cfg.get("GREENAPI_INSTANCE_ID")
         api_token = wa_cfg.get("GREENAPI_API_TOKEN")
         if instance_id and api_token:
-            from app.core.config import get_settings
-            cfg = get_settings()
-            cabinet_url = cfg.customer_cabinet_base_url.rstrip("/")
             msg = (
-                f"Здравствуйте, {customer.full_name}!\n"
-                f"Вам подарен бесплатный спин Колеса удачи!\n"
-                f"Испытайте удачу и выиграйте бонусы!\n"
-                f"{cabinet_url}"
+                f"🎰 Здравствуйте, {customer.full_name}!\n\n"
+                f"🎁 Вам подарен бесплатный спин Колеса Удачи!\n"
+                f"Испытайте удачу и выиграйте бонусы!\n\n"
+                f"👇 Нажмите чтобы крутить:\n{direct_link}"
             )
             asyncio.create_task(send_whatsapp_message(
                 phone=customer.phone, message=msg,

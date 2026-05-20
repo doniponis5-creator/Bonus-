@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes
-  const publicPaths = ['/login', '/auth', '/api', '/_next', '/favicon.ico', '/icon-', '/manifest.json', '/sw.js'];
+  const publicPaths = ['/login', '/auth', '/wheel', '/api', '/_next', '/favicon.ico', '/icon-', '/manifest.json', '/sw.js'];
   if (publicPaths.some(p => pathname.startsWith(p))) {
     return NextResponse.next();
   }
