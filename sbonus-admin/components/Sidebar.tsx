@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Store, Briefcase, Trophy, Ticket,
@@ -41,6 +41,7 @@ function logout() {
   localStorage.removeItem('admin_refresh');
   localStorage.removeItem('admin_user');
   document.cookie = 'admin_token=; path=/; max-age=0';
+  document.cookie = 'admin_refresh=; path=/; max-age=0';
   window.location.href = '/login';
 }
 
@@ -119,6 +120,7 @@ function DesktopSidebar({ path }: { path: string }) {
 function MobileNav({ path, moreOpen, setMoreOpen }: {
   path: string; moreOpen: boolean; setMoreOpen: (v: boolean) => void;
 }) {
+  const router = useRouter();
   // Pages shown in bottom tabs (first 3)
   const mainPaths = BOTTOM_TABS.slice(0, 3).map(t => t.href);
   const isOnMore = !mainPaths.some(p => p === path || (p !== '/' && path.startsWith(p)));
@@ -144,7 +146,7 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
               key={tab.href}
               onClick={() => {
                 if (isMore) { setMoreOpen(!moreOpen); }
-                else { setMoreOpen(false); window.location.href = tab.href; }
+                else { setMoreOpen(false); router.push(tab.href); }
               }}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,

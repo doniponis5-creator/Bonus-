@@ -3,6 +3,7 @@ import { Gift, Loader2, Plus, XCircle, CheckCircle2, Send, Trash2, Search, Disc 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { adminAPI, customersAPI } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 const STATUS_LABEL: Record<string, { text: string; color: string; bg: string }> = {
   pending:    { text: 'Ожидает',     color: '#ffb347', bg: '#ffb34718' },
@@ -12,6 +13,7 @@ const STATUS_LABEL: Record<string, { text: string; color: string; bg: string }> 
 };
 
 export default function CampaignsPage() {
+  const { toast, confirm } = useToast();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
@@ -95,32 +97,35 @@ export default function CampaignsPage() {
   };
 
   const onSendNow = async (id: string, n: string) => {
-    if (!confirm(`Отправить кампанию "${n}" немедленно?`)) return;
+    if (!await confirm(`Отправить кампанию "${n}" немедленно?`)) return;
     try {
       await adminAPI.sendCampaign(id);
+      toast('Кампания отправлена', 'success');
       load();
     } catch (er: any) {
-      alert(er?.response?.data?.detail?.message || 'Ошибка отправки');
+      toast(er?.response?.data?.detail?.message || 'Ошибка отправки', 'error');
     }
   };
 
   const onCancel = async (id: string) => {
-    if (!confirm('Отменить кампанию?')) return;
+    if (!await confirm('Отменить кампанию?')) return;
     try {
       await adminAPI.cancelCampaign(id);
+      toast('Кампания отменена', 'success');
       load();
     } catch (er: any) {
-      alert(er?.response?.data?.detail?.message || 'Ошибка');
+      toast(er?.response?.data?.detail?.message || 'Ошибка', 'error');
     }
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('Удалить кампанию?')) return;
+    if (!await confirm('Удалить кампанию?')) return;
     try {
       await adminAPI.deleteCampaign(id);
+      toast('Кампания удалена', 'success');
       load();
     } catch (er: any) {
-      alert(er?.response?.data?.detail?.message || 'Ошибка');
+      toast(er?.response?.data?.detail?.message || 'Ошибка', 'error');
     }
   };
 

@@ -19,7 +19,9 @@ export default function LoginPage() {
       localStorage.setItem('admin_token', data.access_token);
       localStorage.setItem('admin_refresh', data.refresh_token);
       localStorage.setItem('admin_user', JSON.stringify({ id: data.user_id, role: data.role }));
-      document.cookie = `admin_token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+      const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `admin_token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${secure}`;
+      document.cookie = `admin_refresh=${data.refresh_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${secure}`;
       router.push('/');
     } catch (err: any) {
       setError(err?.response?.data?.detail?.message || 'Неверный email или пароль');

@@ -20,7 +20,7 @@ const PRESET_COLORS = [
 ];
 
 export default function WheelSettingsPage() {
-  const { toast } = useToast();
+  const { toast, confirm } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [segments, setSegments] = useState<Segment[]>([]);
@@ -69,7 +69,7 @@ export default function WheelSettingsPage() {
   };
 
   const handleReset = async () => {
-    if (!confirm("Сбросить к значениям по умолчанию?")) return;
+    if (!await confirm("Сбросить к значениям по умолчанию?")) return;
     try {
       await adminAPI.resetWheelConfig();
       toast("success", "Конфигурация сброшена");

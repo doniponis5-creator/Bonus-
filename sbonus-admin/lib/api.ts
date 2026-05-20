@@ -32,8 +32,12 @@ api.interceptors.response.use(
           if (data.refresh_token) {
             localStorage.setItem('admin_refresh', data.refresh_token);
           }
-          // Update cookie so middleware doesn't block on next page load
-          document.cookie = `admin_token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+          // Update cookies so middleware doesn't block on next page load
+          const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+          document.cookie = `admin_token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${secure}`;
+          if (data.refresh_token) {
+            document.cookie = `admin_refresh=${data.refresh_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${secure}`;
+          }
           originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
           return api(originalRequest);
         }

@@ -2,11 +2,13 @@
 import { Tag, Loader2, XCircle, Plus, CheckCircle2, Trash2, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { adminAPI, customersAPI } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 export default function CouponsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const { toast, confirm } = useToast();
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
@@ -36,12 +38,13 @@ export default function CouponsPage() {
   useEffect(() => { load(page); }, [page]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Деактивировать купон?')) return;
+    if (!await confirm('Деактивировать купон?')) return;
     setDeleting(id);
     try {
       await adminAPI.deleteCoupon(id);
+      toast('Купон деактивирован', 'success');
       load(page);
-    } catch {} finally {
+    } catch { toast('Ошибка', 'error'); } finally {
       setDeleting(null);
     }
   };

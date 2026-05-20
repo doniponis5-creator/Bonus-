@@ -30,6 +30,12 @@ async function tryRefreshToken(): Promise<boolean> {
     if (data.refresh_token) {
       localStorage.setItem('admin_refresh', data.refresh_token);
     }
+    // Update cookies for middleware
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `admin_token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${secure}`;
+    if (data.refresh_token) {
+      document.cookie = `admin_refresh=${data.refresh_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict${secure}`;
+    }
     return true;
   } catch {
     return false;
@@ -77,6 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         localStorage.removeItem('admin_refresh');
         localStorage.removeItem('admin_user');
         document.cookie = 'admin_token=; path=/; max-age=0';
+        document.cookie = 'admin_refresh=; path=/; max-age=0';
         router.push('/login');
       }, TIMEOUT);
     };

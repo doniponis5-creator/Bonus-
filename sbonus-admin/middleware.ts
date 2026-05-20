@@ -33,8 +33,13 @@ export function middleware(request: NextRequest) {
     if (parts.length !== 3) throw new Error('Invalid JWT');
     const payload = JSON.parse(atob(parts[1]));
 
-    // Check expiry
+    // Check expiry — but allow if refresh token exists (client-side will refresh)
     if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
+      const refreshToken = request.cookies.get('admin_refresh')?.value;
+      if (refreshToken) {
+        // Token expired but refresh exists → let client-side handle refresh
+        return NextResponse.next();
+      }
       throw new Error('Token expired');
     }
 
@@ -48,7 +53,9 @@ export function middleware(request: NextRequest) {
     if (!allowedRoles.includes(payload.role)) {
       throw new Error('Invalid role');
     }
-  } catch {
+  } catch (e: any) {
+    // If token is expired but has refresh — already handled above
+    // All other errors → redirect to login
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     const response = NextResponse.redirect(url);

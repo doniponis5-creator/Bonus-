@@ -2,6 +2,7 @@
 import { Star, Loader2, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { adminAPI } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
   pending: { label: 'На проверке', bg: '#f59e0b18', color: '#f59e0b' },
@@ -20,6 +21,7 @@ export default function ReviewsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const { toast, confirm } = useToast();
   const [acting, setActing] = useState<string | null>(null);
 
   const limit = 50;
@@ -40,12 +42,15 @@ export default function ReviewsPage() {
   useEffect(() => { load(page, filter); }, [page, filter]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
-    const note = action === 'reject' ? prompt('Причина отклонения (необязательно):') : undefined;
+    if (action === 'reject') {
+      if (!await confirm('Отклонить отзыв?')) return;
+    }
     setActing(id);
     try {
-      await adminAPI.actionReview(id, action, note || undefined);
+      await adminAPI.actionReview(id, action);
+      toast(action === 'approve' ? 'Отзыв одобрен' : 'Отзыв отклонён', 'success');
       load(page, filter);
-    } catch {} finally {
+    } catch { toast('Ошибка', 'error'); } finally {
       setActing(null);
     }
   };
