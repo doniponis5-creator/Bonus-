@@ -209,3 +209,50 @@ export const customersAPI = {
 };
 
 export default api;
+
+// ─── A/B Testing ───
+export const abTestingAPI = {
+  list: (status?: string) => api.get(`/api/v1/ab-testing${status ? `?status=${status}` : ''}`),
+  get: (id: string) => api.get(`/api/v1/ab-testing/${id}`),
+  create: (d: { name: string; variant_a_message: string; variant_b_message: string; description?: string; campaign_id?: string }) =>
+    api.post('/api/v1/ab-testing', d),
+  assign: (testId: string, customerId: string) =>
+    api.post(`/api/v1/ab-testing/${testId}/assign?customer_id=${customerId}`),
+  convert: (testId: string, customerId: string) =>
+    api.post(`/api/v1/ab-testing/${testId}/convert?customer_id=${customerId}`),
+  complete: (testId: string) => api.put(`/api/v1/ab-testing/${testId}/complete`),
+  cancel: (testId: string) => api.delete(`/api/v1/ab-testing/${testId}`),
+};
+
+// ─── QR Analytics ───
+export const qrAnalyticsAPI = {
+  overview: (days = 30) => api.get(`/api/v1/qr-analytics/overview?days=${days}`),
+  byQR: (qrCode: string) => api.get(`/api/v1/qr-analytics/by-qr/${encodeURIComponent(qrCode)}`),
+  scans: (limit = 50, qrCode?: string, utmSource?: string) => {
+    const p = new URLSearchParams({ limit: String(limit) });
+    if (qrCode) p.set('qr_code', qrCode);
+    if (utmSource) p.set('utm_source', utmSource);
+    return api.get(`/api/v1/qr-analytics/scans?${p.toString()}`);
+  },
+};
+
+// ─── Customer Telegram Bot ───
+export const customerTgAPI = {
+  config: () => api.get('/api/v1/customer-tg-bot/config'),
+  updateConfig: (d: { enabled: boolean; bot_token?: string; bot_username?: string }) =>
+    api.put('/api/v1/customer-tg-bot/config', d),
+  stats: () => api.get('/api/v1/customer-tg-bot/stats'),
+};
+
+// ─── Cashback Categories ───
+export const cashbackAPI = {
+  categories: () => api.get('/api/v1/cashback/categories'),
+  updateCategory: (slug: string, percent: number) =>
+    api.put(`/api/v1/cashback/categories/${slug}`, { percent }),
+  createCategory: (slug: string, name: string, percent: number) =>
+    api.post('/api/v1/cashback/categories', { slug, name, percent }),
+  deleteCategory: (slug: string) => api.delete(`/api/v1/cashback/categories/${slug}`),
+  globalPromo: () => api.get('/api/v1/cashback/global-promo'),
+  updateGlobalPromo: (d: { enabled: boolean; percent?: number; expires_at?: string }) =>
+    api.put('/api/v1/cashback/global-promo', d),
+};

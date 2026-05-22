@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Store, Briefcase, Trophy, Ticket,
   Settings, LogOut, FileSearch, Gift, Tag, Star, BarChart3, Disc3,
-  Flame, Send, MessageCircle, Menu, X, ChevronRight,
+  Flame, Send, MessageCircle, Menu, X, ChevronRight, FlaskConical, QrCode, Bot, Percent,
 } from 'lucide-react';
 
 const NAV = [
@@ -23,6 +23,10 @@ const NAV = [
   { href: '/wheel-settings', icon: Disc3, label: 'Колесо удачи' },
   { href: '/wa-broadcast', icon: MessageCircle, label: 'Рассылки WA' },
   { href: '/telegram', icon: Send, label: 'Telegram бот' },
+  { href: '/cashback', icon: Percent, label: 'Кешбэк' },
+  { href: '/ab-testing', icon: FlaskConical, label: 'A/B тесты' },
+  { href: '/qr-analytics', icon: QrCode, label: 'QR аналитика' },
+  { href: '/customer-tg-bot', icon: Bot, label: 'TG бот клиентов' },
   { href: '/analytics', icon: BarChart3, label: 'Аналитика' },
   { href: '/audit-logs', icon: FileSearch, label: 'Журнал аудита' },
   { href: '/settings', icon: Settings, label: 'Настройки' },
