@@ -25,7 +25,7 @@ function fmt(n: number): string {
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
   return n.toLocaleString('ru-RU');
 }
-function fmtCur(n: number): string { return fmt(n) + ' сум'; }
+function fmtCur(n: number): string { return fmt(n) + ' сом'; }
 
 const FUNNEL_COLORS = ['#3b82f6', '#22c55e', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'];
 const FUNNEL_ICONS = [Users, UserCheck, Repeat, Heart, Share2, TrendingUp];

@@ -57,7 +57,7 @@ function fmt(n: number): string {
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
   return n.toLocaleString('ru-RU');
 }
-function fmtCur(n: number): string { return fmt(n) + ' сум'; }
+function fmtCur(n: number): string { return fmt(n) + ' сом'; }
 function pctChange(cur: number, prev: number): number {
   if (prev === 0) return cur > 0 ? 100 : 0;
   return Math.round(((cur - prev) / prev) * 100);

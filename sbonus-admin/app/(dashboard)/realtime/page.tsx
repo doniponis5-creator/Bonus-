@@ -19,7 +19,7 @@ function fmt(n: number): string {
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
   return n.toLocaleString('ru-RU');
 }
-function fmtCur(n: number): string { return fmt(n) + ' сум'; }
+function fmtCur(n: number): string { return fmt(n) + ' сом'; }
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
