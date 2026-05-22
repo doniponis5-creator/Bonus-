@@ -367,7 +367,6 @@ export default function WheelSettingsPage() {
           </div>
         )}
       </div>
-    </div>
       <style>{`
         @media (max-width: 767px) {
           [style*="1fr 340px"] { grid-template-columns: 1fr !important; }
