@@ -25,6 +25,7 @@ from app.api.v1.branch import router as branch_router
 from app.api.v1.customer_tg import router as customer_tg_router
 from app.api.v1.ab_testing import router as ab_testing_router
 from app.api.v1.qr_analytics import router as qr_analytics_router
+from app.api.v1.analytics_pro import router as analytics_pro_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -49,3 +50,4 @@ api_router.include_router(branch_router)
 api_router.include_router(customer_tg_router)
 api_router.include_router(ab_testing_router)
 api_router.include_router(qr_analytics_router)
+api_router.include_router(analytics_pro_router)

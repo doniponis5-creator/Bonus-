@@ -256,3 +256,14 @@ export const cashbackAPI = {
   updateGlobalPromo: (d: { enabled: boolean; percent?: number; expires_at?: string }) =>
     api.put('/api/v1/cashback/global-promo', d),
 };
+
+// ─── PRO Analytics ───
+export const analyticsProAPI = {
+  business: (days = 30) => api.get(`/api/v1/analytics-pro/business?days=${days}`),
+  cohorts: (months = 6) => api.get(`/api/v1/analytics-pro/cohorts?months=${months}`),
+  rfm: () => api.get('/api/v1/analytics-pro/rfm'),
+  funnel: (days = 90) => api.get(`/api/v1/analytics-pro/funnel?days=${days}`),
+  marketing: (days = 30) => api.get(`/api/v1/analytics-pro/marketing?days=${days}`),
+  realtime: () => api.get('/api/v1/analytics-pro/realtime'),
+  dailyTrends: (days = 30) => api.get(`/api/v1/analytics-pro/daily-trends?days=${days}`),
+};
