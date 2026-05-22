@@ -406,7 +406,7 @@ function DashboardPage() {
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button onClick={() => {
                 const link = `${window.location.origin}/register?ref=${data.referral_code}`;
-                const text = `🎁 Смарт Центр дан ${referralInfo?.invitee_bonus || 50} KGS бонус ол!\n\n📱 Рўйхатдан ўт: ${link}`;
+                const text = `🎁 Получи ${referralInfo?.invitee_bonus || 50} KGS бонус в Смарт Центр!\n\n📱 Регистрируйся: ${link}`;
                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
               }}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -414,7 +414,7 @@ function DashboardPage() {
               </button>
               <button onClick={() => {
                 const link = `${window.location.origin}/register?ref=${data.referral_code}`;
-                const text = `🎁 Смарт Центр: ${referralInfo?.invitee_bonus || 50} KGS бонус! ${link}`;
+                const text = `🎁 Смарт Центр: ${referralInfo?.invitee_bonus || 50} KGS бонус! Регистрируйся: ${link}`;
                 if (navigator.share) {
                   navigator.share({ title: 'Смарт Центр — Бонус', text, url: link });
                 } else {
@@ -426,21 +426,21 @@ function DashboardPage() {
               </button>
             </div>
 
-            {/* 📋 Qanday ishlaydi — podskazzka */}
+            {/* 📋 Как это работает — подсказка */}
             <div style={{
               marginTop: 14, padding: '14px 16px', borderRadius: 12,
               background: 'linear-gradient(135deg, rgba(37,211,102,0.08), rgba(255,230,0,0.06))',
               border: '1px solid rgba(37,211,102,0.15)',
             }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#25D366', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                💡 Qanday ishlaydi?
+                💡 Как это работает?
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[
-                  { step: '1', icon: '📋', text: '"Копировать" tugmasini bosing' },
-                  { step: '2', icon: '📲', text: 'WhatsApp statusga yoki do\'stlarga yuboring' },
-                  { step: '3', icon: '👤', text: 'Do\'stingiz ssylka orqali ro\'yxatdan o\'tadi' },
-                  { step: '4', icon: '🎁', text: `Sizga ${referralInfo?.bonus_per_invite || 100} KGS, do'stingizga ${referralInfo?.invitee_bonus || 50} KGS bonus tushadi!` },
+                  { step: '1', icon: '📋', text: 'Нажмите "Копировать" ниже' },
+                  { step: '2', icon: '📲', text: 'Отправьте ссылку друзьям или в статус WhatsApp' },
+                  { step: '3', icon: '👤', text: 'Друг переходит по ссылке и регистрируется' },
+                  { step: '4', icon: '🎁', text: `Вам ${referralInfo?.bonus_per_invite || 100} KGS, другу ${referralInfo?.invitee_bonus || 50} KGS бонус!` },
                 ].map((item) => (
                   <div key={item.step} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{
@@ -458,7 +458,7 @@ function DashboardPage() {
                 background: 'rgba(255,230,0,0.08)', fontSize: 11.5, color: 'var(--accent)',
                 fontWeight: 600, textAlign: 'center',
               }}>
-                ⚡ Qancha ko'p taklif qilsangiz — shuncha ko'p bonus!
+                ⚡ Чем больше друзей — тем больше бонусов!
               </div>
             </div>
 
