@@ -142,7 +142,7 @@ export default function WheelSettingsPage() {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: showPreview ? "1fr 340px" : "1fr", /* mobile: see @media */, gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: showPreview ? "1fr 340px" : "1fr", gap: 24 }}>
         {/* Left: Segments table */}
         <div>
           {/* Toolbar */}
