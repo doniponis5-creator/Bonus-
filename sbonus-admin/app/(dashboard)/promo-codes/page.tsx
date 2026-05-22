@@ -32,7 +32,7 @@ export default function PromoCodesPage() {
 
   return (
     <div>
-      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24 }}><Ticket size={24} /> Промокоды</h1>
+      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24, flexWrap: 'wrap' as any }}><Ticket size={24} /> Промокоды</h1>
 
       {/* Таблица промокодов */}
       <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>

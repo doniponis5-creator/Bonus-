@@ -59,8 +59,9 @@ function ToastItem({ t, onRemove }: { t: Toast; onRemove: (id: number) => void }
         border: `1px solid ${colors.border}33`,
         borderLeft: `3px solid ${colors.border}`,
         boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-        minWidth: 320,
+        minWidth: 0,
         maxWidth: 480,
+        width: '100%',
         animation: exiting ? 'toast-out 0.3s ease forwards' : 'toast-in 0.3s ease forwards',
         cursor: 'pointer',
         transition: 'transform 0.15s ease',
@@ -90,10 +91,10 @@ function ConfirmModal({ message, onResult }: { message: string; onResult: (ok: b
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
       animation: 'toast-in 0.2s ease',
-    }}>
-      <div style={{
-        background: '#1a1f2e', borderRadius: 16, padding: '28px 32px',
-        maxWidth: 400, width: '90%',
+    }} className="modal-overlay">
+      <div className="modal-content" style={{
+        background: '#1a1f2e', borderRadius: 16, padding: '24px',
+        maxWidth: 400, width: '90%', margin: '0 12px',
         border: '1px solid rgba(255,255,255,0.08)',
         boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
       }}>
@@ -144,8 +145,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ toast, confirm }}>
       {children}
       <div style={{
-        position: 'fixed', top: 20, right: 20, zIndex: 10000,
-        display: 'flex', flexDirection: 'column', gap: 10,
+        position: 'fixed', top: 12, left: 12, right: 12, zIndex: 10000,
+        display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end',
       }}>
         {toasts.map((t) => (
           <ToastItem key={t.id} t={t} onRemove={removeToast} />

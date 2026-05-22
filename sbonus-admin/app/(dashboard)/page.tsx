@@ -101,16 +101,16 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
             <LayoutDashboard size={24} /> Дашборд
           </h1>
           <p style={{ color: 'var(--text2)', fontSize: 14, marginTop: 4 }}>Смарт Центр • S Bonus</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Period selector */}
-          <div style={{ display: 'flex', gap: 4, background: 'var(--card)', borderRadius: 10, padding: 3 }}>
+          <div className="period-selector" style={{ display: 'flex', gap: 4, background: 'var(--card)', borderRadius: 10, padding: 3 }}>
             {PERIOD_OPTIONS.map(opt => (
               <button
                 key={opt.value}

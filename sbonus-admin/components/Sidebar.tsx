@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Store, Briefcase, Trophy, Ticket,
   Settings, LogOut, FileSearch, Gift, Tag, Star, BarChart3, Disc3,
@@ -28,11 +28,11 @@ const NAV = [
   { href: '/settings', icon: Settings, label: 'Настройки' },
 ];
 
-// Bottom nav tabs for mobile
 const BOTTOM_TABS = [
   { href: '/', icon: LayoutDashboard, label: 'Главная' },
   { href: '/customers', icon: Users, label: 'Клиенты' },
   { href: '/transactions', icon: CreditCard, label: 'Операции' },
+  { href: '/analytics', icon: BarChart3, label: 'Аналитика' },
   { href: '/__more__', icon: Menu, label: 'Ещё' },
 ];
 
@@ -57,7 +57,6 @@ export default function Sidebar() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Close "more" menu on route change
   useEffect(() => { setMoreOpen(false); }, [path]);
 
   if (isMobile) {
@@ -68,9 +67,6 @@ export default function Sidebar() {
 }
 
 
-// ═══════════════════════════════════════
-// DESKTOP SIDEBAR (unchanged look)
-// ═══════════════════════════════════════
 function DesktopSidebar({ path }: { path: string }) {
   return (
     <aside style={{
@@ -114,32 +110,43 @@ function DesktopSidebar({ path }: { path: string }) {
 }
 
 
-// ═══════════════════════════════════════
-// MOBILE BOTTOM NAV + "MORE" SHEET
-// ═══════════════════════════════════════
 function MobileNav({ path, moreOpen, setMoreOpen }: {
   path: string; moreOpen: boolean; setMoreOpen: (v: boolean) => void;
 }) {
   const router = useRouter();
-  // Pages shown in bottom tabs (first 3)
-  const mainPaths = BOTTOM_TABS.slice(0, 3).map(t => t.href);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const mainPaths = BOTTOM_TABS.slice(0, 4).map(t => t.href);
   const isOnMore = !mainPaths.some(p => p === path || (p !== '/' && path.startsWith(p)));
+
+  // Prevent body scroll when sheet open
+  useEffect(() => {
+    if (moreOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [moreOpen]);
 
   return (
     <>
       {/* Bottom Navigation Bar */}
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000,
-        background: 'var(--bg2)', borderTop: '1px solid var(--border)',
-        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        height: 64, paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        background: 'var(--bg2)',
+        borderTop: '1px solid var(--border)',
+        display: 'flex', justifyContent: 'space-around', alignItems: 'stretch',
+        height: 68,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
       }}>
         {BOTTOM_TABS.map(tab => {
           const isMore = tab.href === '/__more__';
           const active = isMore
             ? (moreOpen || isOnMore)
             : (path === tab.href || (tab.href !== '/' && path.startsWith(tab.href)));
-          const Icon = tab.icon;
+          const Icon = isMore && moreOpen ? X : tab.icon;
 
           return (
             <button
@@ -149,23 +156,28 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
                 else { setMoreOpen(false); router.push(tab.href); }
               }}
               style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                justifyContent: 'center', gap: 4,
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: active ? 'var(--accent)' : 'var(--text3)',
                 fontSize: 10, fontWeight: active ? 700 : 500,
-                padding: '6px 12px', transition: 'color 0.15s',
-                position: 'relative',
+                padding: '8px 0', flex: 1,
+                transition: 'color 0.2s, transform 0.15s',
+                transform: active ? 'scale(1)' : 'scale(1)',
+                WebkitTapHighlightColor: 'transparent',
+                minWidth: 0,
               }}
             >
-              {active && (
-                <span style={{
-                  position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%)',
-                  width: 20, height: 3, borderRadius: 2,
-                  background: 'var(--accent)',
-                }} />
-              )}
-              <Icon size={22} />
-              <span>{tab.label}</span>
+              <div style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 44, height: 28, borderRadius: 14,
+                background: active ? 'rgba(255,230,0,0.12)' : 'transparent',
+                transition: 'background 0.2s',
+              }}>
+                <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+              </div>
+              <span style={{ lineHeight: 1 }}>{isMore && moreOpen ? 'Закрыть' : tab.label}</span>
             </button>
           );
         })}
@@ -174,98 +186,103 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
       {/* "More" overlay sheet */}
       {moreOpen && (
         <>
-          {/* Backdrop */}
           <div
             onClick={() => setMoreOpen(false)}
             style={{
               position: 'fixed', inset: 0, zIndex: 998,
-              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              animation: 'fadeIn 0.2s ease',
             }}
           />
-          {/* Sheet */}
-          <div style={{
-            position: 'fixed', bottom: 64, left: 0, right: 0, zIndex: 999,
+          <div ref={sheetRef} style={{
+            position: 'fixed', bottom: 68, left: 0, right: 0, zIndex: 999,
             background: 'var(--bg2)', borderTop: '1px solid var(--border)',
-            borderRadius: '20px 20px 0 0', maxHeight: '70vh', overflowY: 'auto',
-            padding: '12px 8px 20px',
-            animation: 'slideUp 0.25s ease',
+            borderRadius: '20px 20px 0 0',
+            maxHeight: 'calc(100vh - 120px)',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: '8px 8px 16px',
+            animation: 'sheetUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
           }}>
-            {/* Handle bar */}
+            {/* Handle */}
             <div style={{
               width: 36, height: 4, borderRadius: 2, background: 'var(--border)',
-              margin: '0 auto 12px',
+              margin: '4px auto 12px',
             }} />
 
-            {/* Logo */}
+            {/* Logo row */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: '8px 12px 16px', borderBottom: '1px solid var(--border)', marginBottom: 8,
+              padding: '8px 12px 14px', borderBottom: '1px solid var(--border)', marginBottom: 6,
             }}>
-              <img src="/icon-192.png" alt="S" width={32} height={32} style={{ borderRadius: 10 }} />
+              <img src="/icon-192.png" alt="S" width={30} height={30} style={{ borderRadius: 8 }} />
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>S Bonus</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>S Bonus Admin</div>
                 <div style={{ fontSize: 11, color: 'var(--text2)' }}>Смарт Центр</div>
               </div>
             </div>
 
-            {/* All nav items (except first 3 already in bottom bar) */}
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {/* Grid of nav items */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
+              padding: '6px 4px',
+            }}>
               {NAV.filter(n => !mainPaths.includes(n.href)).map(n => {
                 const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
                 const Icon = n.icon;
                 return (
                   <Link key={n.href} href={n.href} onClick={() => setMoreOpen(false)} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '14px 14px', borderRadius: 12,
-                    background: active ? 'rgba(255,230,0,0.08)' : 'transparent',
-                    transition: 'background 0.15s',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: 6, padding: '14px 6px', borderRadius: 14,
+                    background: active ? 'rgba(255,230,0,0.1)' : 'rgba(255,255,255,0.02)',
+                    border: active ? '1px solid rgba(255,230,0,0.2)' : '1px solid transparent',
+                    transition: 'all 0.15s',
+                    WebkitTapHighlightColor: 'transparent',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{
-                        width: 36, height: 36, borderRadius: 10, display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                        background: active ? 'rgba(255,230,0,0.12)' : 'rgba(136,153,170,0.06)',
-                      }}>
-                        <Icon size={18} color={active ? 'var(--accent)' : 'var(--text2)'} />
-                      </div>
-                      <span style={{
-                        fontSize: 15, fontWeight: active ? 700 : 500,
-                        color: active ? 'var(--accent)' : 'var(--text)',
-                      }}>
-                        {n.label}
-                      </span>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 12, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      background: active ? 'rgba(255,230,0,0.15)' : 'rgba(136,153,170,0.08)',
+                    }}>
+                      <Icon size={20} color={active ? 'var(--accent)' : 'var(--text2)'} />
                     </div>
-                    <ChevronRight size={16} color="var(--text3)" />
+                    <span style={{
+                      fontSize: 11, fontWeight: active ? 700 : 500, textAlign: 'center',
+                      color: active ? 'var(--accent)' : 'var(--text)',
+                      lineHeight: 1.2,
+                    }}>
+                      {n.label}
+                    </span>
                   </Link>
                 );
               })}
-            </nav>
+            </div>
 
             {/* Logout */}
             <button onClick={logout} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '14px 14px', borderRadius: 12, marginTop: 8,
-              background: 'rgba(239,68,68,0.06)', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '14px', borderRadius: 12, marginTop: 10,
+              background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)',
               cursor: 'pointer', width: '100%',
+              WebkitTapHighlightColor: 'transparent',
             }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10, display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(239,68,68,0.12)',
-              }}>
-                <LogOut size={18} color="var(--danger)" />
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--danger)' }}>Выйти</span>
+              <LogOut size={18} color="var(--danger)" />
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--danger)' }}>Выйти</span>
             </button>
           </div>
         </>
       )}
 
-      {/* CSS Animation */}
       <style>{`
-        @keyframes slideUp {
+        @keyframes sheetUp {
           from { transform: translateY(100%); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
       `}</style>
     </>

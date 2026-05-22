@@ -417,7 +417,7 @@ export default function WABroadcastPage() {
               background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16,
               padding: 24, marginBottom: 20,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 , flexWrap: 'wrap', gap: 12 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
                   Предпросмотр
                 </h3>

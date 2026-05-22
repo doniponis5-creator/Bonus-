@@ -358,7 +358,7 @@ export default function TelegramPage() {
           Команды бота
         </h3>
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, /* mobile: handled by form-grid class */
         }}>
           {[
             { cmd: '/stats', desc: 'Полная статистика' },

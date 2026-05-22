@@ -48,7 +48,7 @@ export default function BranchesPage() {
 
   return (
     <div>
-      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24 }}><Store size={24} /> Филиалы</h1>
+      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24, flexWrap: 'wrap' as any }}><Store size={24} /> Филиалы</h1>
 
       {/* Таблица филиалов */}
       <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>

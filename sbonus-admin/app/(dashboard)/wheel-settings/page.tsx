@@ -142,7 +142,7 @@ export default function WheelSettingsPage() {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: showPreview ? "1fr 340px" : "1fr", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: showPreview ? "1fr 340px" : "1fr", /* mobile: see @media */, gap: 24 }}>
         {/* Left: Segments table */}
         <div>
           {/* Toolbar */}
@@ -199,6 +199,7 @@ export default function WheelSettingsPage() {
               <div key={idx} style={{
                 display: "grid",
                 gridTemplateColumns: "36px 40px 1fr 90px 90px 100px 36px",
+                minWidth: 540, /* scroll on mobile */
                 gap: 8, alignItems: "center",
                 background: colors.cardBg, border: `1px solid ${colors.border}`,
                 borderRadius: 12, padding: "12px 14px",
@@ -366,6 +367,12 @@ export default function WheelSettingsPage() {
           </div>
         )}
       </div>
+    </div>
+      <style>{`
+        @media (max-width: 767px) {
+          [style*="1fr 340px"] { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -46,10 +46,10 @@ export default function PinConfirmModal({ open, title, description, onConfirm, o
       position: 'fixed', inset: 0, zIndex: 1000,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
-    }} onClick={onCancel}>
-      <div onClick={e => e.stopPropagation()} style={{
+    }} className="modal-overlay" onClick={onCancel}>
+      <div onClick={e => e.stopPropagation()} className="modal-content" style={{
         background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 20,
-        padding: '32px 28px', width: '100%', maxWidth: 380,
+        padding: '32px 28px', width: '100%', maxWidth: 380, margin: '0 12px',
         boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>

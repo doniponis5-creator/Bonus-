@@ -9,7 +9,7 @@ export default function StatsCard({ icon, label, value, sub, color = 'var(--acce
         <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>{label}</span>
         <span style={{ fontSize: 20, display: 'flex' }}>{icon}</span>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 800, color }}>{typeof value === 'number' ? value.toLocaleString('ru-RU') : value}</div>
+      <div className="stat-value" style={{ fontSize: 28, fontWeight: 800, color }}>{typeof value === 'number' ? value.toLocaleString('ru-RU') : value}</div>
       {sub && <div style={{ fontSize: 12, color: 'var(--text3)' }}>{sub}</div>}
     </div>
   );

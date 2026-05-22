@@ -131,7 +131,7 @@ export default function CampaignsPage() {
 
   return (
     <div>
-      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800, marginBottom: 24 }}>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800, marginBottom: 24, flexWrap: 'wrap' as any }}>
         <Gift size={24} /> Бонусные кампании
       </h1>
 

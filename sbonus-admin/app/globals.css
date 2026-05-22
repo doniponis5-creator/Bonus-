@@ -5,6 +5,7 @@
   --accent: #FFE600; --accent2: #FFC107; --accent3: #7C6FFF;
   --text: #e2eaf6; --text2: #8899aa; --text3: #556677;
   --danger: #ef4444; --warn: #f59e0b; --success: #22c55e;
+  --bottom-nav-h: 64px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); }
@@ -55,26 +56,140 @@ a { text-decoration: none; color: inherit; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 
-@media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+}
 
-/* ─── Mobile responsive ─── */
+/* ═══════════════════════════════════════════
+   MOBILE RESPONSIVE — Complete overhaul
+   ═══════════════════════════════════════════ */
 @media (max-width: 767px) {
-  /* Tables: horizontal scroll */
-  .table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-  .table th, .table td { padding: 10px 12px; font-size: 13px; }
-
-  /* Cards: tighter padding */
-  .card { padding: 16px; border-radius: 14px; }
-
   /* Hide desktop sidebar */
   aside { display: none !important; }
 
-  /* Full-width inputs */
-  input, textarea, select { font-size: 16px !important; /* prevents iOS zoom */ }
+  /* Cards: compact */
+  .card { padding: 14px; border-radius: 12px; }
+
+  /* Tables: horizontal scroll wrapper */
+  .table-wrap,
+  .table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table { white-space: nowrap; min-width: 600px; }
+  .table th, .table td { padding: 10px 12px; font-size: 12px; }
+
+  /* Inputs: prevent iOS zoom */
+  input, textarea, select { font-size: 16px !important; }
+
+  /* Page headers */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .page-header h1 { font-size: 20px !important; }
+  .page-header-actions {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Period selector — horizontal scroll */
+  .period-selector {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 4px;
+    padding: 3px;
+    flex-shrink: 0;
+  }
+  .period-selector button {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Buttons: full width where needed */
+  .btn { padding: 10px 14px; font-size: 13px; }
+  .btn-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .btn-row .btn,
+  .btn-row button { flex: 1; min-width: 0; }
+
+  /* Modal overlay: full screen on mobile */
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal-content {
+    max-height: 92vh !important;
+    min-height: 50vh;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    margin: 0 !important;
+    animation: modalSlideUp 0.3s ease !important;
+  }
+
+  /* Filter row */
+  .filter-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .filter-row > * { width: 100% !important; }
+  .filter-row select,
+  .filter-row input { width: 100% !important; }
+
+  /* Stats value smaller */
+  .stat-value { font-size: 22px !important; }
+
+  /* Charts: reduce height */
+  .recharts-responsive-container { max-height: 220px !important; }
+
+  /* Form grid */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Pagination */
+  .pagination {
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+  }
+  .pagination button {
+    min-width: 36px;
+    height: 36px;
+    font-size: 12px;
+  }
+
+  /* Tab buttons — horizontal scroll */
+  .tab-row {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 4px !important;
+    padding-bottom: 4px;
+  }
+  .tab-row button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 }
 
-/* Safe area for iOS notch */
+/* Modal animation */
+@keyframes modalSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Safe area for iOS notch + bottom nav */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   body { padding-bottom: env(safe-area-inset-bottom); }
 }

@@ -258,12 +258,12 @@ export default function AuditLogsPage() {
       {/* ── Table ── */}
       <div style={{
         background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16,
-        overflow: 'hidden',
+        overflow: 'hidden', overflowX: 'auto', WebkitOverflowScrolling: 'touch',
       }}>
         {/* Table header */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '240px 130px 1fr 140px 130px 50px',
+          gridTemplateColumns: '240px 130px 1fr 140px 130px 50px', minWidth: 900,
           padding: '14px 20px',
           borderBottom: '1px solid #1c2a3a',
           background: '#080c14',
@@ -307,7 +307,7 @@ export default function AuditLogsPage() {
                 onClick={() => hasDetails && setExpandedId(isExpanded ? null : l.id)}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '240px 130px 1fr 140px 130px 50px',
+                  gridTemplateColumns: '240px 130px 1fr 140px 130px 50px', minWidth: 900,
                   padding: '14px 20px',
                   borderBottom: '1px solid #111827',
                   cursor: hasDetails ? 'pointer' : 'default',

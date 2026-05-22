@@ -35,7 +35,7 @@ export default function TiersPage() {
 
   return (
     <div>
-      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24 }}><Trophy size={24} /> Уровни бонусной программы</h1>
+      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24, flexWrap: 'wrap' as any }}><Trophy size={24} /> Уровни бонусной программы</h1>
 
       {/* Карточки уровней из БД */}
       {loading ? (

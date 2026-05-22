@@ -106,8 +106,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
       <style>{`
         .main-content { padding: 32px; }
+        @media (max-width: 1024px) {
+          .main-content { padding: 24px 16px; }
+        }
         @media (max-width: 767px) {
-          .main-content { padding: 16px 12px 80px 12px !important; }
+          .main-content {
+            padding: 16px 12px 88px 12px !important;
+            min-height: 100vh;
+            -webkit-overflow-scrolling: touch;
+          }
         }
       `}</style>
     </div>
