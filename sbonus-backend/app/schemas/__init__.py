@@ -224,6 +224,9 @@ class SettingsUpdateRequest(BaseModel):
     MIN_PURCHASE_FOR_BONUS: Optional[str] = None
     REFERRAL_BONUS_INVITER: Optional[str] = None
     REFERRAL_BONUS_INVITEE: Optional[str] = None
+    WA_MESSAGE_INTERVAL: Optional[str] = None
+    WHEEL_FREE_SPINS_ON_REGISTER: Optional[str] = None
+    REFERRAL_DAILY_LIMIT: Optional[str] = None
 
 
 class AdminCustomerUpdateRequest(BaseModel):
