@@ -203,7 +203,7 @@ export default function BusinessAnalyticsPage() {
                         opacity={activeRfm && activeRfm !== s.key ? 0.4 : 1} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number, name: string) => [v + ' клиентов', name]} />
+                  <Tooltip formatter={(v: number, name: string) => [v + ' клиентов', name]} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
@@ -291,6 +291,7 @@ export default function BusinessAnalyticsPage() {
             <YAxis tick={{ fontSize: 11, fill: 'var(--text2)' }} tickFormatter={(v: number) => fmt(v)} />
             <Tooltip
               contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}
+              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
               formatter={(v: number) => [fmtCur(v), 'Ср. чек']}
             />
             <Bar dataKey="avg_check" fill="#8b5cf6" radius={[4, 4, 0, 0]} />

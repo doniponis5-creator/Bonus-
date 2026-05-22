@@ -181,6 +181,7 @@ export default function RealtimePage() {
                 <YAxis tick={{ fontSize: 11, fill: 'var(--text2)' }} />
                 <Tooltip
                   contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                   labelFormatter={(h: number) => `${h}:00 — ${h + 1}:00`}
                   formatter={(v: number, name: string) => [
                     name === 'revenue' ? fmtCur(v) : fmt(v),
