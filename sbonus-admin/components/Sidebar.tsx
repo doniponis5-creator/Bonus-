@@ -5,32 +5,68 @@ import { useEffect, useState, useRef } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Store, Briefcase, Trophy, Ticket,
   Settings, LogOut, FileSearch, Gift, Tag, Star, BarChart3, Disc3,
-  Flame, Send, MessageCircle, Menu, X, ChevronRight, FlaskConical, QrCode, Bot, Percent,
+  Flame, Send, MessageCircle, Menu, X, ChevronDown,
+  FlaskConical, QrCode, Bot, Percent,
 } from 'lucide-react';
 
-const NAV = [
-  { href: '/', icon: LayoutDashboard, label: 'Дашборд' },
-  { href: '/customers', icon: Users, label: 'Клиенты' },
-  { href: '/transactions', icon: CreditCard, label: 'Транзакции' },
-  { href: '/campaigns', icon: Gift, label: 'Бонус-кампании' },
-  { href: '/branches', icon: Store, label: 'Филиалы' },
-  { href: '/cashiers', icon: Briefcase, label: 'Кассиры' },
-  { href: '/cashier-bonuses', icon: Flame, label: 'Мотивация' },
-  { href: '/tiers', icon: Trophy, label: 'Уровни' },
-  { href: '/promo-codes', icon: Ticket, label: 'Промокоды' },
-  { href: '/coupons', icon: Tag, label: 'Купоны' },
-  { href: '/reviews', icon: Star, label: 'Отзывы' },
-  { href: '/wheel-settings', icon: Disc3, label: 'Колесо удачи' },
-  { href: '/wa-broadcast', icon: MessageCircle, label: 'Рассылки WA' },
-  { href: '/telegram', icon: Send, label: 'Telegram бот' },
-  { href: '/cashback', icon: Percent, label: 'Кешбэк' },
-  { href: '/ab-testing', icon: FlaskConical, label: 'A/B тесты' },
-  { href: '/qr-analytics', icon: QrCode, label: 'QR аналитика' },
-  { href: '/customer-tg-bot', icon: Bot, label: 'TG бот клиентов' },
-  { href: '/analytics', icon: BarChart3, label: 'Аналитика' },
-  { href: '/audit-logs', icon: FileSearch, label: 'Журнал аудита' },
-  { href: '/settings', icon: Settings, label: 'Настройки' },
+// ─── Navigation structure with groups ───
+interface NavItem {
+  href: string;
+  icon: any;
+  label: string;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: 'Основное',
+    items: [
+      { href: '/', icon: LayoutDashboard, label: 'Дашборд' },
+      { href: '/customers', icon: Users, label: 'Клиенты' },
+      { href: '/transactions', icon: CreditCard, label: 'Транзакции' },
+      { href: '/branches', icon: Store, label: 'Филиалы' },
+      { href: '/cashiers', icon: Briefcase, label: 'Кассиры' },
+      { href: '/tiers', icon: Trophy, label: 'Уровни' },
+    ],
+  },
+  {
+    title: 'Маркетинг',
+    items: [
+      { href: '/campaigns', icon: Gift, label: 'Кампании' },
+      { href: '/promo-codes', icon: Ticket, label: 'Промокоды' },
+      { href: '/coupons', icon: Tag, label: 'Купоны' },
+      { href: '/cashback', icon: Percent, label: 'Кешбэк' },
+      { href: '/ab-testing', icon: FlaskConical, label: 'A/B тесты' },
+      { href: '/wa-broadcast', icon: MessageCircle, label: 'Рассылки WA' },
+    ],
+  },
+  {
+    title: 'Аналитика',
+    items: [
+      { href: '/analytics', icon: BarChart3, label: 'Аналитика' },
+      { href: '/qr-analytics', icon: QrCode, label: 'QR аналитика' },
+      { href: '/reviews', icon: Star, label: 'Отзывы' },
+      { href: '/audit-logs', icon: FileSearch, label: 'Журнал' },
+    ],
+  },
+  {
+    title: 'Настройки',
+    items: [
+      { href: '/wheel-settings', icon: Disc3, label: 'Колесо удачи' },
+      { href: '/cashier-bonuses', icon: Flame, label: 'Мотивация' },
+      { href: '/telegram', icon: Send, label: 'TG бот (админ)' },
+      { href: '/customer-tg-bot', icon: Bot, label: 'TG бот (клиент)' },
+      { href: '/settings', icon: Settings, label: 'Настройки' },
+    ],
+  },
 ];
+
+// Flat list for mobile "More" sheet
+const ALL_NAV = NAV_GROUPS.flatMap(g => g.items);
 
 const BOTTOM_TABS = [
   { href: '/', icon: LayoutDashboard, label: 'Главная' },
@@ -72,40 +108,89 @@ export default function Sidebar() {
 
 
 function DesktopSidebar({ path }: { path: string }) {
+  // Collapsed groups state — stored in localStorage
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sidebar_collapsed');
+      if (saved) setCollapsed(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const toggle = (title: string) => {
+    const next = { ...collapsed, [title]: !collapsed[title] };
+    setCollapsed(next);
+    try { localStorage.setItem('sidebar_collapsed', JSON.stringify(next)); } catch {}
+  };
+
   return (
     <aside style={{
       width: 240, minHeight: '100vh', background: 'var(--bg2)',
       borderRight: '1px solid var(--border)', padding: '24px 12px',
       display: 'flex', flexDirection: 'column',
+      overflowY: 'auto',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px', marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px', marginBottom: 28 }}>
         <img src="/icon-192.png" alt="S" width={38} height={38} style={{ borderRadius: 12 }} />
         <div>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>S Bonus</div>
           <div style={{ fontSize: 11, color: 'var(--text2)' }}>Смарт Центр</div>
         </div>
       </div>
+
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-        {NAV.map(n => {
-          const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
-          const Icon = n.icon;
+        {NAV_GROUPS.map(group => {
+          const isCollapsed = collapsed[group.title];
+          const hasActive = group.items.some(n => path === n.href || (n.href !== '/' && path.startsWith(n.href)));
+
           return (
-            <Link key={n.href} href={n.href} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-              borderRadius: 10, fontSize: 14, fontWeight: active ? 700 : 500,
-              color: active ? 'var(--accent)' : 'var(--text2)',
-              background: active ? 'rgba(255,230,0,0.08)' : 'transparent',
-              transition: 'all 0.15s',
-            }}>
-              <Icon size={20} />{n.label}
-            </Link>
+            <div key={group.title} style={{ marginBottom: 4 }}>
+              {/* Group header */}
+              <button
+                onClick={() => toggle(group.title)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  width: '100%', padding: '6px 12px', marginBottom: 2,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+                  color: hasActive ? 'var(--accent)' : '#5a6a7a',
+                  transition: 'color 0.15s',
+                }}
+              >
+                {group.title}
+                <ChevronDown size={12} style={{
+                  transition: 'transform 0.2s',
+                  transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0)',
+                  opacity: 0.5,
+                }} />
+              </button>
+
+              {/* Group items */}
+              {!isCollapsed && group.items.map(n => {
+                const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
+                const Icon = n.icon;
+                return (
+                  <Link key={n.href} href={n.href} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+                    borderRadius: 10, fontSize: 13, fontWeight: active ? 700 : 500,
+                    color: active ? 'var(--accent)' : 'var(--text2)',
+                    background: active ? 'rgba(255,230,0,0.08)' : 'transparent',
+                    transition: 'all 0.15s',
+                  }}>
+                    <Icon size={18} />{n.label}
+                  </Link>
+                );
+              })}
+            </div>
           );
         })}
       </nav>
+
       <button onClick={logout} style={{
         display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
         borderRadius: 10, fontSize: 13, color: 'var(--danger)', background: 'transparent',
-        border: 'none', cursor: 'pointer', fontWeight: 600,
+        border: 'none', cursor: 'pointer', fontWeight: 600, marginTop: 8,
       }}>
         <LogOut size={16} /> Выход
       </button>
@@ -122,7 +207,6 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
   const mainPaths = BOTTOM_TABS.slice(0, 4).map(t => t.href);
   const isOnMore = !mainPaths.some(p => p === path || (p !== '/' && path.startsWith(p)));
 
-  // Prevent body scroll when sheet open
   useEffect(() => {
     if (moreOpen) {
       document.body.style.overflow = 'hidden';
@@ -166,8 +250,7 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
                 color: active ? 'var(--accent)' : 'var(--text3)',
                 fontSize: 10, fontWeight: active ? 700 : 500,
                 padding: '8px 0', flex: 1,
-                transition: 'color 0.2s, transform 0.15s',
-                transform: active ? 'scale(1)' : 'scale(1)',
+                transition: 'color 0.2s',
                 WebkitTapHighlightColor: 'transparent',
                 minWidth: 0,
               }}
@@ -187,7 +270,7 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
         })}
       </nav>
 
-      {/* "More" overlay sheet */}
+      {/* "More" overlay sheet — organized by groups */}
       {moreOpen && (
         <>
           <div
@@ -228,41 +311,52 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
               </div>
             </div>
 
-            {/* Grid of nav items */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
-              padding: '6px 4px',
-            }}>
-              {NAV.filter(n => !mainPaths.includes(n.href)).map(n => {
-                const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
-                const Icon = n.icon;
-                return (
-                  <Link key={n.href} href={n.href} onClick={() => setMoreOpen(false)} style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: 6, padding: '14px 6px', borderRadius: 14,
-                    background: active ? 'rgba(255,230,0,0.1)' : 'rgba(255,255,255,0.02)',
-                    border: active ? '1px solid rgba(255,230,0,0.2)' : '1px solid transparent',
-                    transition: 'all 0.15s',
-                    WebkitTapHighlightColor: 'transparent',
+            {/* Groups */}
+            {NAV_GROUPS.map(group => {
+              const groupItems = group.items.filter(n => !mainPaths.includes(n.href));
+              if (groupItems.length === 0) return null;
+              return (
+                <div key={group.title} style={{ marginBottom: 12 }}>
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+                    color: '#5a6a7a', padding: '8px 12px 4px',
                   }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 12, display: 'flex',
-                      alignItems: 'center', justifyContent: 'center',
-                      background: active ? 'rgba(255,230,0,0.15)' : 'rgba(136,153,170,0.08)',
-                    }}>
-                      <Icon size={20} color={active ? 'var(--accent)' : 'var(--text2)'} />
-                    </div>
-                    <span style={{
-                      fontSize: 11, fontWeight: active ? 700 : 500, textAlign: 'center',
-                      color: active ? 'var(--accent)' : 'var(--text)',
-                      lineHeight: 1.2,
-                    }}>
-                      {n.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
+                    {group.title}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '2px 4px' }}>
+                    {groupItems.map(n => {
+                      const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
+                      const Icon = n.icon;
+                      return (
+                        <Link key={n.href} href={n.href} onClick={() => setMoreOpen(false)} style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center',
+                          gap: 6, padding: '14px 6px', borderRadius: 14,
+                          background: active ? 'rgba(255,230,0,0.1)' : 'rgba(255,255,255,0.02)',
+                          border: active ? '1px solid rgba(255,230,0,0.2)' : '1px solid transparent',
+                          transition: 'all 0.15s',
+                          WebkitTapHighlightColor: 'transparent',
+                        }}>
+                          <div style={{
+                            width: 40, height: 40, borderRadius: 12, display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                            background: active ? 'rgba(255,230,0,0.15)' : 'rgba(136,153,170,0.08)',
+                          }}>
+                            <Icon size={20} color={active ? 'var(--accent)' : 'var(--text2)'} />
+                          </div>
+                          <span style={{
+                            fontSize: 11, fontWeight: active ? 700 : 500, textAlign: 'center',
+                            color: active ? 'var(--accent)' : 'var(--text)',
+                            lineHeight: 1.2,
+                          }}>
+                            {n.label}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
 
             {/* Logout */}
             <button onClick={logout} style={{
