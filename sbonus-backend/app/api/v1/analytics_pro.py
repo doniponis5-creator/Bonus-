@@ -13,34 +13,27 @@ from sqlalchemy import select, func, case, distinct, and_, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role, UserRole
 from app.models import (
     Customer, Transaction, TransactionType, BonusAccount,
     BonusCampaign, CampaignStatus,
     Notification, NotificationStatus,
-    User, UserRoleEnum,
 )
 
 router = APIRouter(prefix="/analytics-pro", tags=["analytics-pro"])
 
 
-def _require_admin(user: User):
-    from fastapi import HTTPException
-    if user.role not in (UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN):
-        raise HTTPException(status_code=403, detail="Только для администраторов")
 
 
 # ═══════════════════════════════════════════════════
 #  1. БИЗНЕС-ОБЗОР — KPI с сравнением по периодам
 # ═══════════════════════════════════════════════════
 
-@router.get("/business")
+@router.get("/business", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def business_overview(
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    _require_admin(user)
     now = datetime.now(timezone.utc)
     current_start = now - timedelta(days=days)
     prev_start = current_start - timedelta(days=days)
@@ -147,13 +140,11 @@ async def business_overview(
 #  2. КОГОРТНЫЙ АНАЛИЗ
 # ═══════════════════════════════════════════════════
 
-@router.get("/cohorts")
+@router.get("/cohorts", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def cohort_analysis(
     months: int = Query(6, ge=2, le=12),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    _require_admin(user)
     now = datetime.now(timezone.utc)
     start = now - timedelta(days=months * 31)
 
@@ -210,12 +201,10 @@ async def cohort_analysis(
 #  3. RFM-СЕГМЕНТАЦИЯ
 # ═══════════════════════════════════════════════════
 
-@router.get("/rfm")
+@router.get("/rfm", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def rfm_segmentation(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    _require_admin(user)
     now = datetime.now(timezone.utc)
 
     q = await db.execute(
@@ -312,13 +301,11 @@ async def rfm_segmentation(
 #  4. ВОРОНКА КЛИЕНТОВ
 # ═══════════════════════════════════════════════════
 
-@router.get("/funnel")
+@router.get("/funnel", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def customer_funnel(
     days: int = Query(90, ge=7, le=365),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    _require_admin(user)
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days)
 
@@ -395,13 +382,11 @@ async def customer_funnel(
 #  5. МАРКЕТИНГ ROI
 # ═══════════════════════════════════════════════════
 
-@router.get("/marketing")
+@router.get("/marketing", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def marketing_roi(
     days: int = Query(30, ge=7, le=365),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    _require_admin(user)
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days)
 
@@ -486,12 +471,10 @@ async def marketing_roi(
 #  6. REAL-TIME МОНИТОРИНГ
 # ═══════════════════════════════════════════════════
 
-@router.get("/realtime")
+@router.get("/realtime", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def realtime_monitor(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    _require_admin(user)
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     hour_ago = now - timedelta(hours=1)
@@ -596,13 +579,11 @@ async def realtime_monitor(
 #  7. ЕЖЕДНЕВНЫЙ ТРЕНД
 # ═══════════════════════════════════════════════════
 
-@router.get("/daily-trends")
+@router.get("/daily-trends", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def daily_trends(
     days: int = Query(30, ge=7, le=365),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    _require_admin(user)
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days)
 
