@@ -20,7 +20,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role, UserRole
 from app.models import Setting, User, UserRoleEnum, Transaction, TransactionType
 
 router = APIRouter(prefix="/ab-testing", tags=["ab-testing"])
@@ -74,9 +74,6 @@ def _conversion_key(test_id: str) -> str:
 
 # ─── Helpers ───
 
-def _require_admin(user: User):
-    if user.role != UserRoleEnum.SUPER_ADMIN:
-        raise HTTPException(status_code=403, detail="Faqat super admin")
 
 
 async def _get_test(db: AsyncSession, test_id: str) -> dict:
@@ -89,14 +86,12 @@ async def _get_test(db: AsyncSession, test_id: str) -> dict:
 
 # ─── Endpoints ───
 
-@router.post("", response_model=ABTestResponse, status_code=201)
+@router.post("", response_model=ABTestResponse, status_code=201, dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def create_ab_test(
     data: ABTestCreate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """Yangi A/B test yaratish."""
-    _require_admin(user)
 
     test_id = uuid.uuid4().hex[:12]
     test_data = {
@@ -127,14 +122,12 @@ async def create_ab_test(
     )
 
 
-@router.get("", response_model=list[ABTestResponse])
+@router.get("", response_model=list[ABTestResponse], dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def list_ab_tests(
     status_filter: Optional[str] = Query(None, alias="status"),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """Barcha A/B testlar ro'yxati."""
-    _require_admin(user)
 
     result = await db.execute(
         select(Setting).where(Setting.key.like("AB_TEST_%"))
@@ -192,14 +185,12 @@ async def list_ab_tests(
     return tests
 
 
-@router.get("/{test_id}", response_model=ABTestResponse)
+@router.get("/{test_id}", response_model=ABTestResponse, dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def get_ab_test(
     test_id: str,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """Bitta A/B test tafsilotlari."""
-    _require_admin(user)
     test = await _get_test(db, test_id)
 
     assign_row = await db.execute(select(Setting).where(Setting.key == _assignment_key(test_id)))
@@ -238,15 +229,13 @@ async def get_ab_test(
     )
 
 
-@router.post("/{test_id}/assign", response_model=ABTestAssignment)
+@router.post("/{test_id}/assign", response_model=ABTestAssignment, dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def assign_customer(
     test_id: str,
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """Klientni A yoki B variantga tayinlash (50/50)."""
-    _require_admin(user)
     test = await _get_test(db, test_id)
     if test.get("status") != "active":
         raise HTTPException(status_code=400, detail="Test aktiv emas")
@@ -288,15 +277,13 @@ async def assign_customer(
     )
 
 
-@router.post("/{test_id}/convert")
+@router.post("/{test_id}/convert", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def record_conversion(
     test_id: str,
     customer_id: str,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """Konversiya qayd qilish (klient xabar olgandan so'ng sotib oldi)."""
-    _require_admin(user)
 
     assign_row = await db.execute(select(Setting).where(Setting.key == _assignment_key(test_id)))
     assign = assign_row.scalar_one_or_none()
@@ -325,14 +312,12 @@ async def record_conversion(
     return {"status": "ok", "variant": variant, "total_conversions": conversions[variant]}
 
 
-@router.put("/{test_id}/complete")
+@router.put("/{test_id}/complete", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def complete_test(
     test_id: str,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """A/B testni yakunlash va g'olibni aniqlash."""
-    _require_admin(user)
 
     row = await db.execute(select(Setting).where(Setting.key == _test_key(test_id)))
     setting = row.scalar_one_or_none()
@@ -348,14 +333,12 @@ async def complete_test(
     return {"status": "completed", "test_id": test_id}
 
 
-@router.delete("/{test_id}")
+@router.delete("/{test_id}", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def cancel_test(
     test_id: str,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """A/B testni bekor qilish."""
-    _require_admin(user)
 
     row = await db.execute(select(Setting).where(Setting.key == _test_key(test_id)))
     setting = row.scalar_one_or_none()

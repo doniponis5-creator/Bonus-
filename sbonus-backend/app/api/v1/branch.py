@@ -14,7 +14,7 @@ from sqlalchemy import func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role, UserRole
 from app.models import (
     Branch, Transaction, TransactionType, Customer, BonusAccount,
     User, UserRoleEnum,
@@ -79,19 +79,22 @@ class BranchCashierResponse(BaseModel):
 
 # ─── Helpers ───
 
-def _require_admin(user: User):
-    if user.role not in (UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN):
+def _require_admin(user: dict):
+    role = user.get("role", "")
+    if role not in (UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN, "super_admin", "branch_admin"):
         raise HTTPException(status_code=403, detail="Faqat admin uchun")
 
-def _require_super_admin(user: User):
-    if user.role != UserRoleEnum.SUPER_ADMIN:
+def _require_super_admin(user: dict):
+    role = user.get("role", "")
+    if role not in (UserRole.SUPER_ADMIN, "super_admin"):
         raise HTTPException(status_code=403, detail="Faqat super admin uchun")
 
-def _require_branch_access(user: User, branch_id: uuid.UUID):
+def _require_branch_access(user: dict, branch_id: uuid.UUID):
     """Branch admin faqat o'z filialiga kirishi mumkin."""
-    if user.role == UserRoleEnum.SUPER_ADMIN:
+    role = user.get("role", "")
+    if role in (UserRole.SUPER_ADMIN, "super_admin"):
         return
-    if user.role == UserRoleEnum.BRANCH_ADMIN and user.branch_id == branch_id:
+    if role in (UserRole.BRANCH_ADMIN, "branch_admin") and str(user.get("branch_id", "")) == str(branch_id):
         return
     raise HTTPException(status_code=403, detail="Bu filialga ruxsat yo'q")
 
@@ -101,12 +104,12 @@ def _require_branch_access(user: User, branch_id: uuid.UUID):
 @router.get("", response_model=list[BranchResponse])
 async def list_branches(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     """Barcha filiallar ro'yxati."""
     _require_admin(user)
-    if user.role == UserRoleEnum.BRANCH_ADMIN:
-        result = await db.execute(select(Branch).where(Branch.id == user.branch_id))
+    if user.get("role") in (UserRole.BRANCH_ADMIN, "branch_admin"):
+        result = await db.execute(select(Branch).where(Branch.id == uuid.UUID(str(user.get("branch_id")))))
     else:
         result = await db.execute(select(Branch).order_by(Branch.name))
     branches = result.scalars().all()
@@ -121,7 +124,7 @@ async def list_branches(
 async def create_branch(
     data: BranchCreate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     """Yangi filial qo'shish (super admin only)."""
     _require_super_admin(user)
@@ -141,7 +144,7 @@ async def update_branch(
     branch_id: uuid.UUID,
     data: BranchUpdate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     """Filial ma'lumotlarini yangilash."""
     _require_super_admin(user)
@@ -174,7 +177,7 @@ async def get_branch_stats(
     branch_id: uuid.UUID,
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     """Filial bo'yicha statistika."""
     _require_admin(user)
@@ -226,7 +229,7 @@ async def get_branch_stats(
 async def compare_branches(
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     """Barcha filiallarni solishtirish."""
     _require_super_admin(user)
@@ -294,7 +297,7 @@ async def get_branch_cashiers(
     branch_id: uuid.UUID,
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     """Filial kassirlari va ularning statistikasi."""
     _require_admin(user)
@@ -350,7 +353,7 @@ async def get_branch_top_customers(
     days: int = Query(30, ge=1, le=365),
     limit: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     """Filialning eng yaxshi klientlari."""
     _require_admin(user)

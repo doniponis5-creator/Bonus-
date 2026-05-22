@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func, case, distinct, and_, extract
+from sqlalchemy import select, func, case, distinct, and_, extract, literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -150,8 +150,8 @@ async def cohort_analysis(
 
     q = await db.execute(
         select(
-            func.date_trunc('month', Customer.created_at).label("reg_month"),
-            func.date_trunc('month', Transaction.created_at).label("tx_month"),
+            func.date_trunc(literal_column("'month'"), Customer.created_at).label("reg_month"),
+            func.date_trunc(literal_column("'month'"), Transaction.created_at).label("tx_month"),
             Customer.id,
         ).outerjoin(Transaction, and_(
             Transaction.customer_id == Customer.id,
@@ -589,7 +589,7 @@ async def daily_trends(
 
     q = await db.execute(
         select(
-            func.date_trunc('day', Transaction.created_at).label("day"),
+            func.date_trunc(literal_column("'day'"), Transaction.created_at).label("day"),
             func.count(Transaction.id).label("tx_count"),
             func.coalesce(func.sum(case(
                 (Transaction.type == TransactionType.EARN, Transaction.purchase_amount),
@@ -597,8 +597,8 @@ async def daily_trends(
             )), 0).label("revenue"),
             func.count(distinct(Transaction.customer_id)).label("active_customers"),
         ).where(Transaction.created_at >= since)
-        .group_by(func.date_trunc('day', Transaction.created_at))
-        .order_by(func.date_trunc('day', Transaction.created_at))
+        .group_by(func.date_trunc(literal_column("'day'"), Transaction.created_at))
+        .order_by(func.date_trunc(literal_column("'day'"), Transaction.created_at))
     )
 
     result = []

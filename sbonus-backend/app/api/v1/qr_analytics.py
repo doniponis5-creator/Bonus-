@@ -20,7 +20,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role, UserRole
 from app.models import Setting, User, UserRoleEnum, Customer
 
 router = APIRouter(prefix="/qr-analytics", tags=["qr-analytics"])
@@ -80,9 +80,6 @@ def _month_key() -> str:
     return f"{SCANS_KEY_PREFIX}{now.strftime('%Y_%m')}"
 
 
-def _require_admin(user: User):
-    if user.role not in (UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN):
-        raise HTTPException(status_code=403, detail="Faqat admin uchun")
 
 
 # ─── Endpoints ───
@@ -150,14 +147,12 @@ async def record_scan(
     return QRScanResponse(**scan_record)
 
 
-@router.get("/overview", response_model=QRAnalyticsOverview)
+@router.get("/overview", response_model=QRAnalyticsOverview, dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def get_overview(
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """QR skanerlash umumiy statistikasi."""
-    _require_admin(user)
 
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days)
@@ -240,14 +235,12 @@ async def get_overview(
     )
 
 
-@router.get("/by-qr/{qr_code}", response_model=QRCodeStats)
+@router.get("/by-qr/{qr_code}", response_model=QRCodeStats, dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def get_qr_stats(
     qr_code: str,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """Bitta QR kod bo'yicha statistika."""
-    _require_admin(user)
 
     # Find customer
     result = await db.execute(select(Customer).where(Customer.qr_code == qr_code))
@@ -295,16 +288,14 @@ async def get_qr_stats(
     )
 
 
-@router.get("/scans", response_model=list[QRScanResponse])
+@router.get("/scans", response_model=list[QRScanResponse], dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
 async def list_recent_scans(
     limit: int = Query(50, ge=1, le=200),
     qr_code: Optional[str] = None,
     utm_source: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """Oxirgi skanerlashlar ro'yxati."""
-    _require_admin(user)
 
     all_scans = []
     result = await db.execute(
