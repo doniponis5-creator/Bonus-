@@ -121,6 +121,7 @@ class BonusEarnRequest(BaseModel):
     customer_id: uuid.UUID
     purchase_amount: Decimal = Field(..., gt=0, description="Сумма покупки в KGS")
     branch_id: uuid.UUID
+    category_slug: Optional[str] = Field(None, description="Tovar kategoriyasi (cashback uchun)")
     receipt_number: Optional[str] = Field(None, max_length=50, description="Номер чека из 1С")
     note: Optional[str] = Field(None, max_length=255)
 
@@ -227,6 +228,10 @@ class SettingsUpdateRequest(BaseModel):
     WA_MESSAGE_INTERVAL: Optional[str] = None
     WHEEL_FREE_SPINS_ON_REGISTER: Optional[str] = None
     REFERRAL_DAILY_LIMIT: Optional[str] = None
+    # ─── FCM Push Notifications ───
+    ENABLE_PUSH_NOTIFICATIONS: Optional[str] = None
+    FCM_PROJECT_ID: Optional[str] = None
+    FCM_SERVICE_ACCOUNT_JSON: Optional[str] = None
 
 
 class AdminCustomerUpdateRequest(BaseModel):

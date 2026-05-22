@@ -5,11 +5,12 @@ POST /api/v1/bonus/earn, spend, check-spend, birthday, referral/apply, promo/app
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.core.rate_limiter import RATE_LIMITS
 
 
 def _validate_branch(current_user: dict, request_branch_id: uuid.UUID | None):
@@ -35,7 +36,7 @@ from app.services.bonus import BonusService
 router = APIRouter(prefix="/bonus", tags=["Бонусные операции"])
 
 
-@router.post("/earn", response_model=BonusResult, status_code=201)
+@router.post("/earn", response_model=BonusResult, status_code=201, dependencies=[Depends(RATE_LIMITS["bonus_earn"])])
 async def earn_bonus(
     body: BonusEarnRequest,
     db: AsyncSession = Depends(get_db),
@@ -54,10 +55,11 @@ async def earn_bonus(
         cashier_id=uuid.UUID(current_user["sub"]) if current_user.get("sub") else None,
         receipt_number=body.receipt_number,
         note=body.note,
+        category_slug=body.category_slug,
     )
 
 
-@router.post("/spend", response_model=BonusResult, status_code=201)
+@router.post("/spend", response_model=BonusResult, status_code=201, dependencies=[Depends(RATE_LIMITS["bonus_spend"])])
 async def spend_bonus(
     body: BonusSpendRequest,
     db: AsyncSession = Depends(get_db),
@@ -98,7 +100,7 @@ async def birthday_bonus(
     return await svc.birthday_bonus(customer_id)
 
 
-@router.post("/referral/apply", response_model=BonusResult, status_code=201)
+@router.post("/referral/apply", response_model=BonusResult, status_code=201, dependencies=[Depends(RATE_LIMITS["referral_apply"])])
 async def apply_referral(
     body: ReferralApplyRequest,
     db: AsyncSession = Depends(get_db),
@@ -109,7 +111,7 @@ async def apply_referral(
     return await svc.apply_referral(body.customer_id, body.referral_code)
 
 
-@router.post("/promo/apply", response_model=BonusResult, status_code=201)
+@router.post("/promo/apply", response_model=BonusResult, status_code=201, dependencies=[Depends(RATE_LIMITS["promo_apply"])])
 async def apply_promo(
     body: PromoApplyRequest,
     db: AsyncSession = Depends(get_db),

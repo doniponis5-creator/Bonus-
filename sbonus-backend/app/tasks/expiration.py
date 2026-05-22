@@ -276,3 +276,13 @@ async def _notify_expiration_warning(db, customer_id, amount: Decimal, balance: 
         phone=customer.phone, message=msg,
         instance_id=instance_id, api_token=api_token
     ))
+
+    # Push notification
+    try:
+        from app.services.push_notification import notify_bonus_expiring
+        from app.core.database import async_session as _session
+        asyncio.create_task(notify_bonus_expiring(
+            _session, str(customer_id), warn_days, float(amount)
+        ))
+    except Exception:
+        pass

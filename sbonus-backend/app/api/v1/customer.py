@@ -139,6 +139,8 @@ async def get_transactions(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     tx_type: str = Query(None, description="Фильтр: earn/spend/expire/referral/promo/campaign"),
+    date_from: str = Query(None, description="Начало периода (YYYY-MM-DD)"),
+    date_to: str = Query(None, description="Конец периода (YYYY-MM-DD)"),
     db: AsyncSession = Depends(get_db),
     current: dict = Depends(get_current_customer),
 ) -> dict:
@@ -152,6 +154,22 @@ async def get_transactions(
         except ValueError:
             pass
 
+    # Sana bo'yicha filter
+    if date_from:
+        try:
+            from datetime import datetime, timezone
+            df = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            query = query.where(Transaction.created_at >= df)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            from datetime import datetime, timedelta, timezone
+            dt = datetime.strptime(date_to, "%Y-%m-%d").replace(tzinfo=timezone.utc) + timedelta(days=1)
+            query = query.where(Transaction.created_at < dt)
+        except ValueError:
+            pass
+
     total = (await db.execute(
         select(func.count()).select_from(query.subquery())
     )).scalar() or 0
@@ -162,21 +180,31 @@ async def get_transactions(
     )
     txns = result.scalars().all()
 
+    items = [
+        {
+            "id": str(t.id),
+            "type": t.type.value,
+            "amount": float(t.amount),
+            "purchase_amount": float(t.purchase_amount) if t.purchase_amount else None,
+            "note": t.note,
+            "created_at": t.created_at.isoformat(),
+        }
+        for t in txns
+    ]
+
+    # Davr uchun statistika
+    total_earned_period = sum(i["amount"] for i in items if i["type"] in ("earn", "referral", "promo", "campaign", "birthday"))
+    total_spent_period = sum(i["amount"] for i in items if i["type"] == "spend")
+
     return {
-        "items": [
-            {
-                "id": str(t.id),
-                "type": t.type.value,
-                "amount": float(t.amount),
-                "purchase_amount": float(t.purchase_amount) if t.purchase_amount else None,
-                "note": t.note,
-                "created_at": t.created_at.isoformat(),
-            }
-            for t in txns
-        ],
+        "items": items,
         "total": total,
         "page": page,
         "limit": limit,
+        "summary": {
+            "earned_in_page": round(total_earned_period, 2),
+            "spent_in_page": round(total_spent_period, 2),
+        },
     }
 
 

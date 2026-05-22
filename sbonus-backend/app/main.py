@@ -14,7 +14,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
+from app.api.v2 import api_v2_router
+from app.core.versioning import APIVersionMiddleware
 from app.core.config import get_settings
+from app.core.rate_limiter import GlobalRateLimitMiddleware
 from app.core.logging import setup_logging, get_logger
 from app.core.database import Base, engine
 from app.seeds.defaults import seed_default_data
@@ -33,6 +36,10 @@ from app.services.telegram_bot import (
     send_daily_evening_report,
     start_polling as start_tg_polling,
     stop_polling as stop_tg_polling,
+)
+from app.services.customer_telegram_bot import (
+    start_customer_bot,
+    stop_customer_bot,
 )
 
 settings = get_settings()
@@ -152,6 +159,7 @@ async def lifespan(app: FastAPI):
 
     # Telegram bot polling (обработка команд)
     start_tg_polling()
+    start_customer_bot()
 
     logger.info("Cron: bonus campaigns scheduled at 09:00 daily")
     logger.info("Cron: bonus expiration scheduled at 02:00 daily")
@@ -168,6 +176,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     stop_tg_polling()
+    stop_customer_bot()
     scheduler.shutdown()
     await engine.dispose()
     logger.info("Server stopped")
@@ -183,7 +192,7 @@ app = FastAPI(
         "**Функции:** начисление/списание бонусов, уровни (Bronze→Platinum), "
         "реферальная программа, промокоды, интеграция 1С, WhatsApp уведомления."
     ),
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.app_env != "production" else None,
     redoc_url="/redoc" if settings.app_env != "production" else None,
@@ -209,10 +218,17 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = request_id
         return response
 
+# API Versioning: deprecation headers
+app.add_middleware(APIVersionMiddleware)
+
+# Global Rate Limiting: 200 requests / min per IP
+app.add_middleware(GlobalRateLimitMiddleware, max_requests=200, window_seconds=60)
+
 app.add_middleware(RequestIDMiddleware)
 
-# API Routes
+# API Routes (v1 + v2)
 app.include_router(api_router)
+app.include_router(api_v2_router)
 
 
 # Global exception handler — hide internals in production
@@ -235,7 +251,7 @@ async def root() -> dict:
         "status": "ok",
         "service": settings.shop_bonus_name,
         "shop": settings.shop_name,
-        "version": "1.0.0",
+        "version": "2.0.0",
     }
 
 

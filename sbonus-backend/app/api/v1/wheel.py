@@ -235,6 +235,16 @@ async def _do_spin(db: AsyncSession, customer_id: uuid.UUID) -> SpinResultRespon
         new_balance=float(account.balance),
     ))
 
+    # Push notification (FCM)
+    asyncio.create_task(_notify_wheel_push(
+        db_factory=async_session,
+        customer_id=str(customer_id),
+        prize_label=winner["label"],
+        prize_type=prize_type,
+        bonus_amount=float(bonus_amount),
+        new_balance=float(account.balance),
+    ))
+
     if customer_phone:
         asyncio.create_task(_notify_wheel_whatsapp(
             db_factory=async_session,
@@ -408,3 +418,26 @@ async def _notify_wheel_whatsapp(
         await send_whatsapp_message(phone, msg, instance_id, api_token)
     except Exception:
         pass  # Не ломаем основной flow
+
+
+async def _notify_wheel_push(
+    db_factory,
+    customer_id: str,
+    prize_label: str,
+    prize_type: str,
+    bonus_amount: float,
+    new_balance: float,
+):
+    """Push notification klientga koleso yutug'i haqida."""
+    try:
+        from app.services.push_notification import notify_wheel_win
+        await notify_wheel_win(
+            db_factory=db_factory,
+            customer_id=customer_id,
+            prize_label=prize_label,
+            prize_type=prize_type,
+            bonus_amount=bonus_amount,
+            new_balance=new_balance,
+        )
+    except Exception:
+        pass  # fire-and-forget

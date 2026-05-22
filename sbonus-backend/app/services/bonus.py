@@ -26,6 +26,7 @@ from app.models import (
     TransactionType,
 )
 from app.schemas import BonusResult
+from app.core.events import emit_bonus_earned, emit_bonus_spent
 
 settings = get_settings()
 
@@ -51,6 +52,7 @@ class BonusService:
         cashier_id: Optional[uuid.UUID] = None,
         receipt_number: Optional[str] = None,
         note: Optional[str] = None,
+        category_slug: Optional[str] = None,
     ) -> BonusResult:
         """
         Начислить бонус за покупку.
@@ -125,8 +127,12 @@ class BonusService:
         account = await self._get_or_create_account(customer_id)
         tier = await self._get_tier(customer.tier_id)
 
-        # Расчёт бонуса
-        bonus_amount = (purchase_amount * tier.bonus_percent / Decimal("100")).quantize(Decimal("0.01"))
+        # Расчёт бонуса (с учётом категории и promo)
+        from app.services.cashback import calculate_cashback_percent
+        cashback_percent, cashback_source = await calculate_cashback_percent(
+            self.db, tier.bonus_percent, category_slug
+        )
+        bonus_amount = (purchase_amount * cashback_percent / Decimal("100")).quantize(Decimal("0.01"))
 
         # Обновление баланса
         account.balance += bonus_amount
@@ -157,6 +163,15 @@ class BonusService:
 
         tier_name = new_tier.name if tier_upgraded else tier.name
 
+        # Event: tier upgrade
+        if tier_upgraded:
+            from app.core.events import emit_customer_tier_up
+            asyncio.create_task(emit_customer_tier_up(
+                customer_id=str(customer_id),
+                old_tier=tier.name,
+                new_tier=new_tier.name,
+            ))
+
         # Отправка WhatsApp уведомления (с трекингом)
         await self._notify_whatsapp(
             customer.phone,
@@ -172,6 +187,16 @@ class BonusService:
         if purchase_amount >= 50000:
             from app.services.telegram_bot import notify_large_earn
             asyncio.ensure_future(notify_large_earn(customer.full_name, float(purchase_amount), float(bonus_amount)))
+
+        # Event bus
+        asyncio.create_task(emit_bonus_earned(
+            customer_id=str(customer_id),
+            amount=float(bonus_amount),
+            purchase_amount=float(purchase_amount),
+            new_balance=float(account.balance),
+            cashier_id=str(cashier_id) if cashier_id else None,
+            category_slug=category_slug,
+        ))
 
         return BonusResult(
             transaction_id=txn.id,
@@ -273,6 +298,14 @@ class BonusService:
         if spend_amount >= 5000:
             from app.services.telegram_bot import notify_large_spend
             asyncio.ensure_future(notify_large_spend(customer.full_name, float(spend_amount), float(account.balance)))
+
+        # Event bus
+        asyncio.create_task(emit_bonus_spent(
+            customer_id=str(customer_id),
+            amount=float(spend_amount),
+            purchase_amount=float(purchase_amount),
+            new_balance=float(account.balance),
+        ))
 
         return BonusResult(
             transaction_id=txn.id,
@@ -475,6 +508,15 @@ class BonusService:
         )
         self.db.add(txn)
         await self.db.flush()
+
+        # Event bus: referral applied
+        from app.core.events import emit_referral_applied
+        asyncio.create_task(emit_referral_applied(
+            inviter_id=str(inviter.id),
+            invitee_id=str(customer_id),
+            inviter_bonus=float(inviter_bonus),
+            invitee_bonus=float(invitee_bonus),
+        ))
 
         tier = await self._get_tier(customer.tier_id)
 
