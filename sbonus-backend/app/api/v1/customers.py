@@ -10,12 +10,13 @@ GET    /api/v1/customers/{id}/transactions
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.redis import check_rate_limit
 from app.core.security import UserRole, get_current_user, require_role
 from app.models import BonusAccount, Customer, Tier, Transaction
 from app.schemas import BalanceResponse, CustomerRegisterRequest, CustomerResponse
@@ -55,16 +56,6 @@ async def register_customer(
     tier_result = await db.execute(select(Tier).order_by(Tier.sort_order.asc()).limit(1))
     default_tier = tier_result.scalar_one_or_none()
 
-    # Обработка реферала
-    referred_by_id = None
-    if body.referred_by_code:
-        ref_result = await db.execute(
-            select(Customer).where(Customer.referral_code == body.referred_by_code)
-        )
-        referrer = ref_result.scalar_one_or_none()
-        if referrer:
-            referred_by_id = referrer.id
-
     customer = Customer(
         phone=normalized_phone,
         full_name=body.full_name,
@@ -72,7 +63,7 @@ async def register_customer(
         birth_date=body.birth_date,
         tier_id=default_tier.id if default_tier else None,
         referral_code=_generate_referral(),
-        referred_by=referred_by_id,
+        referred_by=None,  # apply_referral() sets this
     )
     db.add(customer)
     await db.flush()
@@ -80,8 +71,16 @@ async def register_customer(
     # Создаём бонусный счёт
     account = BonusAccount(customer_id=customer.id)
     db.add(account)
-
     await db.flush()
+
+    # Автоматическое начисление реферального бонуса обеим сторонам
+    if body.referred_by_code:
+        try:
+            from app.services.bonus import BonusService
+            svc = BonusService(db)
+            await svc.apply_referral(customer.id, body.referred_by_code)
+        except Exception:
+            pass  # Реферал необязателен — не блокируем регистрацию
 
     return CustomerResponse(
         id=customer.id,
@@ -95,6 +94,29 @@ async def register_customer(
         is_active=customer.is_active,
         created_at=customer.created_at,
     )
+
+
+@router.get("/referrer-name/{referral_code}")
+async def get_referrer_name(
+    referral_code: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Публичный эндпоинт: получить имя пригласившего по реферальному коду (для /register страницы)."""
+    ip = request.client.host if request.client else "unknown"
+    if not await check_rate_limit(f"referrer_name:{ip}", max_attempts=10, window_seconds=60):
+        raise HTTPException(status_code=429, detail={"message": "Слишком много запросов"})
+
+    result = await db.execute(
+        select(Customer.full_name).where(Customer.referral_code == referral_code.strip().upper())
+    )
+    name = result.scalar_one_or_none()
+    if not name:
+        raise HTTPException(status_code=404, detail={"message": "Код не найден"})
+    # Маскируем: "Алишер Каримов" → "Ал*** Ка***"
+    parts = name.split()
+    masked = " ".join(p[:2] + "***" if len(p) > 2 else p[0] + "**" for p in parts)
+    return {"name": masked}
 
 
 @router.get("/search", response_model=list[CustomerResponse])

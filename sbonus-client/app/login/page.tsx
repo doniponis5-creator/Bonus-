@@ -136,8 +136,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text3)' }}>
-          Нет аккаунта? Обратитесь к кассиру в магазине.
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)' }}>
+          Нет аккаунта?{' '}
+          <a href="/register" style={{ color: 'var(--accent)', fontWeight: 600 }}>Зарегистрироваться</a>
         </p>
       </div>
     </div>

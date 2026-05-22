@@ -149,7 +149,8 @@ function DashboardPage() {
 
   const copyRef = () => {
     if (data?.referral_code) {
-      navigator.clipboard.writeText(data.referral_code);
+      const link = `${window.location.origin}/register?ref=${data.referral_code}`;
+      navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -388,7 +389,7 @@ function DashboardPage() {
               <Share2 size={14} /> Пригласи друга — получи бонус!
             </h3>
             <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
-              Поделитесь вашим кодом с другом. Вы получите <strong style={{ color: 'var(--accent)' }}>100 KGS</strong>, а друг — <strong style={{ color: 'var(--accent)' }}>50 KGS</strong>!
+              Поделитесь ссылкой с другом. Вы получите <strong style={{ color: 'var(--accent)' }}>{referralInfo?.bonus_per_invite || 100} KGS</strong>, а друг — <strong style={{ color: 'var(--accent)' }}>{referralInfo?.invitee_bonus || 50} KGS</strong>!
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,230,0,0.06)', borderRadius: 12, padding: '12px 16px' }}>
               <div style={{ flex: 1 }}>
@@ -401,21 +402,23 @@ function DashboardPage() {
               </button>
             </div>
 
-            {/* Share buttons */}
+            {/* Share buttons — endi /register?ref= ssylka bilan */}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button onClick={() => {
-                const text = `🎁 Смарт Центр: Получи 50 KGS бонус! Мой код: ${data.referral_code}\n📱 https://cabinet.smartcentr.store`;
+                const link = `${window.location.origin}/register?ref=${data.referral_code}`;
+                const text = `🎁 Смарт Центр дан ${referralInfo?.invitee_bonus || 50} KGS бонус ол!\n\n📱 Рўйхатдан ўт: ${link}`;
                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
               }}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Smartphone size={14} /> WhatsApp
               </button>
               <button onClick={() => {
-                const text = `🎁 Смарт Центр: Получи 50 KGS бонус! Мой код: ${data.referral_code} 📱 https://cabinet.smartcentr.store`;
+                const link = `${window.location.origin}/register?ref=${data.referral_code}`;
+                const text = `🎁 Смарт Центр: ${referralInfo?.invitee_bonus || 50} KGS бонус! ${link}`;
                 if (navigator.share) {
-                  navigator.share({ title: 'Смарт Центр — Бонус', text });
+                  navigator.share({ title: 'Смарт Центр — Бонус', text, url: link });
                 } else {
-                  navigator.clipboard.writeText(text);
+                  navigator.clipboard.writeText(link);
                 }
               }}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'rgba(255,255,255,0.08)', color: '#e2eaf6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -423,15 +426,86 @@ function DashboardPage() {
               </button>
             </div>
 
-            {referralInfo && (
-              <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text2)', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Приглашено друзей: <strong style={{ color: 'var(--accent)' }}>{referralInfo.invited_count}</strong></span>
-                <span>Заработано: <strong style={{ color: '#22c55e' }}>{(referralInfo.invited_count || 0) * 100} KGS</strong></span>
+            {/* 📋 Qanday ishlaydi — podskazzka */}
+            <div style={{
+              marginTop: 14, padding: '14px 16px', borderRadius: 12,
+              background: 'linear-gradient(135deg, rgba(37,211,102,0.08), rgba(255,230,0,0.06))',
+              border: '1px solid rgba(37,211,102,0.15)',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#25D366', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                💡 Qanday ishlaydi?
               </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { step: '1', icon: '📋', text: '"Копировать" tugmasini bosing' },
+                  { step: '2', icon: '📲', text: 'WhatsApp statusga yoki do\'stlarga yuboring' },
+                  { step: '3', icon: '👤', text: 'Do\'stingiz ssylka orqali ro\'yxatdan o\'tadi' },
+                  { step: '4', icon: '🎁', text: `Sizga ${referralInfo?.bonus_per_invite || 100} KGS, do'stingizga ${referralInfo?.invitee_bonus || 50} KGS bonus tushadi!` },
+                ].map((item) => (
+                  <div key={item.step} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: 'rgba(37,211,102,0.15)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, flexShrink: 0,
+                    }}>{item.icon}</div>
+                    <span style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.4 }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                marginTop: 10, padding: '8px 12px', borderRadius: 8,
+                background: 'rgba(255,230,0,0.08)', fontSize: 11.5, color: 'var(--accent)',
+                fontWeight: 600, textAlign: 'center',
+              }}>
+                ⚡ Qancha ko'p taklif qilsangiz — shuncha ko'p bonus!
+              </div>
+            </div>
+
+            {referralInfo && (
+              <>
+                <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text2)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Приглашено: <strong style={{ color: 'var(--accent)' }}>{referralInfo.invited_count}</strong></span>
+                  <span>Заработано: <strong style={{ color: '#22c55e' }}>{referralInfo.total_earned?.toLocaleString('ru-RU') || 0} KGS</strong></span>
+                </div>
+
+                {/* Список приглашённых */}
+                {referralInfo.invites && referralInfo.invites.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Ваши приглашённые:</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {referralInfo.invites.slice(0, 10).map((inv: any, i: number) => (
+                        <div key={i} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{
+                              width: 28, height: 28, borderRadius: '50%',
+                              background: 'rgba(255,230,0,0.1)', display: 'flex',
+                              alignItems: 'center', justifyContent: 'center',
+                              fontSize: 12, fontWeight: 700, color: 'var(--accent)',
+                            }}>{i + 1}</div>
+                            <span style={{ fontSize: 13, fontWeight: 500 }}>{inv.name}</span>
+                          </div>
+                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+                            {inv.date ? new Date(inv.date).toLocaleDateString('ru-RU') : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Кто меня пригласил */}
+                {referralInfo.referred_by_name && (
+                  <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text3)', padding: '8px 12px', background: 'rgba(96,165,250,0.06)', borderRadius: 10 }}>
+                    Вас пригласил: <strong style={{ color: '#60a5fa' }}>{referralInfo.referred_by_name}</strong>
+                  </div>
+                )}
+              </>
             )}
           </div>
-
-          {/* Referral code input removed — referral applies only during registration */}
 
           {/* Coupons */}
           <MyCoupons onBalanceChange={fetchData} />

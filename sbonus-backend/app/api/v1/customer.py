@@ -264,22 +264,64 @@ async def get_referral_info(
     db: AsyncSession = Depends(get_db),
     current: dict = Depends(get_current_customer),
 ) -> dict:
-    """Информация о реферальной программе клиента."""
+    """Информация о реферальной программе клиента — все данные из DB Settings."""
     customer_id = current["sub"]
     result = await db.execute(select(Customer).where(Customer.id == customer_id))
     customer = result.scalar_one_or_none()
     if not customer:
         raise HTTPException(status_code=404, detail={"message": "Клиент не найден"})
 
-    # Количество приглашённых
-    invited_count = (await db.execute(
-        select(func.count()).select_from(Customer).where(Customer.referred_by == customer.id)
-    )).scalar() or 0
+    # Читаем бонусы из DB Settings
+    from app.core.config import get_settings
+    env_settings = get_settings()
+    ref_settings = await db.execute(
+        select(Setting).where(Setting.key.in_([
+            "REFERRAL_BONUS_INVITER", "REFERRAL_BONUS_INVITEE", "REFERRAL_DAILY_LIMIT",
+        ]))
+    )
+    db_ref = {s.key: s.value for s in ref_settings.scalars().all()}
+    inviter_bonus = Decimal(db_ref["REFERRAL_BONUS_INVITER"]) if db_ref.get("REFERRAL_BONUS_INVITER") else env_settings.referral_bonus_inviter
+    invitee_bonus = Decimal(db_ref["REFERRAL_BONUS_INVITEE"]) if db_ref.get("REFERRAL_BONUS_INVITEE") else env_settings.referral_bonus_invitee
+
+    # Приглашённые
+    invited_result = await db.execute(
+        select(Customer.id, Customer.full_name, Customer.created_at)
+        .where(Customer.referred_by == customer.id)
+        .order_by(Customer.created_at.desc())
+    )
+    invites = invited_result.all()
+
+    # Реальные заработки из транзакций
+    total_earned = (await db.execute(
+        select(func.coalesce(func.sum(Transaction.amount), 0))
+        .where(
+            Transaction.customer_id == customer.id,
+            Transaction.type == TransactionType.REFERRAL,
+        )
+    )).scalar() or Decimal("0")
+
+    # Кто пригласил меня
+    referred_by_name = None
+    if customer.referred_by:
+        referrer = (await db.execute(
+            select(Customer.full_name).where(Customer.id == customer.referred_by)
+        )).scalar_one_or_none()
+        referred_by_name = referrer
 
     return {
         "referral_code": customer.referral_code,
-        "invited_count": invited_count,
-        "bonus_per_invite": float(Decimal("100")),
+        "invited_count": len(invites),
+        "bonus_per_invite": float(inviter_bonus),
+        "invitee_bonus": float(invitee_bonus),
+        "total_earned": float(total_earned),
+        "referred_by_name": referred_by_name,
+        "invites": [
+            {
+                "name": inv.full_name or "Клиент",
+                "date": inv.created_at.isoformat() if inv.created_at else None,
+            }
+            for inv in invites
+        ],
     }
 
 

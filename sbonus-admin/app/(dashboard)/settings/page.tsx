@@ -1,5 +1,5 @@
 "use client";
-import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift, Timer, Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift, Timer, Lock, Eye, EyeOff, CheckCircle2, Users } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -59,6 +59,9 @@ export default function SettingsPage() {
     WHEEL_FREE_SPINS_ON_REGISTER: "1",
     BONUS_EXPIRATION_DAYS: "365",
     BONUS_EXPIRATION_WARNING_DAYS: "14",
+    REFERRAL_BONUS_INVITER: "100",
+    REFERRAL_BONUS_INVITEE: "50",
+    REFERRAL_DAILY_LIMIT: "5",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
@@ -548,7 +551,71 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* BONUS EXPIRATION CARD */}
+      {/* REFERRAL SETTINGS CARD */}
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardTitleWrapper}>
+            <Users size={24} color={colors.accent} />
+            <div>
+              <h2 style={styles.cardTitle}>Реферальная программа</h2>
+              <p style={styles.cardDesc}>Настройки бонусов за приглашение друзей</p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
+            <div>
+              <label style={styles.inputLabel}>Бонус пригласившему (KGS)</label>
+              <input
+                style={styles.input}
+                type="number"
+                min={0}
+                value={settings.REFERRAL_BONUS_INVITER}
+                onChange={(e) => handleChange("REFERRAL_BONUS_INVITER", e.target.value)}
+                placeholder="100"
+              />
+            </div>
+            <div>
+              <label style={styles.inputLabel}>Бонус приглашённому (KGS)</label>
+              <input
+                style={styles.input}
+                type="number"
+                min={0}
+                value={settings.REFERRAL_BONUS_INVITEE}
+                onChange={(e) => handleChange("REFERRAL_BONUS_INVITEE", e.target.value)}
+                placeholder="50"
+              />
+            </div>
+            <div>
+              <label style={styles.inputLabel}>Лимит в день (на 1 клиента)</label>
+              <input
+                style={styles.input}
+                type="number"
+                min={1}
+                max={50}
+                value={settings.REFERRAL_DAILY_LIMIT}
+                onChange={(e) => handleChange("REFERRAL_DAILY_LIMIT", e.target.value)}
+                placeholder="5"
+              />
+            </div>
+          </div>
+          <div style={{
+            background: `${colors.accent}10`,
+            border: `1px solid ${colors.accent}30`,
+            borderRadius: "12px",
+            padding: "12px 16px",
+            fontSize: "13px",
+            color: colors.textMuted,
+            lineHeight: 1.6,
+          }}>
+            <strong style={{ color: colors.accent }}>Как работает:</strong> Клиент делится ссылкой с другом →
+            друг регистрируется → оба получают бонус автоматически. Ссылка: <code>cabinet.smartcentr.store/register?ref=REF-XXX</code>
+          </div>
+        </div>
+      </div>
+
+            {/* BONUS EXPIRATION CARD */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardTitleWrapper}>

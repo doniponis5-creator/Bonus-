@@ -20,6 +20,7 @@ from app.models import (
     BonusAccount,
     Customer,
     PromoCode,
+    Setting,
     Tier,
     Transaction,
     TransactionType,
@@ -377,12 +378,30 @@ class BonusService:
             message_kg=f"🎂 Туулган күнүңүз менен! +{bonus} KGS белек!",
         )
 
+    # ─── helpers: read referral config from DB Settings ───
+
+    async def _get_referral_settings(self) -> dict:
+        """Читает REFERRAL_BONUS_INVITER/INVITEE/DAILY_LIMIT из DB Settings (fallback на env)."""
+        result = await self.db.execute(
+            select(Setting).where(Setting.key.in_([
+                "REFERRAL_BONUS_INVITER",
+                "REFERRAL_BONUS_INVITEE",
+                "REFERRAL_DAILY_LIMIT",
+            ]))
+        )
+        db_settings = {s.key: s.value for s in result.scalars().all()}
+        return {
+            "inviter_bonus": Decimal(db_settings["REFERRAL_BONUS_INVITER"]) if db_settings.get("REFERRAL_BONUS_INVITER") else settings.referral_bonus_inviter,
+            "invitee_bonus": Decimal(db_settings["REFERRAL_BONUS_INVITEE"]) if db_settings.get("REFERRAL_BONUS_INVITEE") else settings.referral_bonus_invitee,
+            "daily_limit": int(db_settings.get("REFERRAL_DAILY_LIMIT") or "5"),
+        }
+
     # ─── REFERRAL ───
 
     async def apply_referral(
         self, customer_id: uuid.UUID, referral_code: str
     ) -> BonusResult:
-        """Применить реферальный код."""
+        """Применить реферальный код. Бонусы читаются из DB Settings."""
         # Найти пригласившего
         result = await self.db.execute(
             select(Customer).where(Customer.referral_code == referral_code)
@@ -408,11 +427,14 @@ class BonusService:
                 detail={"code": "REFERRAL_ALREADY_USED", "message": "Реферальный код уже использован"},
             )
 
-        # Обновить referred_by
-        customer.referred_by = inviter.id
+        # Читаем настройки из DB
+        ref_cfg = await self._get_referral_settings()
+        inviter_bonus = ref_cfg["inviter_bonus"]
+        invitee_bonus = ref_cfg["invitee_bonus"]
+        daily_limit = ref_cfg["daily_limit"]
 
-        # Проверка дневного лимита реферальных бонусов (макс. 5 рефералов в день)
-        from datetime import datetime, timezone, timedelta
+        # Проверка дневного лимита ПЕРЕД мутацией данных
+        from datetime import datetime, timezone
         today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         daily_refs = (await self.db.execute(
             select(func.count(Transaction.id)).where(
@@ -421,31 +443,34 @@ class BonusService:
                 Transaction.created_at >= today_start,
             )
         )).scalar() or 0
-        if daily_refs >= 5:
+        if daily_refs >= daily_limit:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"code": "REFERRAL_DAILY_LIMIT", "message": "Дневной лимит реферальных бонусов достигнут"},
             )
 
+        # Обновить referred_by (после всех проверок)
+        customer.referred_by = inviter.id
+
         # Бонус пригласившему
         inviter_account = await self._get_or_create_account(inviter.id)
-        inviter_account.balance += settings.referral_bonus_inviter
-        inviter_account.total_earned += settings.referral_bonus_inviter
+        inviter_account.balance += inviter_bonus
+        inviter_account.total_earned += inviter_bonus
         self.db.add(Transaction(
             customer_id=inviter.id,
             type=TransactionType.REFERRAL,
-            amount=settings.referral_bonus_inviter,
+            amount=inviter_bonus,
             note=f"👥 Реферал: {customer.full_name} зарегистрирован",
         ))
 
         # Бонус новому клиенту
         account = await self._get_or_create_account(customer_id)
-        account.balance += settings.referral_bonus_invitee
-        account.total_earned += settings.referral_bonus_invitee
+        account.balance += invitee_bonus
+        account.total_earned += invitee_bonus
         txn = Transaction(
             customer_id=customer_id,
             type=TransactionType.REFERRAL,
-            amount=settings.referral_bonus_invitee,
+            amount=invitee_bonus,
             note=f"👤 Приветственный бонус по реферальному коду",
         )
         self.db.add(txn)
@@ -453,15 +478,78 @@ class BonusService:
 
         tier = await self._get_tier(customer.tier_id)
 
+        # WhatsApp уведомления обеим сторонам (await — нужен DB session для credentials)
+        await self._notify_referral_whatsapp(
+            inviter=inviter,
+            invitee=customer,
+            inviter_bonus=inviter_bonus,
+            invitee_bonus=invitee_bonus,
+            inviter_balance=inviter_account.balance,
+            invitee_balance=account.balance,
+        )
+
         return BonusResult(
             transaction_id=txn.id,
             type="referral",
-            amount=settings.referral_bonus_invitee,
+            amount=invitee_bonus,
             new_balance=account.balance,
             tier_name=tier.name,
-            message_ru=f"👥 Реферал применён! +{settings.referral_bonus_invitee} KGS",
-            message_kg=f"👥 Реферал колдонулду! +{settings.referral_bonus_invitee} KGS",
+            message_ru=f"👥 Реферал применён! +{invitee_bonus} KGS",
+            message_kg=f"👥 Реферал колдонулду! +{invitee_bonus} KGS",
         )
+
+    async def _notify_referral_whatsapp(
+        self, inviter: Customer, invitee: Customer,
+        inviter_bonus: Decimal, invitee_bonus: Decimal,
+        inviter_balance: Decimal, invitee_balance: Decimal,
+    ):
+        """Отправить WhatsApp уведомления обеим сторонам реферала."""
+        from app.services.whatsapp import send_whatsapp_message
+        global _wa_cache, _wa_cache_ttl
+        import time as _time
+
+        now = _time.monotonic()
+        if now > _wa_cache_ttl:
+            result = await self.db.execute(select(Setting).where(Setting.key.in_([
+                "ENABLE_WHATSAPP_NOTIFICATIONS",
+                "GREENAPI_INSTANCE_ID",
+                "GREENAPI_API_TOKEN",
+            ])))
+            _wa_cache = {s.key: s.value for s in result.scalars().all()}
+            _wa_cache_ttl = now + _WA_CACHE_SECONDS
+
+        if _wa_cache.get("ENABLE_WHATSAPP_NOTIFICATIONS") != "true":
+            return
+        instance_id = _wa_cache.get("GREENAPI_INSTANCE_ID")
+        api_token = _wa_cache.get("GREENAPI_API_TOKEN")
+        if not instance_id or not api_token:
+            return
+
+        # Сообщение пригласившему
+        inviter_msg = (
+            f"🎉 *{settings.shop_bonus_name}*\n\n"
+            f"Ваш друг *{invitee.full_name}* присоединился по вашему реферальному коду!\n"
+            f"💰 Вам начислено *+{inviter_bonus} KGS*\n"
+            f"📊 Ваш баланс: *{inviter_balance} KGS*\n\n"
+            f"Продолжайте приглашать друзей и зарабатывать бонусы! 🚀"
+        )
+        asyncio.create_task(send_whatsapp_message(
+            phone=inviter.phone, message=inviter_msg,
+            instance_id=instance_id, api_token=api_token,
+        ))
+
+        # Сообщение новому клиенту
+        invitee_msg = (
+            f"🎉 *Добро пожаловать в {settings.shop_bonus_name}!*\n\n"
+            f"Вы присоединились по приглашению *{inviter.full_name}*\n"
+            f"🎁 Ваш приветственный бонус: *+{invitee_bonus} KGS*\n"
+            f"📊 Ваш баланс: *{invitee_balance} KGS*\n\n"
+            f"📱 Личный кабинет: {settings.customer_cabinet_base_url}"
+        )
+        asyncio.create_task(send_whatsapp_message(
+            phone=invitee.phone, message=invitee_msg,
+            instance_id=instance_id, api_token=api_token,
+        ))
 
     # ─── PROMO CODE ───
 
