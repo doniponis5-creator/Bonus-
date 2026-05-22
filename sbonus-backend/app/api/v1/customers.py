@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.redis import check_rate_limit
 from app.core.security import UserRole, get_current_user, require_role
-from app.models import BonusAccount, Customer, Tier, Transaction
+from app.models import BonusAccount, Customer, Tier, Transaction, Setting
 from app.schemas import BalanceResponse, CustomerRegisterRequest, CustomerResponse
 from app.utils import normalize_phone
 
@@ -116,7 +116,19 @@ async def get_referrer_name(
     # Маскируем: "Алишер Каримов" → "Ал*** Ка***"
     parts = name.split()
     masked = " ".join(p[:2] + "***" if len(p) > 2 else p[0] + "**" for p in parts)
-    return {"name": masked}
+    # Получаем суммы бонусов из DB Settings
+    invitee_bonus = "50"
+    inviter_bonus = "100"
+    try:
+        r1 = await db.execute(select(Setting.value).where(Setting.key == "REFERRAL_BONUS_INVITEE"))
+        v1 = r1.scalar_one_or_none()
+        if v1: invitee_bonus = v1
+        r2 = await db.execute(select(Setting.value).where(Setting.key == "REFERRAL_BONUS_INVITER"))
+        v2 = r2.scalar_one_or_none()
+        if v2: inviter_bonus = v2
+    except Exception:
+        pass
+    return {"name": masked, "invitee_bonus": invitee_bonus, "inviter_bonus": inviter_bonus}
 
 
 @router.get("/search", response_model=list[CustomerResponse])

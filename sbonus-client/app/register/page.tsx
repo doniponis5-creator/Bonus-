@@ -26,6 +26,7 @@ function RegisterForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [referrerName, setReferrerName] = useState('');
+  const [inviteeBonus, setInviteeBonus] = useState('50');
 
   // Если уже авторизован — на главную
   useEffect(() => {
@@ -37,7 +38,10 @@ function RegisterForm() {
     if (!refCode) return;
     fetch(`${API_URL}/api/v1/customers/referrer-name/${encodeURIComponent(refCode)}`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.name) setReferrerName(data.name); })
+      .then(data => {
+        if (data?.name) setReferrerName(data.name);
+        if (data?.invitee_bonus) setInviteeBonus(data.invitee_bonus);
+      })
       .catch(() => {});
   }, [refCode]);
 
@@ -72,7 +76,8 @@ function RegisterForm() {
   if (success) {
     return (
       <div className="center">
-        <div style={{ maxWidth: 360, width: '100%', textAlign: 'center' }}>
+        <div style={{ maxWidth: 380, width: '100%', textAlign: 'center' }}>
+          {/* Success icon */}
           <div style={{
             width: 80, height: 80, borderRadius: '50%',
             background: 'rgba(34,197,94,0.15)',
@@ -81,29 +86,70 @@ function RegisterForm() {
           }}>
             <CheckCircle2 size={40} color="#22c55e" />
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12, color: 'var(--text)' }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'var(--text)' }}>
             Вы зарегистрированы!
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 8 }}>
-            Мы отправили ссылку для входа в <strong style={{ color: '#25D366' }}>WhatsApp</strong>.
-          </p>
-          <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 24 }}>
-            Откройте сообщение и нажмите на ссылку, чтобы войти в личный кабинет.
-          </p>
+
+          {/* Bonus card — show exact amount */}
           {refCode && (
             <div style={{
-              background: 'rgba(255,230,0,0.08)', borderRadius: 12, padding: '12px 16px',
-              marginBottom: 24, border: '1px solid rgba(255,230,0,0.2)',
+              background: 'linear-gradient(135deg, rgba(255,230,0,0.12), rgba(124,111,255,0.08))',
+              borderRadius: 16, padding: '20px 24px', margin: '16px 0',
+              border: '1px solid rgba(255,230,0,0.25)',
             }}>
-              <Gift size={16} color="var(--accent)" style={{ marginBottom: 4 }} />
-              <p style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
-                Реферальный бонус начислен!
+              <Gift size={24} color="var(--accent)" />
+              <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--accent)', margin: '8px 0 4px' }}>
+                +{inviteeBonus} KGS
+              </div>
+              <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>
+                Бонус зачислен на ваш счёт!
               </p>
             </div>
           )}
-          <button className="btn btn-ghost" onClick={() => router.push('/login')}>
-            Перейти к входу
-          </button>
+
+          {/* WhatsApp instruction */}
+          <div style={{
+            background: 'rgba(37,211,102,0.08)', borderRadius: 14, padding: '16px 20px',
+            margin: '16px 0', border: '1px solid rgba(37,211,102,0.15)', textAlign: 'left',
+          }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#25D366', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              📱 Как войти в кабинет?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <p style={{ fontSize: 13, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ background: 'rgba(37,211,102,0.15)', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#25D366', flexShrink: 0 }}>1</span>
+                Откройте WhatsApp
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ background: 'rgba(37,211,102,0.15)', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#25D366', flexShrink: 0 }}>2</span>
+                Найдите сообщение от Смарт Центр
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ background: 'rgba(37,211,102,0.15)', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#25D366', flexShrink: 0 }}>3</span>
+                Нажмите на ссылку — вы в кабинете!
+              </p>
+            </div>
+          </div>
+
+          {/* CTA buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+            <a href="https://wa.me/" target="_blank" rel="noopener" style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '14px 0', borderRadius: 12, fontSize: 15, fontWeight: 700,
+              background: '#25D366', color: '#fff', border: 'none', cursor: 'pointer',
+              textDecoration: 'none',
+            }}>
+              📱 Открыть WhatsApp
+            </a>
+            <button onClick={() => router.push('/login')} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
+              background: 'rgba(255,255,255,0.06)', color: 'var(--text2)',
+              border: '1px solid var(--border)', cursor: 'pointer',
+            }}>
+              Войти по номеру телефона
+            </button>
+          </div>
         </div>
       </div>
     );
