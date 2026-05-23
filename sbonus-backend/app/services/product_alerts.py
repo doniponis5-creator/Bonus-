@@ -17,7 +17,7 @@ from decimal import Decimal
 
 from sqlalchemy import func, select
 
-from app.core.database import async_session_factory
+from app.core.database import async_session
 from app.models import Product, PurchaseItem, Setting
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ async def send_product_daily_digest():
     Ежедневный дайджест по товарам — отправка в WhatsApp/Telegram.
     Запускается cron'ом в 08:00.
     """
-    async with async_session_factory() as db:
+    async with async_session() as db:
         try:
             cfg = await _get_settings(db)
 
@@ -139,7 +139,7 @@ async def check_critical_stock():
     Запускается каждые 30 минут.
     Отправляет алерт только если товар ТОЛЬКО ЧТО стал критичным (0 остаток).
     """
-    async with async_session_factory() as db:
+    async with async_session() as db:
         try:
             cfg = await _get_settings(db)
 
