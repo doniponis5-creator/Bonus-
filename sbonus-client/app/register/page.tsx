@@ -65,6 +65,20 @@ function RegisterForm() {
         setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
       } else {
         setSuccess(true);
+        // Track QR scan for analytics
+        try {
+          await fetch(`${API_URL}/api/v1/qr-analytics/scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              qr_code: 'REGISTER_QR',
+              utm_source: refCode ? 'referral' : 'qr_banner',
+              utm_medium: 'qr_code',
+              utm_campaign: refCode || 'self_register',
+              device_type: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+            }),
+          });
+        } catch {}
       }
     } catch {
       setError('Ошибка сети. Проверьте подключение.');
