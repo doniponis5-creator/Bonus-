@@ -19,7 +19,8 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.redis import check_rate_limit
 from app.core.security import UserRole, create_customer_token, require_role
-from app.models import Customer, CustomerAuthToken, Setting
+from decimal import Decimal
+from app.models import Customer, CustomerAuthToken, Setting, Transaction, TransactionType, BonusAccount
 from pydantic import BaseModel
 from app.schemas import (
     CustomerMagicLinkRequest,
@@ -245,7 +246,7 @@ async def self_register(
     3. Система создаёт клиента + начисляет реферальный бонус
     4. Отправляет magic-link в WhatsApp для входа в кабинет
     """
-    from app.models import BonusAccount, Tier
+    from app.models import Tier
 
     phone = normalize_phone(body.phone)
     if not phone or len(phone) < 12 or not phone.startswith("+996"):
@@ -304,6 +305,28 @@ async def self_register(
     account = BonusAccount(customer_id=customer.id)
     db.add(account)
     await db.flush()
+
+    # ─── Welcome bonus (100 сом по умолчанию) ───
+    try:
+        wb_result = await db.execute(
+            select(Setting).where(Setting.key == "WELCOME_BONUS_AMOUNT")
+        )
+        wb_setting = wb_result.scalar_one_or_none()
+        welcome_amount = Decimal(wb_setting.value) if wb_setting else Decimal("100")
+
+        if welcome_amount > 0:
+            account.balance += welcome_amount
+            account.total_earned += welcome_amount
+            db.add(Transaction(
+                customer_id=customer.id,
+                type=TransactionType.PROMO,
+                amount=welcome_amount,
+                note="🎁 Приветственный бонус за регистрацию",
+            ))
+            await db.flush()
+            logger.info(f"Welcome bonus {welcome_amount} KGS → {customer.phone}")
+    except Exception as e:
+        logger.warning(f"Welcome bonus failed for {customer.phone}: {e}")
 
     # Автоматический реферальный бонус
     if referral_code_value:
