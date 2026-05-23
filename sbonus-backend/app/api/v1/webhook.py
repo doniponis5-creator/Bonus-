@@ -30,13 +30,16 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models import BonusAccount, Customer, CustomerDebt, Tier, Transaction, TransactionType
+from app.models import BonusAccount, Customer, CustomerDebt, Product, PurchaseItem, Tier, Transaction, TransactionType
 from app.schemas import (
     Webhook1CPurchaseRequest,
     Webhook1CSpendRequest,
     Webhook1CRefundRequest,
     Webhook1CRegisterRequest,
     Webhook1CDebtUpdateRequest,
+    Webhook1CProductsSyncRequest,
+    Webhook1CStockUpdateRequest,
+    PurchaseItemInput,
 )
 from app.services.bonus import BonusService
 from app.utils import normalize_phone
@@ -159,6 +162,31 @@ async def webhook_1c_purchase(
         receipt_number=body.receipt_number,
         note=f"1С: чек #{body.receipt_number}",
     )
+    await db.flush()
+
+    # ── Сохранить позиции чека (товары) если переданы ──
+    items_saved = 0
+    if body.items:
+        for item in body.items:
+            prod_result = await db.execute(
+                select(Product).where(Product.sku == item.sku)
+            )
+            product = prod_result.scalar_one_or_none()
+            if product:
+                pi = PurchaseItem(
+                    transaction_id=result.transaction_id if hasattr(result, "transaction_id") else None,
+                    product_id=product.id,
+                    receipt_number=body.receipt_number,
+                    quantity=item.quantity,
+                    price=item.price,
+                    total=(item.quantity * item.price).quantize(Decimal("0.01")),
+                )
+                db.add(pi)
+                # Обновить остаток и дату последней продажи
+                product.current_stock = max(Decimal("0"), product.current_stock - item.quantity)
+                product.last_sold_at = func.now()
+                items_saved += 1
+
     await db.commit()
 
     return {
@@ -172,6 +200,7 @@ async def webhook_1c_purchase(
         "new_balance": float(result.new_balance),
         "tier": result.tier_name,
         "tier_upgraded": result.tier_upgraded,
+        "items_saved": items_saved,
         "message": result.message_ru,
     }
 
@@ -585,7 +614,154 @@ async def webhook_1c_debt_update(
 
 
 # ═══════════════════════════════════════════
-# 8. GREEN API — входящие WhatsApp
+# 8. PRODUCTS SYNC — синхронизация товаров из 1С
+# ═══════════════════════════════════════════
+
+@router.post("/1c/products-sync", status_code=201)
+async def webhook_1c_products_sync(
+    body: Webhook1CProductsSyncRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_signature: str = Header(None, alias="X-Signature"),
+) -> dict:
+    """
+    **Пакетная синхронизация товаров из 1С.**
+
+    1С отправляет полный список товаров (до 5000 за раз).
+    Если товар с таким SKU уже есть — обновляется, если нет — создаётся.
+
+    Рекомендуется вызывать ежедневно или при изменении каталога.
+    """
+    await _security_check(request, x_signature)
+
+    from datetime import datetime as dt, timezone
+
+    created = 0
+    updated = 0
+    now = dt.now(timezone.utc)
+
+    for item in body.products:
+        result = await db.execute(
+            select(Product).where(Product.sku == item.sku)
+        )
+        product = result.scalar_one_or_none()
+
+        if product:
+            # Обновить существующий товар
+            product.name = item.name
+            product.category = item.category
+            product.barcode = item.barcode
+            product.unit = item.unit
+            product.price = item.price
+            product.cost_price = item.cost_price
+            product.current_stock = item.current_stock
+            product.min_stock_level = item.min_stock_level
+            product.supplier = item.supplier
+            product.last_synced_at = now
+            product.is_active = True
+            updated += 1
+        else:
+            # Создать новый товар
+            product = Product(
+                sku=item.sku,
+                name=item.name,
+                category=item.category,
+                barcode=item.barcode,
+                unit=item.unit,
+                price=item.price,
+                cost_price=item.cost_price,
+                current_stock=item.current_stock,
+                min_stock_level=item.min_stock_level,
+                supplier=item.supplier,
+                last_synced_at=now,
+            )
+            db.add(product)
+            created += 1
+
+    await db.commit()
+
+    # Подсчёт товаров с низким остатком
+    low_stock_result = await db.execute(
+        select(func.count()).select_from(Product).where(
+            Product.is_active == True,
+            Product.current_stock <= Product.min_stock_level,
+            Product.current_stock > 0,
+        )
+    )
+    low_stock_count = low_stock_result.scalar() or 0
+
+    out_of_stock_result = await db.execute(
+        select(func.count()).select_from(Product).where(
+            Product.is_active == True,
+            Product.current_stock <= 0,
+        )
+    )
+    out_of_stock_count = out_of_stock_result.scalar() or 0
+
+    return {
+        "success": True,
+        "event": "products_sync",
+        "created": created,
+        "updated": updated,
+        "total_processed": len(body.products),
+        "low_stock_count": low_stock_count,
+        "out_of_stock_count": out_of_stock_count,
+        "message": f"Синхронизация завершена: {created} новых, {updated} обновлённых товаров",
+    }
+
+
+# ═══════════════════════════════════════════
+# 9. STOCK UPDATE — пакетное обновление остатков
+# ═══════════════════════════════════════════
+
+@router.post("/1c/stock-update", status_code=201)
+async def webhook_1c_stock_update(
+    body: Webhook1CStockUpdateRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_signature: str = Header(None, alias="X-Signature"),
+) -> dict:
+    """
+    **Пакетное обновление остатков из 1С.**
+
+    Быстрый endpoint для обновления только остатков (без каталога).
+    Используется при инвентаризации или после закрытия смены.
+    """
+    await _security_check(request, x_signature)
+
+    from datetime import datetime as dt, timezone
+    now = dt.now(timezone.utc)
+
+    updated = 0
+    not_found_skus = []
+
+    for item in body.items:
+        result = await db.execute(
+            select(Product).where(Product.sku == item.sku)
+        )
+        product = result.scalar_one_or_none()
+
+        if product:
+            product.current_stock = item.current_stock
+            product.last_synced_at = now
+            updated += 1
+        else:
+            not_found_skus.append(item.sku)
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "event": "stock_update",
+        "updated": updated,
+        "not_found": len(not_found_skus),
+        "not_found_skus": not_found_skus[:20],  # Максимум 20 SKU в ответе
+        "message": f"Остатки обновлены: {updated} товаров",
+    }
+
+
+# ═══════════════════════════════════════════
+# 10. GREEN API — входящие WhatsApp
 # ═══════════════════════════════════════════
 
 @router.post("/greenapi")

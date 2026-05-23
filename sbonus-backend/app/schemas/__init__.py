@@ -267,6 +267,7 @@ class Webhook1CPurchaseRequest(BaseModel):
     branch_id: uuid.UUID = Field(..., description="UUID филиала")
     cashier_id: Optional[uuid.UUID] = Field(None, description="UUID кассира")
     receipt_number: str = Field(..., max_length=50, description="Номер чека из 1С")
+    items: Optional[list["PurchaseItemInput"]] = Field(None, description="Позиции чека (товары)")
 
 
 class Webhook1CSpendRequest(BaseModel):
@@ -427,3 +428,125 @@ class Webhook1CDebtUpdateRequest(BaseModel):
     amount: Decimal = Field(..., ge=0, description="Текущая задолженность в KGS (0 если погашена)")
     reference: Optional[str] = Field(None, max_length=100, description="Номер документа в 1С")
     note: Optional[str] = Field(None, max_length=255)
+
+
+# ═══════════════════════════════════════════
+# ТОВАР АНАЛИТИКА (1С интеграция)
+# ═══════════════════════════════════════════
+
+class ProductSyncItem(BaseModel):
+    """Один товар для синхронизации из 1С."""
+    sku: str = Field(..., max_length=50, description="Артикул товара в 1С")
+    name: str = Field(..., max_length=200, description="Наименование товара")
+    category: Optional[str] = Field(None, max_length=100, description="Категория товара")
+    barcode: Optional[str] = Field(None, max_length=50, description="Штрих-код")
+    unit: str = Field("шт", max_length=20, description="Единица измерения")
+    price: Decimal = Field(..., ge=0, description="Розничная цена в KGS")
+    cost_price: Optional[Decimal] = Field(None, ge=0, description="Себестоимость в KGS")
+    current_stock: Decimal = Field(..., ge=0, description="Текущий остаток")
+    min_stock_level: Decimal = Field(Decimal("5"), ge=0, description="Минимальный остаток для алерта")
+    supplier: Optional[str] = Field(None, max_length=200, description="Поставщик")
+
+
+class Webhook1CProductsSyncRequest(BaseModel):
+    """Пакетная синхронизация товаров из 1С."""
+    products: list[ProductSyncItem] = Field(..., min_length=1, max_length=5000, description="Список товаров")
+    branch_id: Optional[uuid.UUID] = Field(None, description="UUID филиала (необязательно)")
+
+
+class StockUpdateItem(BaseModel):
+    """Обновление остатка одного товара."""
+    sku: str = Field(..., max_length=50, description="Артикул товара")
+    current_stock: Decimal = Field(..., ge=0, description="Новый остаток")
+
+
+class Webhook1CStockUpdateRequest(BaseModel):
+    """Пакетное обновление остатков из 1С."""
+    items: list[StockUpdateItem] = Field(..., min_length=1, max_length=5000, description="Список остатков")
+
+
+class PurchaseItemInput(BaseModel):
+    """Позиция в чеке (товар + кол-во + цена)."""
+    sku: str = Field(..., max_length=50, description="Артикул товара")
+    quantity: Decimal = Field(..., gt=0, description="Количество")
+    price: Decimal = Field(..., ge=0, description="Цена за единицу в KGS")
+
+
+class ProductResponse(BaseModel):
+    """Ответ с информацией о товаре."""
+    id: uuid.UUID
+    sku: str
+    name: str
+    category: Optional[str] = None
+    unit: str = "шт"
+    price: float
+    cost_price: Optional[float] = None
+    current_stock: float
+    min_stock_level: float
+    supplier: Optional[str] = None
+    abc_class: Optional[str] = None
+    is_low_stock: bool = False
+    is_active: bool = True
+
+    model_config = {"from_attributes": True}
+
+
+class ProductAnalyticsSummary(BaseModel):
+    """Общая сводка товарной аналитики."""
+    total_products: int
+    active_products: int
+    low_stock_count: int
+    out_of_stock_count: int
+    dead_stock_count: int
+    abc_a_count: int
+    abc_b_count: int
+    abc_c_count: int
+    total_inventory_value: float
+    total_cost_value: Optional[float] = None
+
+
+class TopSellerItem(BaseModel):
+    """Топ продаваемый товар."""
+    sku: str
+    name: str
+    category: Optional[str] = None
+    total_sold: float
+    total_revenue: float
+    avg_daily_sales: float
+    current_stock: float
+    days_until_stockout: Optional[int] = None
+
+
+class LowStockAlert(BaseModel):
+    """Алерт: остаток ниже минимума."""
+    sku: str
+    name: str
+    category: Optional[str] = None
+    current_stock: float
+    min_stock_level: float
+    avg_daily_sales: float
+    days_until_stockout: Optional[int] = None
+    recommended_order: float
+    urgency: str  # critical / warning / info
+
+
+class DeadStockItem(BaseModel):
+    """Товар без продаж (замороженный капитал)."""
+    sku: str
+    name: str
+    category: Optional[str] = None
+    current_stock: float
+    price: float
+    frozen_capital: float
+    days_without_sale: int
+    last_sold_at: Optional[datetime] = None
+
+
+class FrequentlyBoughtTogether(BaseModel):
+    """Пара товаров, которые часто покупают вместе."""
+    product_a_sku: str
+    product_a_name: str
+    product_b_sku: str
+    product_b_name: str
+    times_bought_together: int
+    confidence: float  # 0-1

@@ -267,3 +267,23 @@ export const analyticsProAPI = {
   realtime: () => api.get('/api/v1/analytics-pro/realtime'),
   dailyTrends: (days = 30) => api.get(`/api/v1/analytics-pro/daily-trends?days=${days}`),
 };
+
+// ─── Product Analytics ───
+export const productAPI = {
+  summary: () => api.get('/api/v1/product-analytics/summary'),
+  products: (params?: Record<string, any>) => api.get('/api/v1/product-analytics/products', { params }),
+  topSellers: (days = 30, limit = 20, category?: string) =>
+    api.get(`/api/v1/product-analytics/top-sellers?days=${days}&limit=${limit}${category ? `&category=${category}` : ''}`),
+  lowStock: (includeOutOfStock = true) =>
+    api.get(`/api/v1/product-analytics/low-stock?include_out_of_stock=${includeOutOfStock}`),
+  deadStock: (days = 30) => api.get(`/api/v1/product-analytics/dead-stock?days=${days}`),
+  abc: (days = 90) => api.get(`/api/v1/product-analytics/abc?days=${days}`),
+  recalculateAbc: (days = 90) => api.post(`/api/v1/product-analytics/recalculate-abc?days=${days}`),
+  margins: (days = 30, limit = 30, sort = 'margin_desc') =>
+    api.get(`/api/v1/product-analytics/margins?days=${days}&limit=${limit}&sort=${sort}`),
+  frequentlyBought: (days = 90, minCount = 3) =>
+    api.get(`/api/v1/product-analytics/frequently-bought?days=${days}&min_count=${minCount}`),
+  settings: () => api.get('/api/v1/product-analytics/settings'),
+  updateSettings: (params: Record<string, any>) => api.put('/api/v1/product-analytics/settings', null, { params }),
+  dailyDigest: () => api.get('/api/v1/product-analytics/daily-digest'),
+};

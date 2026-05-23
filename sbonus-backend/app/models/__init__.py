@@ -456,6 +456,71 @@ class CustomerDebt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class Product(Base):
+    """
+    Товарлар каталоги (1С'дан sync).
+    SKU — уникальный идентификатор товара в 1С.
+    """
+    __tablename__ = "products"
+    __table_args__ = (
+        Index("ix_products_sku", "sku", unique=True),
+        Index("ix_products_category", "category"),
+        Index("ix_products_is_active", "is_active"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sku: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    barcode: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    unit: Mapped[str] = mapped_column(String(20), nullable=False, default="шт")
+    price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    cost_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    current_stock: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    min_stock_level: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("5"))
+    supplier: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    abc_class: Mapped[str | None] = mapped_column(String(1), nullable=True)  # A/B/C classification
+    last_sold_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    purchase_items: Mapped[list["PurchaseItem"]] = relationship(back_populates="product")
+
+
+class PurchaseItem(Base):
+    """
+    Товарлар в чеке — каждая позиция покупки.
+    Связан с Transaction (EARN) и Product.
+    """
+    __tablename__ = "purchase_items"
+    __table_args__ = (
+        Index("ix_purchase_items_transaction_id", "transaction_id"),
+        Index("ix_purchase_items_product_id", "product_id"),
+        Index("ix_purchase_items_created_at", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True
+    )
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("products.id"), nullable=False
+    )
+    receipt_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    product: Mapped["Product"] = relationship(back_populates="purchase_items")
+
+
 # ═══════════════════════════════════════════
 # SQL для иммутабельности transactions
 # ═══════════════════════════════════════════

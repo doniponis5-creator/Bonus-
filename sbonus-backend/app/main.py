@@ -41,6 +41,7 @@ from app.services.customer_telegram_bot import (
     start_customer_bot,
     stop_customer_bot,
 )
+from app.services.product_alerts import send_product_daily_digest, check_critical_stock
 
 settings = get_settings()
 logger = get_logger("main")
@@ -155,6 +156,22 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
+    # Cron: Товарный дайджест (WhatsApp) — каждый день 08:00
+    scheduler.add_job(
+        send_product_daily_digest,
+        CronTrigger(hour=8, minute=0),
+        id="product_daily_digest",
+        replace_existing=True,
+    )
+
+    # Cron: Проверка критических остатков — каждые 30 минут
+    scheduler.add_job(
+        check_critical_stock,
+        CronTrigger(minute="*/30"),
+        id="product_critical_stock",
+        replace_existing=True,
+    )
+
     scheduler.start()
 
     # Telegram bot polling (обработка команд)
@@ -169,6 +186,7 @@ async def lifespan(app: FastAPI):
     logger.info("Cron: smart comeback reminder at 12:00 daily (max 2 per cycle, 50/run)")
     logger.info("Cron: WA auto-triggers: birthday 09:30 (sleeping DISABLED → smart reminder)")
     logger.info("Cron: Telegram reports at 09:00 & 21:00 daily")
+    logger.info("Cron: Product daily digest at 08:00, critical stock check every 30 min")
     logger.info("Server started! Swagger: http://localhost:8000/docs")
     logger.info("=" * 50)
 
