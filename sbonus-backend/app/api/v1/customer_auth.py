@@ -307,6 +307,7 @@ async def self_register(
     await db.flush()
 
     # ─── Welcome bonus (100 сом по умолчанию) ───
+    welcome_amount = Decimal("0")
     try:
         wb_result = await db.execute(
             select(Setting).where(Setting.key == "WELCOME_BONUS_AMOUNT")
@@ -338,7 +339,7 @@ async def self_register(
             logger.warning(f"Self-register referral bonus failed: {e}")
 
     # Отправляем magic-link для входа (flush inside)
-    await _send_magic_link(db, customer, ip)
+    await _send_magic_link(db, customer, ip, welcome_bonus=welcome_amount if welcome_amount > 0 else None)
     await db.commit()  # single atomic commit
 
     return SuccessResponse(
@@ -346,7 +347,7 @@ async def self_register(
     )
 
 
-async def _send_magic_link(db: AsyncSession, customer: Customer, ip: str):
+async def _send_magic_link(db: AsyncSession, customer: Customer, ip: str, welcome_bonus: Decimal | None = None):
     """Вспомогательная функция: создать magic-link и отправить в WhatsApp."""
     token_value = secrets.token_urlsafe(32)[:64]
     expires_at = datetime.now(timezone.utc) + timedelta(
@@ -368,10 +369,16 @@ async def _send_magic_link(db: AsyncSession, customer: Customer, ip: str):
         logger.warning(f"WhatsApp not configured — magic link for {customer.phone} not sent")
         return
 
+    bonus_line = ""
+    if welcome_bonus:
+        bonus_line = f"\n🎁 Вам начислен приветственный бонус: *{welcome_bonus} сом*!\n"
+
     message = (
-        f"🔐 *{settings.shop_bonus_name}* — вход в личный кабинет\n\n"
+        f"🎉 *{settings.shop_bonus_name}* — добро пожаловать!\n\n"
         f"Здравствуйте, {customer.full_name}!\n"
-        f"Перейдите по ссылке, чтобы войти:\n\n"
+        f"Вы успешно зарегистрированы в бонусной программе.\n"
+        f"{bonus_line}\n"
+        f"Войдите в личный кабинет по ссылке:\n"
         f"{link}\n\n"
         f"⏱ Ссылка действительна {settings.customer_magic_link_expire_minutes} минут."
     )
