@@ -25,8 +25,8 @@ from sqlalchemy import case, desc, func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.auth import get_current_user, require_role
-from app.models import Product, PurchaseItem, Setting, UserRoleEnum
+from app.core.security import get_current_user, require_role, UserRole
+from app.models import Product, PurchaseItem, Setting
 
 router = APIRouter(
     prefix="/product-analytics",
@@ -66,7 +66,7 @@ async def _get_product_velocity(db: AsyncSession, product_id, days: int = 30) ->
 @router.get("/summary")
 async def product_analytics_summary(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Общая сводка товарной аналитики."""
     now = datetime.now(timezone.utc)
@@ -149,7 +149,7 @@ async def product_list(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Список товаров с фильтрами и сортировкой."""
     query = select(Product).where(Product.is_active == True)
@@ -227,7 +227,7 @@ async def top_sellers(
     limit: int = Query(20, ge=1, le=100),
     category: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Топ продаваемых товаров за период."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
@@ -285,7 +285,7 @@ async def top_sellers(
 async def low_stock_alerts(
     include_out_of_stock: bool = Query(True, description="Включить товары с нулевым остатком"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Алерты: товары с остатком ниже минимума."""
     query = (
@@ -354,7 +354,7 @@ async def low_stock_alerts(
 async def dead_stock(
     days: int = Query(30, ge=7, le=365, description="Нет продаж за N дней"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Товары без продаж за указанный период (замороженный капитал)."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
@@ -408,7 +408,7 @@ async def dead_stock(
 async def abc_analysis(
     days: int = Query(90, ge=30, le=365, description="Период для расчёта ABC"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """ABC-анализ: категоризация товаров по вкладу в выручку."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
@@ -488,7 +488,7 @@ async def abc_analysis(
 async def recalculate_abc(
     days: int = Query(90, ge=30, le=365),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN)),
 ) -> dict:
     """Пересчитать ABC-классы и сохранить в БД."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
@@ -546,7 +546,7 @@ async def product_margins(
     limit: int = Query(30, ge=1, le=100),
     sort: str = Query("margin_desc", description="margin_desc / margin_asc / revenue_desc"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Маржинальность товаров: выручка vs себестоимость."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
@@ -627,7 +627,7 @@ async def frequently_bought_together(
     min_count: int = Query(3, ge=2, description="Минимум совместных покупок"),
     limit: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Пары товаров, которые часто покупают вместе (кросс-сейл)."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
@@ -693,7 +693,7 @@ async def frequently_bought_together(
 @router.get("/settings")
 async def get_product_settings(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN)),
 ) -> dict:
     """Получить настройки товарной аналитики."""
     keys = [
@@ -726,7 +726,7 @@ async def update_product_settings(
     alert_channel: Optional[str] = Query(None, description="whatsapp / telegram"),
     daily_digest_enabled: Optional[bool] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN)),
 ) -> dict:
     """Обновить настройки товарной аналитики."""
     updates = {}
@@ -762,7 +762,7 @@ async def update_product_settings(
 @router.get("/daily-digest")
 async def daily_digest(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRoleEnum.SUPER_ADMIN, UserRoleEnum.BRANCH_ADMIN)),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Генерация текста дневного дайджеста (для WhatsApp/Telegram)."""
     now = datetime.now(timezone.utc)
