@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable">
+	<ScheduledJob>
+		<Properties>
+			<Name>SB_СинхронизацияТоваров</Name>
+			<Synonym>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>SBonus Синхронизация Товаров</v8:content>
+				</v8:item>
+			</Synonym>
+			<Comment>Ежедневная синхронизация каталога товаров с SBonus+ (06:00)</Comment>
+			<MethodName>SB_ОбщийМодуль.СинхронизацияТоваровВSBonus</MethodName>
+			<Use>true</Use>
+			<Predefined>true</Predefined>
+			<RestartIntervalOnFailure>60</RestartIntervalOnFailure>
+			<RestartCountOnFailure>3</RestartCountOnFailure>
+		</Properties>
+	</ScheduledJob>
+</MetaDataObject>

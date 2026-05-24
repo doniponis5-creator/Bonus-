@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ConfigDumpInfo xmlns="http://v8.1c.ru/8.3/xcf/dumpinfo" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" format="Hierarchical" version="2.16">
+	<ConfigVersions>
+		<Metadata name="Configuration.SBonusPlus" version="1"/>
+		<Metadata name="CommonModule.SB_ОбщийМодуль" version="1"/>
+		<Metadata name="Constant.SB_APIUrl" version="1"/>
+		<Metadata name="Constant.SB_WebhookSecret" version="1"/>
+		<Metadata name="Constant.SB_IntegrationEnabled" version="1"/>
+		<Metadata name="ScheduledJob.SB_СинхронизацияТоваров" version="1"/>
+		<Metadata name="ScheduledJob.SB_ОбновлениеОстатков" version="1"/>
+		<Metadata name="EventSubscription.SB_ПриПроведенииЧека" version="1"/>
+	</ConfigVersions>
+</ConfigDumpInfo>

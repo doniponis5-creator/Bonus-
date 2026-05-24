@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable">
+	<CommonModule>
+		<Properties>
+			<Name>SB_ОбщийМодуль</Name>
+			<Synonym>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>SBonus Общий Модуль</v8:content>
+				</v8:item>
+			</Synonym>
+			<Comment>Модуль интеграции с SBonus+ API</Comment>
+			<Server>true</Server>
+			<ExternalConnection>false</ExternalConnection>
+			<ClientOrdinaryApplication>false</ClientOrdinaryApplication>
+			<ClientManagedApplication>false</ClientManagedApplication>
+			<ServerCall>true</ServerCall>
+			<Privileged>true</Privileged>
+			<ReturnValuesReuse>DontUse</ReturnValuesReuse>
+		</Properties>
+	</CommonModule>
+</MetaDataObject>

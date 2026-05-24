@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable">
+	<EventSubscription>
+		<Properties>
+			<Name>SB_ПриПроведенииЧека</Name>
+			<Synonym>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>SBonus При Проведении Чека</v8:content>
+				</v8:item>
+			</Synonym>
+			<Comment>Отправка данных чека в SBonus+ при проведении ЧекККМ</Comment>
+			<Source>
+				<xr:Type>DocumentObject.ЧекККМ</xr:Type>
+			</Source>
+			<Event>OnPosting</Event>
+			<Handler>SB_ОбщийМодуль.ПриПроведенииЧекаSBonus</Handler>
+		</Properties>
+	</EventSubscription>
+</MetaDataObject>
