@@ -117,11 +117,21 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [field]: value }));
   };
 
-  const toggleBoolean = (field: keyof typeof settings) => {
+  const toggleBoolean = async (field: keyof typeof settings) => {
+    const newValue = settings[field] === "true" ? "false" : "true";
     setSettings((prev) => ({
       ...prev,
-      [field]: prev[field] === "true" ? "false" : "true",
+      [field]: newValue,
     }));
+    // Auto-save toggle changes immediately (especially for 1C webhook)
+    try {
+      await api.post("/api/v1/admin/settings", { ...settings, [field]: newValue });
+      toast('success', newValue === "true" ? 'Включено' : 'Отключено');
+    } catch {
+      // Revert on error
+      setSettings((prev) => ({ ...prev, [field]: settings[field] }));
+      toast('error', 'Ошибка сохранения');
+    }
   };
 
   // ─── Стили ───

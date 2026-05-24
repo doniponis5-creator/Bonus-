@@ -30,7 +30,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models import BonusAccount, Customer, CustomerDebt, Product, PurchaseItem, Tier, Transaction, TransactionType
+from app.models import BonusAccount, Customer, CustomerDebt, Product, PurchaseItem, Setting, Tier, Transaction, TransactionType
 from app.schemas import (
     Webhook1CPurchaseRequest,
     Webhook1CSpendRequest,
@@ -79,12 +79,19 @@ def _check_ip_whitelist(client_ip: str) -> bool:
     return False
 
 
-async def _security_check(request: Request, x_signature: str | None) -> None:
+async def _security_check(request: Request, x_signature: str | None, db: AsyncSession = None) -> None:
     """Общая проверка безопасности: флаг, IP, HMAC."""
-    if not settings.enable_1c_webhook:
+    # Читаем флаг из DB Settings (а не из .env) — чтобы toggle в админке работал в реальном времени
+    is_enabled = settings.enable_1c_webhook  # fallback на .env
+    if db:
+        result = await db.execute(select(Setting).where(Setting.key == "ENABLE_1C_WEBHOOK"))
+        db_setting = result.scalar_one_or_none()
+        if db_setting is not None:
+            is_enabled = db_setting.value.lower() in ("true", "1", "yes")
+    if not is_enabled:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={"code": "WEBHOOK_DISABLED", "message": "1С webhook отключён. Включите ENABLE_1C_WEBHOOK=true"},
+            detail={"code": "WEBHOOK_DISABLED", "message": "1С webhook отключён. Включите в Настройках → Интеграция 1С"},
         )
 
     client_ip = request.client.host if request.client else "0.0.0.0"
@@ -148,7 +155,7 @@ async def webhook_1c_purchase(
 
     Idempotency: повторный запрос с тем же receipt_number вернёт ошибку 409.
     """
-    await _security_check(request, x_signature)
+    await _security_check(request, x_signature, db)
 
     phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
@@ -224,7 +231,7 @@ async def webhook_1c_spend(
 
     Перед вызовом рекомендуется сначала запросить GET /check-spend/{phone}.
     """
-    await _security_check(request, x_signature)
+    await _security_check(request, x_signature, db)
 
     phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
@@ -273,7 +280,7 @@ async def webhook_1c_refund(
 
     Если оригинальная транзакция не найдена — создаёт прямой возврат на refund_amount.
     """
-    await _security_check(request, x_signature)
+    await _security_check(request, x_signature, db)
 
     phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
@@ -363,7 +370,7 @@ async def webhook_1c_register(
 
     После регистрации можно сразу начислить бонус через /purchase.
     """
-    await _security_check(request, x_signature)
+    await _security_check(request, x_signature, db)
 
     phone = normalize_phone(body.phone)
 
@@ -588,7 +595,7 @@ async def webhook_1c_debt_update(
 
     Если `amount = 0` — это означает, что долг погашен.
     """
-    await _security_check(request, x_signature)
+    await _security_check(request, x_signature, db)
 
     phone = normalize_phone(body.phone)
     customer = await _get_customer_or_404(phone, db)
@@ -632,7 +639,7 @@ async def webhook_1c_products_sync(
 
     Рекомендуется вызывать ежедневно или при изменении каталога.
     """
-    await _security_check(request, x_signature)
+    await _security_check(request, x_signature, db)
 
     from datetime import datetime as dt, timezone
 
@@ -727,7 +734,7 @@ async def webhook_1c_stock_update(
     Быстрый endpoint для обновления только остатков (без каталога).
     Используется при инвентаризации или после закрытия смены.
     """
-    await _security_check(request, x_signature)
+    await _security_check(request, x_signature, db)
 
     from datetime import datetime as dt, timezone
     now = dt.now(timezone.utc)
