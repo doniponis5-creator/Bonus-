@@ -1039,8 +1039,16 @@ async def update_customer(
     if not customer:
         raise HTTPException(status_code=404, detail={"message": "Клиент не найден"})
 
+    # Проверка уникальности телефона
+    if body.phone is not None and body.phone != customer.phone:
+        existing = (await db.execute(
+            select(Customer).where(Customer.phone == body.phone, Customer.id != id)
+        )).scalar_one_or_none()
+        if existing:
+            raise HTTPException(status_code=409, detail={"message": f"Телефон {body.phone} уже используется другим клиентом"})
+        customer.phone = body.phone
+
     if body.full_name is not None: customer.full_name = body.full_name
-    if body.phone is not None: customer.phone = body.phone
     if body.birth_date is not None: customer.birth_date = body.birth_date
     if body.is_active is not None: customer.is_active = body.is_active
 

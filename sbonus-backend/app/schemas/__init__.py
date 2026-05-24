@@ -432,7 +432,8 @@ class DebtPaymentItem(BaseModel):
     """Тўлов тарихи элементи."""
     date: str = Field(..., description="Тўлов санаси")
     amount: Decimal = Field(..., ge=0)
-    document: Optional[str] = Field(None, description="1С ҳужжат рақами")
+    document: Optional[str] = Field(None, description="Номер документа 1С")
+    overdue_days: int = Field(0, ge=0, description="Дней просрочки при оплате")
 
 class DebtNextPayment(BaseModel):
     """Навбатдаги тўлов."""

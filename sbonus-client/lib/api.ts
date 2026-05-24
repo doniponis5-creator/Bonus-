@@ -111,7 +111,7 @@ export interface DebtSummary {
 
 export interface DebtDetail extends DebtSummary {
   schedule: { date: string; amount: number; status: string }[];
-  payments_history: { date: string; amount: number; document: string }[];
+  payments_history: { date: string; amount: number; document: string; overdue_days?: number }[];
 }
 
 export interface DebtsResponse {

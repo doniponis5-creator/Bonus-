@@ -211,9 +211,13 @@ export default function DebtDetailPage() {
               }}>
                 <div style={{
                   width: 24, height: 24, borderRadius: 12, flexShrink: 0,
-                  background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: (p as any).overdue_days > 0 ? '#F09595' : 'var(--accent)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <CheckCircle2 size={14} color="#000" />
+                  {(p as any).overdue_days > 0
+                    ? <AlertTriangle size={12} color="#fff" />
+                    : <CheckCircle2 size={14} color="#000" />
+                  }
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: 'var(--text1)' }}>
@@ -222,6 +226,11 @@ export default function DebtDetailPage() {
                   {p.document && (
                     <p style={{ fontSize: 10, color: 'var(--text3)', margin: '1px 0 0' }}>
                       {p.document.length > 35 ? p.document.slice(0, 35) + '...' : p.document}
+                    </p>
+                  )}
+                  {(p as any).overdue_days > 0 && (
+                    <p style={{ fontSize: 10, color: '#F09595', margin: '1px 0 0', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <AlertTriangle size={10} /> Просрочка: {(p as any).overdue_days} дн.
                     </p>
                   )}
                 </div>
