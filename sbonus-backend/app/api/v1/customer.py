@@ -80,19 +80,22 @@ async def get_me(
                     Decimal("0"), min(Decimal("100"), (done / gap * Decimal("100")).quantize(Decimal("0.01")))
                 )
 
-    # ── Последняя задолженность из 1C ──
-    debt_amount = Decimal("0")
-    debt_updated_at = None
+    # ── Жами долг (барча актив рассрочкалар суммаси) ──
     debt_result = await db.execute(
-        select(CustomerDebt)
-        .where(CustomerDebt.customer_id == customer.id)
-        .order_by(CustomerDebt.created_at.desc())
-        .limit(1)
+        select(
+            func.coalesce(func.sum(CustomerDebt.amount), Decimal("0")),
+            func.count(CustomerDebt.id),
+            func.max(CustomerDebt.synced_at),
+        )
+        .where(
+            CustomerDebt.customer_id == customer.id,
+            CustomerDebt.status.in_(["active", "overdue"]),
+        )
     )
-    last_debt = debt_result.scalar_one_or_none()
-    if last_debt:
-        debt_amount = last_debt.amount
-        debt_updated_at = last_debt.created_at
+    debt_row = debt_result.one()
+    debt_amount = debt_row[0]
+    debt_count = debt_row[1]
+    debt_updated_at = debt_row[2]
 
     # ── Последние 5 транзакций ──
     tx_result = await db.execute(
@@ -678,4 +681,96 @@ async def my_reviews(
             r.platform == ReviewPlatform.TWOGIS and r.status in (ReviewStatus.PENDING, ReviewStatus.APPROVED)
             for r in reviews
         ),
+    }
+
+
+# ═══════════════════════════════════════════
+# РАССРОЧКА / ДОЛГЛАР
+# ═══════════════════════════════════════════
+
+@router.get("/debts")
+async def get_debts(
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """Клиентнинг барча рассрочкалари (актив + просроченные)."""
+    customer_id = current["sub"]
+
+    result = await db.execute(
+        select(CustomerDebt)
+        .where(
+            CustomerDebt.customer_id == customer_id,
+            CustomerDebt.status.in_(["active", "overdue"]),
+        )
+        .order_by(CustomerDebt.overdue_days.desc(), CustomerDebt.created_at.desc())
+    )
+    debts = result.scalars().all()
+
+    # Жами суммалар
+    total_debt = sum(d.amount for d in debts)
+    total_sum = sum(d.total_amount for d in debts)
+    total_paid = sum(d.paid_amount for d in debts)
+
+    return {
+        "total_debt": float(total_debt),
+        "total_original": float(total_sum),
+        "total_paid": float(total_paid),
+        "count": len(debts),
+        "debts": [
+            {
+                "id": str(d.id),
+                "reference": d.reference,
+                "total_amount": float(d.total_amount),
+                "paid_amount": float(d.paid_amount),
+                "amount": float(d.amount),
+                "overdue_days": d.overdue_days,
+                "status": d.status,
+                "percent_paid": round(float(d.paid_amount) / float(d.total_amount) * 100, 1) if d.total_amount > 0 else 0,
+                "next_payment": d.next_payment,
+                "note": d.note,
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+                "synced_at": d.synced_at.isoformat() if d.synced_at else None,
+            }
+            for d in debts
+        ],
+    }
+
+
+@router.get("/debts/{debt_id}")
+async def get_debt_detail(
+    debt_id: str,
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """Рассрочка тафсилоти — график, тўловлар тарихи."""
+    customer_id = current["sub"]
+
+    result = await db.execute(
+        select(CustomerDebt).where(
+            CustomerDebt.id == debt_id,
+            CustomerDebt.customer_id == customer_id,
+        )
+    )
+    debt = result.scalar_one_or_none()
+    if not debt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "DEBT_NOT_FOUND", "message": "Рассрочка топилмади"},
+        )
+
+    return {
+        "id": str(debt.id),
+        "reference": debt.reference,
+        "total_amount": float(debt.total_amount),
+        "paid_amount": float(debt.paid_amount),
+        "amount": float(debt.amount),
+        "overdue_days": debt.overdue_days,
+        "status": debt.status,
+        "percent_paid": round(float(debt.paid_amount) / float(debt.total_amount) * 100, 1) if debt.total_amount > 0 else 0,
+        "schedule": debt.schedule or [],
+        "payments_history": debt.payments_history or [],
+        "next_payment": debt.next_payment,
+        "note": debt.note,
+        "created_at": debt.created_at.isoformat() if debt.created_at else None,
+        "synced_at": debt.synced_at.isoformat() if debt.synced_at else None,
     }

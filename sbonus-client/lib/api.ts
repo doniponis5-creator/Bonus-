@@ -93,6 +93,40 @@ export const customerAPI = {
     api.get('/api/v1/customer/reviews'),
 };
 
+// ── Рассрочка/Долг ──
+export interface DebtSummary {
+  id: string;
+  reference: string;
+  total_amount: number;
+  paid_amount: number;
+  amount: number;
+  overdue_days: number;
+  status: string;
+  percent_paid: number;
+  next_payment: { date: string; amount: number } | null;
+  note: string | null;
+  created_at: string | null;
+  synced_at: string | null;
+}
+
+export interface DebtDetail extends DebtSummary {
+  schedule: { date: string; amount: number; status: string }[];
+  payments_history: { date: string; amount: number; document: string }[];
+}
+
+export interface DebtsResponse {
+  total_debt: number;
+  total_original: number;
+  total_paid: number;
+  count: number;
+  debts: DebtSummary[];
+}
+
+export const debtAPI = {
+  list: () => api.get<DebtsResponse>('/api/v1/customer/debts'),
+  detail: (id: string) => api.get<DebtDetail>(`/api/v1/customer/debts/${id}`),
+};
+
 export const wheelAPI = {
   config: () => api.get('/api/v1/wheel/config'),
   spin: () => api.post('/api/v1/wheel/spin'),

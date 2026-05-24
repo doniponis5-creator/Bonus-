@@ -588,34 +588,78 @@ async def webhook_1c_debt_update(
     x_signature: str = Header(None, alias="X-Signature"),
 ) -> dict:
     """
-    **Обновление задолженности клиента из 1С.**
+    **Рассрочка/долг маълумотларини 1С дан қабул қилиш.**
 
-    Каждое обновление сохраняется как отдельная запись (история задолженности).
-    Личный кабинет показывает самую свежую запись.
-
-    Если `amount = 0` — это означает, что долг погашен.
+    Upsert логика: reference бўйича мавжуд ёзувни янгилайди ёки янгисини яратади.
+    amount=0 бўлса — рассрочка тўланган деб ёзилади.
     """
     await _security_check(request, x_signature, db)
 
     phone = normalize_phone(body.phone)
     customer = await _get_customer_or_404(phone, db)
 
-    debt = CustomerDebt(
-        customer_id=customer.id,
-        amount=body.amount,
-        source="1c",
-        reference=body.reference,
-        note=body.note,
-    )
-    db.add(debt)
+    # Upsert: reference бўйича мавжуд ёзувни излаш
+    existing = (await db.execute(
+        select(CustomerDebt).where(
+            CustomerDebt.customer_id == customer.id,
+            CustomerDebt.reference == body.reference,
+        )
+    )).scalar_one_or_none()
+
+    # Статусни аниқлаш
+    debt_status = "active"
+    if body.amount == 0:
+        debt_status = "paid"
+    elif body.overdue_days > 0:
+        debt_status = "overdue"
+
+    # JSON маълумотларни тайёрлаш
+    schedule_data = [item.model_dump(mode="json") for item in (body.schedule or [])]
+    payments_data = [item.model_dump(mode="json") for item in (body.payments_history or [])]
+    next_pay_data = body.next_payment.model_dump(mode="json") if body.next_payment else None
+
+    if existing:
+        # UPDATE
+        existing.amount = body.amount
+        existing.total_amount = body.total_amount
+        existing.paid_amount = body.paid_amount
+        existing.overdue_days = body.overdue_days
+        existing.schedule = schedule_data
+        existing.payments_history = payments_data
+        existing.next_payment = next_pay_data
+        existing.note = body.note
+        existing.status = debt_status
+        action = "updated"
+    else:
+        # INSERT
+        debt = CustomerDebt(
+            customer_id=customer.id,
+            amount=body.amount,
+            total_amount=body.total_amount,
+            paid_amount=body.paid_amount,
+            overdue_days=body.overdue_days,
+            schedule=schedule_data,
+            payments_history=payments_data,
+            next_payment=next_pay_data,
+            source="1c",
+            reference=body.reference,
+            note=body.note,
+            status=debt_status,
+        )
+        db.add(debt)
+        action = "created"
+
     await db.commit()
 
     return {
         "success": True,
         "event": "debt_update",
+        "action": action,
         "customer_id": str(customer.id),
         "customer_name": customer.full_name,
         "debt_amount": float(body.amount),
+        "total_amount": float(body.total_amount),
+        "status": debt_status,
         "reference": body.reference,
     }
 

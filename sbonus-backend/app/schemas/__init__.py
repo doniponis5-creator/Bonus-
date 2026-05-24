@@ -422,12 +422,36 @@ class BonusCampaignRecipientResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DebtScheduleItem(BaseModel):
+    """Тўлов графиги элементи."""
+    date: str = Field(..., description="Тўлов санаси yyyy-MM-dd")
+    amount: Decimal = Field(..., ge=0)
+    status: str = Field("pending", description="pending | overdue | paid")
+
+class DebtPaymentItem(BaseModel):
+    """Тўлов тарихи элементи."""
+    date: str = Field(..., description="Тўлов санаси")
+    amount: Decimal = Field(..., ge=0)
+    document: Optional[str] = Field(None, description="1С ҳужжат рақами")
+
+class DebtNextPayment(BaseModel):
+    """Навбатдаги тўлов."""
+    date: str
+    amount: Decimal
+
 class Webhook1CDebtUpdateRequest(BaseModel):
-    """Обновление задолженности клиента из 1С."""
-    phone: str = Field(..., description="Телефон клиента")
-    amount: Decimal = Field(..., ge=0, description="Текущая задолженность в KGS (0 если погашена)")
-    reference: Optional[str] = Field(None, max_length=100, description="Номер документа в 1С")
-    note: Optional[str] = Field(None, max_length=255)
+    """Рассрочка маълумотларини 1С дан қабул қилиш."""
+    phone: str = Field(..., description="Телефон +996XXXXXXXXX")
+    full_name: Optional[str] = Field(None, max_length=200)
+    amount: Decimal = Field(..., ge=0, description="Қолган долг суммаси")
+    total_amount: Decimal = Field(Decimal("0"), ge=0, description="Рассрочка жами суммаси")
+    paid_amount: Decimal = Field(Decimal("0"), ge=0, description="Тўланган сумма")
+    overdue_days: int = Field(0, ge=0, description="Кечикиш кунлари")
+    reference: str = Field(..., max_length=255, description="1С ҳужжат рақами (upsert калит)")
+    note: Optional[str] = Field(None, max_length=500)
+    schedule: Optional[list[DebtScheduleItem]] = Field(None, description="Тўлов графиги")
+    payments_history: Optional[list[DebtPaymentItem]] = Field(None, description="Тўлов тарихи")
+    next_payment: Optional[DebtNextPayment] = Field(None, description="Навбатдаги тўлов")
 
 
 # ═══════════════════════════════════════════
