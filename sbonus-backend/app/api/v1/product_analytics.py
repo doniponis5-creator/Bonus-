@@ -108,6 +108,7 @@ async def product_analytics_summary(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
             Product.current_stock > 0,
+            Product.min_stock_level > 0,  # Только настроенные товары
             Product.current_stock <= Product.min_stock_level,
         )
     )
@@ -186,7 +187,7 @@ async def product_list(
     if abc_class:
         query = query.where(Product.abc_class == abc_class.upper())
     if low_stock_only:
-        query = query.where(Product.current_stock <= Product.min_stock_level)
+        query = query.where(Product.min_stock_level > 0, Product.current_stock <= Product.min_stock_level)
     if search:
         query = query.where(
             (Product.name.ilike(f"%{search}%")) | (Product.sku.ilike(f"%{search}%"))
@@ -317,11 +318,12 @@ async def low_stock_alerts(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
-    """Алерты: товары с остатком ниже минимума."""
+    """Алерты: товары с остатком ниже минимума (только с настроенным min_stock_level)."""
     query = (
         select(Product)
         .where(
             Product.is_active == True,
+            Product.min_stock_level > 0,  # Только настроенные товары (не default 5)
             Product.current_stock <= Product.min_stock_level,
         )
         .order_by(Product.current_stock.asc())
@@ -873,6 +875,7 @@ async def daily_digest(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
             Product.current_stock > 0,
+            Product.min_stock_level > 0,
             Product.current_stock <= Product.min_stock_level,
         )
     )

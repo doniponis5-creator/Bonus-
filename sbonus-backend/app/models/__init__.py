@@ -505,7 +505,7 @@ class Product(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
     cost_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     current_stock: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
-    min_stock_level: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("5"))
+    min_stock_level: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
     supplier: Mapped[str | None] = mapped_column(String(200), nullable=True)
     abc_class: Mapped[str | None] = mapped_column(String(1), nullable=True)  # A/B/C classification
     last_sold_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
