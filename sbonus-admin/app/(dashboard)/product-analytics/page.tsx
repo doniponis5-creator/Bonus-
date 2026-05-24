@@ -439,10 +439,8 @@ function LowStockTab({ data }: { data: any }) {
   const [urgFilter, setUrgFilter] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
-
   const filtered = useMemo(() => {
-    let items = data.alerts || [];
+    let items = data?.alerts || [];
     if (search) {
       const s = search.toLowerCase();
       items = items.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
@@ -450,7 +448,9 @@ function LowStockTab({ data }: { data: any }) {
     if (catFilter) items = items.filter((a: any) => a.category === catFilter);
     if (urgFilter) items = items.filter((a: any) => a.urgency === urgFilter);
     return items;
-  }, [data.alerts, search, catFilter, urgFilter]);
+  }, [data?.alerts, search, catFilter, urgFilter]);
+
+  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -545,14 +545,14 @@ function LowStockTab({ data }: { data: any }) {
 function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period: number; setPeriod: (d: number) => void; reload: (d: number) => void }) {
   const [search, setSearch] = useState('');
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
-
-  const allSellers = data.top_sellers || [];
+  const allSellers = data?.top_sellers || [];
   const filtered = useMemo(() => {
     if (!search) return allSellers;
     const s = search.toLowerCase();
     return allSellers.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
   }, [allSellers, search]);
+
+  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const chartData = allSellers.slice(0, 10).map((s: any) => ({
     name: s.name.length > 20 ? s.name.slice(0, 20) + '...' : s.name,
@@ -639,9 +639,7 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
   const [classFilter, setClassFilter] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
-
-  const allItems = data.items || [];
+  const allItems = data?.items || [];
   const filtered = useMemo(() => {
     let items = allItems;
     if (search) {
@@ -651,6 +649,8 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
     if (classFilter) items = items.filter((a: any) => a.abc_class === classFilter);
     return items;
   }, [allItems, search, classFilter]);
+
+  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -774,17 +774,17 @@ function DeadStockTab({ data }: { data: any }) {
   const [catFilter, setCatFilter] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
-
   const filtered = useMemo(() => {
-    let items = data.items || [];
+    let items = data?.items || [];
     if (search) {
       const s = search.toLowerCase();
       items = items.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
     }
     if (catFilter) items = items.filter((a: any) => a.category === catFilter);
     return items;
-  }, [data.items, search, catFilter]);
+  }, [data?.items, search, catFilter]);
+
+  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -861,14 +861,14 @@ function MarginsTab({ data }: { data: any }) {
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
-
-  const allItems = data.items || [];
+  const allItems = data?.items || [];
   const filtered = useMemo(() => {
     if (!search) return allItems;
     const s = search.toLowerCase();
     return allItems.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
   }, [allItems, search]);
+
+  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
