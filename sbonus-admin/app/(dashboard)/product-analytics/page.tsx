@@ -1,10 +1,11 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { productAPI } from '@/lib/api';
 import {
   Package, Loader2, AlertTriangle, TrendingUp, TrendingDown,
   ShoppingCart, BarChart3, RefreshCw, Settings2, ArrowUpDown,
   Search, ChevronDown, DollarSign, Layers, Zap, ShoppingBag,
+  Download, Filter, X,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -91,6 +92,79 @@ function Badge({ text, color }: { text: string; color: string }) {
     </span>
   );
 }
+
+// ─── Search Bar ───
+function SearchBar({ value, onChange, placeholder = 'Поиск по названию или SKU...' }: {
+  value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  return (
+    <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+      <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#5e6e82' }} />
+      <input
+        type="text" value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: '100%', padding: '9px 12px 9px 36px',
+          background: '#0a101e', border: '1px solid #1e293b', borderRadius: 8,
+          color: '#e2eaf6', fontSize: 13, outline: 'none',
+        }}
+      />
+      {value && (
+        <button onClick={() => onChange('')} style={{
+          position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+          background: 'none', border: 'none', color: '#5e6e82', cursor: 'pointer', padding: 2,
+        }}>
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Category Select ───
+function CategorySelect({ value, onChange, categories }: {
+  value: string; onChange: (v: string) => void; categories: string[];
+}) {
+  if (!categories || categories.length === 0) return null;
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} style={{
+      padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
+      borderRadius: 8, color: '#e2eaf6', fontSize: 13, cursor: 'pointer', outline: 'none',
+      minWidth: 140,
+    }}>
+      <option value="">Все категории</option>
+      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+    </select>
+  );
+}
+
+// ─── Show More Button ───
+function ShowMoreBtn({ shown, total, onClick }: { shown: number; total: number; onClick: () => void }) {
+  if (shown >= total) return null;
+  return (
+    <div style={{ textAlign: 'center', padding: 16 }}>
+      <button onClick={onClick} style={{
+        padding: '8px 24px', background: '#1e293b', border: '1px solid #334155',
+        borderRadius: 8, color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+      }}>
+        Показать ещё ({total - shown} осталось)
+      </button>
+    </div>
+  );
+}
+
+// ─── Export CSV ───
+function exportCSV(headers: string[], rows: string[][], filename: string) {
+  const bom = '﻿';
+  const csv = bom + [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+const PAGE_SIZE = 50;
 
 // ═══════════════════════════════════════════
 // MAIN PAGE
@@ -360,7 +434,25 @@ function OverviewTab({ summary, lowStock }: { summary: any; lowStock: any }) {
 // ═══════════════════════════════════════════
 
 function LowStockTab({ data }: { data: any }) {
+  const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState('');
+  const [urgFilter, setUrgFilter] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+
+  const filtered = useMemo(() => {
+    let items = data.alerts || [];
+    if (search) {
+      const s = search.toLowerCase();
+      items = items.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
+    }
+    if (catFilter) items = items.filter((a: any) => a.category === catFilter);
+    if (urgFilter) items = items.filter((a: any) => a.urgency === urgFilter);
+    return items;
+  }, [data.alerts, search, catFilter, urgFilter]);
+
+  const visible = filtered.slice(0, visibleCount);
 
   return (
     <>
@@ -368,6 +460,34 @@ function LowStockTab({ data }: { data: any }) {
         <KpiCard icon={AlertTriangle} label="Всего алертов" value={data.total_alerts} color="#f59e0b" />
         <KpiCard icon={Zap} label="Критичные" value={data.critical} color="#ef4444" />
         <KpiCard icon={AlertTriangle} label="Предупреждения" value={data.warning} color="#f59e0b" />
+      </div>
+
+      {/* Search + Filters + Export */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} />
+        <CategorySelect value={catFilter} onChange={v => { setCatFilter(v); setVisibleCount(PAGE_SIZE); }} categories={data.categories || []} />
+        <select value={urgFilter} onChange={e => { setUrgFilter(e.target.value); setVisibleCount(PAGE_SIZE); }} style={{
+          padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
+          borderRadius: 8, color: '#e2eaf6', fontSize: 13, cursor: 'pointer', outline: 'none',
+        }}>
+          <option value="">Все статусы</option>
+          <option value="critical">Критичные</option>
+          <option value="warning">Предупреждения</option>
+        </select>
+        <button onClick={() => exportCSV(
+          ['Статус', 'Товар', 'SKU', 'Категория', 'Остаток', 'Минимум', 'Продажи/день', 'Дней до 0', 'Заказать'],
+          filtered.map((a: any) => [URGENCY_LABELS[a.urgency], a.name, a.sku, a.category || '', a.current_stock, a.min_stock_level, a.avg_daily_sales, a.days_until_stockout ?? '—', a.recommended_order]),
+          'low-stock-alerts.csv'
+        )} style={{
+          display: 'flex', alignItems: 'center', gap: 4, padding: '9px 14px',
+          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
+          color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+        }}>
+          <Download size={14} /> Excel
+        </button>
+        {(search || catFilter || urgFilter) && (
+          <span style={{ color: '#8899aa', fontSize: 12 }}>Найдено: {filtered.length}</span>
+        )}
       </div>
 
       <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
@@ -384,7 +504,7 @@ function LowStockTab({ data }: { data: any }) {
             </tr>
           </thead>
           <tbody>
-            {data.alerts.map((a: any, i: number) => (
+            {visible.map((a: any, i: number) => (
               <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <Badge text={URGENCY_LABELS[a.urgency]} color={URGENCY_COLORS[a.urgency]} />
@@ -406,11 +526,12 @@ function LowStockTab({ data }: { data: any }) {
             ))}
           </tbody>
         </table>
-        {data.alerts.length === 0 && (
+        {filtered.length === 0 && (
           <div style={{ padding: 40, textAlign: 'center', color: '#22c55e' }}>
-            Все товары в норме!
+            {search || catFilter || urgFilter ? 'Ничего не найдено' : 'Все товары в норме!'}
           </div>
         )}
+        <ShowMoreBtn shown={visible.length} total={filtered.length} onClick={() => setVisibleCount(v => v + PAGE_SIZE)} />
       </div>
     </>
   );
@@ -422,9 +543,18 @@ function LowStockTab({ data }: { data: any }) {
 // ═══════════════════════════════════════════
 
 function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period: number; setPeriod: (d: number) => void; reload: (d: number) => void }) {
+  const [search, setSearch] = useState('');
+
   if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
-  const chartData = data.top_sellers?.slice(0, 10).map((s: any) => ({
+  const allSellers = data.top_sellers || [];
+  const filtered = useMemo(() => {
+    if (!search) return allSellers;
+    const s = search.toLowerCase();
+    return allSellers.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
+  }, [allSellers, search]);
+
+  const chartData = allSellers.slice(0, 10).map((s: any) => ({
     name: s.name.length > 20 ? s.name.slice(0, 20) + '...' : s.name,
     revenue: Math.round(s.total_revenue),
     sold: Math.round(s.total_sold),
@@ -432,7 +562,7 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         {[7, 30, 90].map(d => (
           <button key={d} onClick={() => { setPeriod(d); reload(d); }} style={{
             padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -442,6 +572,8 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
             {d} дней
           </button>
         ))}
+        <div style={{ flex: 1 }} />
+        <SearchBar value={search} onChange={setSearch} />
       </div>
 
       {chartData.length > 0 && (
@@ -473,7 +605,7 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
             </tr>
           </thead>
           <tbody>
-            {data.top_sellers.map((s: any, i: number) => (
+            {filtered.map((s: any, i: number) => (
               <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
                 <td style={{ padding: '10px 16px', color: '#FFE600', fontWeight: 700 }}>{i + 1}</td>
                 <td style={{ padding: '10px 16px' }}>
@@ -503,8 +635,24 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
 
 function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void }) {
   const [recalculating, setRecalculating] = useState(false);
+  const [search, setSearch] = useState('');
+  const [classFilter, setClassFilter] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+
+  const allItems = data.items || [];
+  const filtered = useMemo(() => {
+    let items = allItems;
+    if (search) {
+      const s = search.toLowerCase();
+      items = items.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
+    }
+    if (classFilter) items = items.filter((a: any) => a.abc_class === classFilter);
+    return items;
+  }, [allItems, search, classFilter]);
+
+  const visible = filtered.slice(0, visibleCount);
 
   const summaryData = data.summary ? [
     { name: 'A — 80% выручки', count: data.summary.A?.count || 0, revenue: data.summary.A?.revenue || 0, fill: ABC_COLORS.A },
@@ -548,6 +696,34 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
         </div>
       )}
 
+      {/* Search + Filter */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} />
+        <select value={classFilter} onChange={e => { setClassFilter(e.target.value); setVisibleCount(PAGE_SIZE); }} style={{
+          padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
+          borderRadius: 8, color: '#e2eaf6', fontSize: 13, cursor: 'pointer', outline: 'none',
+        }}>
+          <option value="">Все классы</option>
+          <option value="A">A — Лидеры</option>
+          <option value="B">B — Средние</option>
+          <option value="C">C — Аутсайдеры</option>
+        </select>
+        <button onClick={() => exportCSV(
+          ['Класс', 'Товар', 'SKU', 'Выручка', '% от общей', 'Накопительный %'],
+          filtered.map((a: any) => [a.abc_class, a.name, a.sku, a.revenue, a.revenue_percent, a.cumulative_percent]),
+          'abc-analysis.csv'
+        )} style={{
+          display: 'flex', alignItems: 'center', gap: 4, padding: '9px 14px',
+          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
+          color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+        }}>
+          <Download size={14} /> Excel
+        </button>
+        {(search || classFilter) && (
+          <span style={{ color: '#8899aa', fontSize: 12 }}>Найдено: {filtered.length}</span>
+        )}
+      </div>
+
       {/* Table */}
       <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -561,7 +737,7 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
             </tr>
           </thead>
           <tbody>
-            {(data.items || []).slice(0, 50).map((item: any, i: number) => (
+            {visible.map((item: any, i: number) => (
               <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <Badge text={item.abc_class} color={ABC_COLORS[item.abc_class] || '#8899aa'} />
@@ -577,6 +753,12 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
             ))}
           </tbody>
         </table>
+        {filtered.length === 0 && (
+          <div style={{ padding: 40, textAlign: 'center', color: '#5e6e82' }}>
+            {search || classFilter ? 'Ничего не найдено' : 'Нет данных для ABC-анализа'}
+          </div>
+        )}
+        <ShowMoreBtn shown={visible.length} total={filtered.length} onClick={() => setVisibleCount(v => v + PAGE_SIZE)} />
       </div>
     </>
   );
@@ -588,13 +770,49 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
 // ═══════════════════════════════════════════
 
 function DeadStockTab({ data }: { data: any }) {
+  const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+
+  const filtered = useMemo(() => {
+    let items = data.items || [];
+    if (search) {
+      const s = search.toLowerCase();
+      items = items.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
+    }
+    if (catFilter) items = items.filter((a: any) => a.category === catFilter);
+    return items;
+  }, [data.items, search, catFilter]);
+
+  const visible = filtered.slice(0, visibleCount);
 
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
         <KpiCard icon={TrendingDown} label="Dead Stock товаров" value={data.total_dead_stock} color="#ef4444" />
         <KpiCard icon={DollarSign} label="Замороженный капитал" value={fmtMoney(data.total_frozen_capital)} sub="Деньги, которые лежат без дела" color="#f59e0b" />
+      </div>
+
+      {/* Search + Filters + Export */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} />
+        <CategorySelect value={catFilter} onChange={v => { setCatFilter(v); setVisibleCount(PAGE_SIZE); }} categories={data.categories || []} />
+        <button onClick={() => exportCSV(
+          ['Товар', 'SKU', 'Категория', 'Остаток', 'Цена', 'Заморожено', 'Без продаж (дн)', 'Посл. продажа'],
+          filtered.map((a: any) => [a.name, a.sku, a.category || '', a.current_stock, a.price, a.frozen_capital, a.days_without_sale, a.last_sold_at || '—']),
+          'dead-stock.csv'
+        )} style={{
+          display: 'flex', alignItems: 'center', gap: 4, padding: '9px 14px',
+          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
+          color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+        }}>
+          <Download size={14} /> Excel
+        </button>
+        {(search || catFilter) && (
+          <span style={{ color: '#8899aa', fontSize: 12 }}>Найдено: {filtered.length}</span>
+        )}
       </div>
 
       <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
@@ -609,7 +827,7 @@ function DeadStockTab({ data }: { data: any }) {
             </tr>
           </thead>
           <tbody>
-            {(data.items || []).map((item: any, i: number) => (
+            {visible.map((item: any, i: number) => (
               <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{item.name}</div>
@@ -623,9 +841,12 @@ function DeadStockTab({ data }: { data: any }) {
             ))}
           </tbody>
         </table>
-        {data.items?.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#22c55e' }}>Dead Stock нет — отлично!</div>
+        {filtered.length === 0 && (
+          <div style={{ padding: 40, textAlign: 'center', color: '#22c55e' }}>
+            {search || catFilter ? 'Ничего не найдено' : 'Dead Stock нет — отлично!'}
+          </div>
         )}
+        <ShowMoreBtn shown={visible.length} total={filtered.length} onClick={() => setVisibleCount(v => v + PAGE_SIZE)} />
       </div>
     </>
   );
@@ -637,7 +858,19 @@ function DeadStockTab({ data }: { data: any }) {
 // ═══════════════════════════════════════════
 
 function MarginsTab({ data }: { data: any }) {
+  const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+
+  const allItems = data.items || [];
+  const filtered = useMemo(() => {
+    if (!search) return allItems;
+    const s = search.toLowerCase();
+    return allItems.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
+  }, [allItems, search]);
+
+  const visible = filtered.slice(0, visibleCount);
 
   const chartData = (data.items || []).slice(0, 15).map((m: any) => ({
     name: m.name.length > 18 ? m.name.slice(0, 18) + '...' : m.name,
@@ -668,6 +901,23 @@ function MarginsTab({ data }: { data: any }) {
         </div>
       )}
 
+      {/* Search + Export */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} />
+        <button onClick={() => exportCSV(
+          ['Товар', 'SKU', 'Цена', 'Себестоимость', 'Продано', 'Выручка', 'Прибыль', 'Маржа %'],
+          filtered.map((m: any) => [m.name, m.sku, m.price, m.cost_price, m.total_sold, m.total_revenue, m.total_profit, m.margin_percent]),
+          'margins.csv'
+        )} style={{
+          display: 'flex', alignItems: 'center', gap: 4, padding: '9px 14px',
+          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
+          color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+        }}>
+          <Download size={14} /> Excel
+        </button>
+        {search && <span style={{ color: '#8899aa', fontSize: 12 }}>Найдено: {filtered.length}</span>}
+      </div>
+
       <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
@@ -682,7 +932,7 @@ function MarginsTab({ data }: { data: any }) {
             </tr>
           </thead>
           <tbody>
-            {(data.items || []).map((m: any, i: number) => (
+            {visible.map((m: any, i: number) => (
               <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{m.name}</div>
@@ -700,6 +950,12 @@ function MarginsTab({ data }: { data: any }) {
             ))}
           </tbody>
         </table>
+        {filtered.length === 0 && (
+          <div style={{ padding: 40, textAlign: 'center', color: '#5e6e82' }}>
+            {search ? 'Ничего не найдено' : 'Нет данных о маржинальности'}
+          </div>
+        )}
+        <ShowMoreBtn shown={visible.length} total={filtered.length} onClick={() => setVisibleCount(v => v + PAGE_SIZE)} />
       </div>
     </>
   );

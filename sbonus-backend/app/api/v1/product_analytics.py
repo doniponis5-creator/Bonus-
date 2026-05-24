@@ -59,6 +59,33 @@ async def _get_product_velocity(db: AsyncSession, product_id, days: int = 30) ->
     return round(total_sold / days, 2)
 
 
+async def _get_bulk_velocity(db: AsyncSession, product_ids: list, days: int = 30) -> dict:
+    """Средние продажи в день для МНОЖЕСТВА товаров за 1 запрос (вместо N+1)."""
+    if not product_ids:
+        return {}
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    result = await db.execute(
+        select(
+            PurchaseItem.product_id,
+            func.coalesce(func.sum(PurchaseItem.quantity), 0).label("total_sold"),
+        )
+        .where(
+            PurchaseItem.product_id.in_(product_ids),
+            PurchaseItem.created_at >= since,
+        )
+        .group_by(PurchaseItem.product_id)
+    )
+    rows = result.all()
+    velocity_map = {}
+    for r in rows:
+        velocity_map[r.product_id] = round(float(r.total_sold) / days, 2)
+    # Для товаров без продаж — velocity = 0
+    for pid in product_ids:
+        if pid not in velocity_map:
+            velocity_map[pid] = 0.0
+    return velocity_map
+
+
 # ═══════════════════════════════════════════
 # 1. SUMMARY — общая сводка
 # ═══════════════════════════════════════════
@@ -284,6 +311,9 @@ async def top_sellers(
 @router.get("/low-stock")
 async def low_stock_alerts(
     include_out_of_stock: bool = Query(True, description="Включить товары с нулевым остатком"),
+    search: Optional[str] = Query(None, description="Поиск по названию/SKU"),
+    category: Optional[str] = Query(None, description="Фильтр по категории"),
+    urgency_filter: Optional[str] = Query(None, description="critical / warning"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
@@ -300,14 +330,26 @@ async def low_stock_alerts(
     if not include_out_of_stock:
         query = query.where(Product.current_stock > 0)
 
+    if search:
+        search_term = f"%{search.strip()}%"
+        query = query.where(
+            (Product.name.ilike(search_term)) | (Product.sku.ilike(search_term))
+        )
+    if category:
+        query = query.where(Product.category == category)
+
     result = await db.execute(query)
     products = result.scalars().all()
+
+    # ── Batch velocity вместо N+1 (1 запрос вместо 2200!) ──
+    product_ids = [p.id for p in products]
+    velocity_map = await _get_bulk_velocity(db, product_ids)
 
     alerts = []
     reorder_days = int(await _get_setting(db, "PRODUCT_REORDER_DAYS", "14"))
 
     for p in products:
-        velocity = await _get_product_velocity(db, p.id)
+        velocity = velocity_map.get(p.id, 0.0)
 
         if p.current_stock <= 0:
             urgency = "critical"
@@ -338,10 +380,18 @@ async def low_stock_alerts(
     urgency_order = {"critical": 0, "warning": 1, "info": 2}
     alerts.sort(key=lambda a: urgency_order.get(a["urgency"], 3))
 
+    # Фильтр по urgency (после расчёта, т.к. urgency вычисляется в Python)
+    if urgency_filter:
+        alerts = [a for a in alerts if a["urgency"] == urgency_filter]
+
+    # Собрать уникальные категории для фильтра на фронте
+    categories = sorted(set(a["category"] for a in alerts if a["category"]))
+
     return {
         "total_alerts": len(alerts),
         "critical": sum(1 for a in alerts if a["urgency"] == "critical"),
         "warning": sum(1 for a in alerts if a["urgency"] == "warning"),
+        "categories": categories,
         "alerts": alerts,
     }
 
@@ -353,13 +403,15 @@ async def low_stock_alerts(
 @router.get("/dead-stock")
 async def dead_stock(
     days: int = Query(30, ge=7, le=365, description="Нет продаж за N дней"),
+    search: Optional[str] = Query(None, description="Поиск по названию/SKU"),
+    category: Optional[str] = Query(None, description="Фильтр по категории"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Товары без продаж за указанный период (замороженный капитал)."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
-    result = await db.execute(
+    query = (
         select(Product)
         .where(
             Product.is_active == True,
@@ -367,9 +419,19 @@ async def dead_stock(
             (Product.last_sold_at == None) | (Product.last_sold_at < cutoff),
         )
         .order_by(
-            (Product.current_stock * Product.price).desc()  # Сортировка по замороженному капиталу
+            (Product.current_stock * Product.price).desc()
         )
     )
+
+    if search:
+        search_term = f"%{search.strip()}%"
+        query = query.where(
+            (Product.name.ilike(search_term)) | (Product.sku.ilike(search_term))
+        )
+    if category:
+        query = query.where(Product.category == category)
+
+    result = await db.execute(query)
     products = result.scalars().all()
 
     now = datetime.now(timezone.utc)
@@ -379,7 +441,12 @@ async def dead_stock(
     for p in products:
         frozen = p.current_stock * p.price
         total_frozen += frozen
-        days_without = (now - p.last_sold_at).days if p.last_sold_at else 999
+        if p.last_sold_at:
+            days_without = (now - p.last_sold_at).days
+        elif hasattr(p, 'created_at') and p.created_at:
+            days_without = (now - p.created_at).days
+        else:
+            days_without = days  # Минимум = период фильтра
 
         items.append({
             "sku": p.sku,
@@ -392,10 +459,13 @@ async def dead_stock(
             "last_sold_at": p.last_sold_at.isoformat() if p.last_sold_at else None,
         })
 
+    categories = sorted(set(i["category"] for i in items if i["category"]))
+
     return {
         "period_days": days,
         "total_dead_stock": len(items),
         "total_frozen_capital": float(total_frozen),
+        "categories": categories,
         "items": items,
     }
 
@@ -512,8 +582,9 @@ async def recalculate_abc(
     if total_revenue == 0:
         return {"success": True, "message": "Нет данных для расчёта", "updated": 0}
 
+    # Рассчитать ABC-классы
     cumulative = 0
-    updated = 0
+    abc_assignments = {}  # product_id → new abc_class
     for r in rows:
         rev = float(r.revenue)
         cumulative += rev
@@ -526,10 +597,20 @@ async def recalculate_abc(
         else:
             abc = "C"
 
-        prod = await db.execute(select(Product).where(Product.id == r.id))
-        product = prod.scalar_one()
-        if product.abc_class != abc:
-            product.abc_class = abc
+        abc_assignments[r.id] = abc
+
+    # ── Batch update вместо N+1 (1 запрос на класс вместо N) ──
+    updated = 0
+    for abc_class in ("A", "B", "C"):
+        ids = [pid for pid, cls in abc_assignments.items() if cls == abc_class]
+        if not ids:
+            continue
+        result2 = await db.execute(
+            select(Product).where(Product.id.in_(ids), Product.abc_class != abc_class)
+        )
+        products_to_update = result2.scalars().all()
+        for p in products_to_update:
+            p.abc_class = abc_class
             updated += 1
 
     await db.commit()
