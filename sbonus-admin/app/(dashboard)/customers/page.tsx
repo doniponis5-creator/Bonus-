@@ -117,7 +117,7 @@ export default function CustomersPage() {
     setDebtModal(true);
     setDebtLoading(true);
     try {
-      const res = await api.get(`/api/v1/admin/customers/${customer.id}/debts`);
+      const res = await customersAPI.getDebts(customer.id);
       setDebtData(res.data);
     } catch { setDebtData(null); }
     setDebtLoading(false);

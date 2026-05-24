@@ -204,6 +204,8 @@ export const customersAPI = {
     api.post(`/api/v1/admin/customers/${id}/bonus/earn`, { amount, note }),
   adminSpend: (id: string, amount: number, note: string) =>
     api.post(`/api/v1/admin/customers/${id}/bonus/spend`, { amount, note }),
+  getDebts: (id: string) =>
+    api.get(`/api/v1/admin/customers/${id}/debts`),
   giftSpin: (id: string) =>
     api.post(`/api/v1/admin/customers/${id}/gift-spin`),
 };
