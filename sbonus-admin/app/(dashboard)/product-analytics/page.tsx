@@ -44,7 +44,7 @@ const URGENCY_LABELS: Record<string, string> = {
   info: 'Инфо',
 };
 
-type Tab = 'overview' | 'low-stock' | 'top-sellers' | 'abc' | 'dead-stock' | 'margins' | 'cross-sell' | 'settings';
+type Tab = 'overview' | 'low-stock' | 'top-sellers' | 'abc' | 'dead-stock' | 'margins' | 'cross-sell' | 'all-products' | 'settings';
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'overview', label: 'Обзор', icon: BarChart3 },
@@ -54,6 +54,7 @@ const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'dead-stock', label: 'Dead Stock', icon: TrendingDown },
   { key: 'margins', label: 'Маржа', icon: DollarSign },
   { key: 'cross-sell', label: 'Кросс-сейл', icon: ShoppingBag },
+  { key: 'all-products', label: 'Товары', icon: Package },
   { key: 'settings', label: 'Настройки', icon: Settings2 },
 ];
 
@@ -183,6 +184,7 @@ export default function ProductAnalyticsPage() {
   const [deadStock, setDeadStock] = useState<any>(null);
   const [margins, setMargins] = useState<any>(null);
   const [crossSell, setCrossSell] = useState<any>(null);
+  const [allProducts, setAllProducts] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
 
   const [period, setPeriod] = useState(30);
@@ -230,6 +232,10 @@ export default function ProductAnalyticsPage() {
           const r = await productAPI.frequentlyBought(90);
           setCrossSell(r.data);
         }
+        if (tab === 'all-products' && !allProducts) {
+          const r = await productAPI.products({ limit: 200 });
+          setAllProducts(r.data);
+        }
         if (tab === 'settings' && !settings) {
           const r = await productAPI.settings();
           setSettings(r.data);
@@ -237,7 +243,7 @@ export default function ProductAnalyticsPage() {
       } catch {}
     };
     loadTab();
-  }, [tab, period, topSellers, abc, deadStock, margins, crossSell, settings]);
+  }, [tab, period, topSellers, abc, deadStock, margins, crossSell, allProducts, settings]);
 
   if (loading) {
     return (
@@ -320,6 +326,7 @@ export default function ProductAnalyticsPage() {
       {tab === 'dead-stock' && <DeadStockTab data={deadStock} />}
       {tab === 'margins' && <MarginsTab data={margins} />}
       {tab === 'cross-sell' && <CrossSellTab data={crossSell} />}
+      {tab === 'all-products' && <AllProductsTab data={allProducts} />}
       {tab === 'settings' && <SettingsTab data={settings} onSave={async (params: any) => {
         await productAPI.updateSettings(params);
         const r = await productAPI.settings(); setSettings(r.data);
@@ -1013,6 +1020,182 @@ function CrossSellTab({ data }: { data: any }) {
     </>
   );
 }
+
+
+// ═══════════════════════════════════════════
+// ALL PRODUCTS TAB
+// ═══════════════════════════════════════════
+
+function AllProductsTab({ data }: { data: any }) {
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price' | 'cost'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const categories = useMemo(() => {
+    if (!data?.categories) return [];
+    return data.categories.map((c: any) => c.name);
+  }, [data?.categories]);
+
+  const filtered = useMemo(() => {
+    if (!data?.products) return [];
+    let items = [...data.products];
+
+    if (search) {
+      const q = search.toLowerCase();
+      items = items.filter((p: any) =>
+        p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q)
+      );
+    }
+    if (category) {
+      items = items.filter((p: any) => p.category === category);
+    }
+
+    items.sort((a: any, b: any) => {
+      let cmp = 0;
+      if (sortBy === 'name') cmp = (a.name || '').localeCompare(b.name || '', 'ru');
+      else if (sortBy === 'stock') cmp = (a.current_stock || 0) - (b.current_stock || 0);
+      else if (sortBy === 'price') cmp = (a.price || 0) - (b.price || 0);
+      else if (sortBy === 'cost') cmp = (a.cost_price || 0) - (b.cost_price || 0);
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+
+    return items;
+  }, [data?.products, search, category, sortBy, sortDir]);
+
+  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+
+  const visible = filtered.slice(0, visibleCount);
+
+  const toggleSort = (col: 'name' | 'stock' | 'price' | 'cost') => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortDir('asc'); }
+  };
+
+  const handleExport = () => {
+    const headers = ['№', 'Название', 'SKU', 'Категория', 'Остаток (шт)', 'Цена (сом)', 'Себестоимость (сом)', 'ABC'];
+    const rows = filtered.map((p: any, i: number) => [
+      String(i + 1),
+      p.name || '',
+      p.sku || '',
+      p.category || '',
+      String(p.current_stock ?? 0),
+      String(p.price ?? 0),
+      String(p.cost_price ?? ''),
+      p.abc_class || '',
+    ]);
+    exportCSV(headers, rows, 'products_export.csv');
+  };
+
+  const sortIcon = (col: string) => {
+    if (sortBy !== col) return '↕';
+    return sortDir === 'asc' ? '↑' : '↓';
+  };
+
+  return (
+    <>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} />
+        <CategorySelect value={category} onChange={v => { setCategory(v); setVisibleCount(PAGE_SIZE); }} categories={categories} />
+        <button onClick={handleExport} style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '9px 16px', background: '#166534', border: '1px solid #22c55e40',
+          borderRadius: 8, color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+        }}>
+          <Download size={14} /> Excel ({filtered.length})
+        </button>
+        <div style={{ color: '#5e6e82', fontSize: 12, marginLeft: 'auto' }}>
+          Всего: {data.total} товаров
+        </div>
+      </div>
+
+      {/* Table */}
+      <div style={{
+        background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden',
+      }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #1e293b' }}>
+                <th style={{ ...thStyle, width: 48 }}>№</th>
+                <th style={{ ...thStyle, cursor: 'pointer' }} onClick={() => toggleSort('name')}>
+                  Название {sortIcon('name')}
+                </th>
+                <th style={thStyle}>SKU</th>
+                <th style={thStyle}>Категория</th>
+                <th style={{ ...thStyle, cursor: 'pointer', textAlign: 'right' }} onClick={() => toggleSort('stock')}>
+                  Остаток (шт) {sortIcon('stock')}
+                </th>
+                <th style={{ ...thStyle, cursor: 'pointer', textAlign: 'right' }} onClick={() => toggleSort('price')}>
+                  Цена (сом) {sortIcon('price')}
+                </th>
+                <th style={{ ...thStyle, cursor: 'pointer', textAlign: 'right' }} onClick={() => toggleSort('cost')}>
+                  Себестоимость {sortIcon('cost')}
+                </th>
+                <th style={{ ...thStyle, textAlign: 'center', width: 56 }}>ABC</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#5e6e82' }}>
+                    {search || category ? 'Ничего не найдено' : 'Нет товаров'}
+                  </td>
+                </tr>
+              )}
+              {visible.map((p: any, i: number) => {
+                const stockColor = p.current_stock <= 0 ? '#ef4444' :
+                  (p.min_stock_level > 0 && p.current_stock <= p.min_stock_level) ? '#f59e0b' : '#e2eaf6';
+                return (
+                  <tr key={p.id} style={{
+                    borderBottom: '1px solid #1e293b15',
+                    background: i % 2 === 0 ? 'transparent' : '#0a101e40',
+                  }}>
+                    <td style={{ ...tdStyle, color: '#5e6e82' }}>{i + 1}</td>
+                    <td style={{ ...tdStyle, fontWeight: 500, maxWidth: 300 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.name}
+                      </div>
+                    </td>
+                    <td style={{ ...tdStyle, color: '#8899aa', fontFamily: 'monospace', fontSize: 12 }}>
+                      {p.sku || '—'}
+                    </td>
+                    <td style={{ ...tdStyle, color: '#8899aa' }}>{p.category || '—'}</td>
+                    <td style={{ ...tdStyle, textAlign: 'right', color: stockColor, fontWeight: 600 }}>
+                      {fmt(p.current_stock)}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'right' }}>
+                      {fmtMoney(p.price)}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'right', color: p.cost_price ? '#e2eaf6' : '#5e6e82' }}>
+                      {p.cost_price ? fmtMoney(p.cost_price) : '—'}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      {p.abc_class ? <Badge text={p.abc_class} color={ABC_COLORS[p.abc_class] || '#5e6e82'} /> : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <ShowMoreBtn shown={visibleCount} total={filtered.length} onClick={() => setVisibleCount(c => c + PAGE_SIZE)} />
+      </div>
+    </>
+  );
+}
+
+const thStyle: React.CSSProperties = {
+  padding: '12px 14px', textAlign: 'left', color: '#8899aa',
+  fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
+  whiteSpace: 'nowrap', userSelect: 'none',
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '10px 14px', color: '#e2eaf6', whiteSpace: 'nowrap',
+};
 
 
 // ═══════════════════════════════════════════
