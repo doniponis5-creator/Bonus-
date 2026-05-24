@@ -1,5 +1,5 @@
 'use client';
-import { Users, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock, Filter, CheckSquare, Square, Coins, Upload, FileSpreadsheet, X, AlertTriangle, CheckCircle2, Disc } from 'lucide-react';
+import { Users, FileText, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock, Filter, CheckSquare, Square, Coins, Upload, FileSpreadsheet, X, AlertTriangle, CheckCircle2, Disc } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { customersAPI, adminAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
