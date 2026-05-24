@@ -1195,6 +1195,194 @@ async def gift_spin(
     return SuccessResponse(message=f"Бесплатный спин подарен клиенту {customer.full_name}")
 
 
+# ═══════════════════════════════════════════
+# ДОЛГИ / РАССРОЧКИ КЛИЕНТА
+# ═══════════════════════════════════════════
+
+@router.get(
+    "/customers/{id}/debts",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def get_customer_debts(
+    id: uuid.UUID,
+    status_filter: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Все долги/рассрочки клиента для админ-панели."""
+    from app.models import CustomerDebt
+
+    result = await db.execute(select(Customer).where(Customer.id == id))
+    customer = result.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail={"message": "Клиент не найден"})
+
+    query = select(CustomerDebt).where(CustomerDebt.customer_id == id)
+    if status_filter and status_filter in ("active", "overdue", "paid"):
+        query = query.where(CustomerDebt.status == status_filter)
+    query = query.order_by(CustomerDebt.overdue_days.desc(), CustomerDebt.created_at.desc())
+
+    debts = (await db.execute(query)).scalars().all()
+
+    active_debts = [d for d in debts if d.status != "paid"]
+    total_debt = sum(d.amount for d in active_debts)
+    total_original = sum(d.total_amount for d in debts)
+    total_paid_sum = sum(d.paid_amount for d in debts)
+    overdue_count = sum(1 for d in debts if d.overdue_days > 0)
+
+    return {
+        "customer_name": customer.full_name,
+        "customer_phone": customer.phone,
+        "total_debt": float(total_debt),
+        "total_original": float(total_original),
+        "total_paid": float(total_paid_sum),
+        "count": len(debts),
+        "overdue_count": overdue_count,
+        "debts": [
+            {
+                "id": str(d.id),
+                "reference": d.reference,
+                "total_amount": float(d.total_amount),
+                "paid_amount": float(d.paid_amount),
+                "amount": float(d.amount),
+                "overdue_days": d.overdue_days,
+                "status": d.status,
+                "percent_paid": round(float(d.paid_amount) / float(d.total_amount) * 100, 1) if d.total_amount > 0 else 0,
+                "schedule": d.schedule or [],
+                "payments_history": d.payments_history or [],
+                "next_payment": d.next_payment,
+                "note": d.note,
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+                "synced_at": d.synced_at.isoformat() if d.synced_at else None,
+            }
+            for d in debts
+        ],
+    }
+
+
+@router.get(
+    "/debts/summary",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
+)
+async def get_all_debts_summary(
+    status_filter: str | None = None,
+    search: str | None = None,
+    sort_by: str = "overdue_days",
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Сводка по всем должникам для админ-панели (таблица + фильтры)."""
+    from app.models import CustomerDebt
+    from sqlalchemy import func as sa_func
+
+    # Подзапрос: сгруппировать по клиенту
+    subq = (
+        select(
+            CustomerDebt.customer_id,
+            sa_func.sum(CustomerDebt.amount).label("total_debt"),
+            sa_func.sum(CustomerDebt.total_amount).label("total_original"),
+            sa_func.sum(CustomerDebt.paid_amount).label("total_paid"),
+            sa_func.count(CustomerDebt.id).label("debt_count"),
+            sa_func.max(CustomerDebt.overdue_days).label("max_overdue"),
+            sa_func.max(CustomerDebt.synced_at).label("last_sync"),
+        )
+        .where(CustomerDebt.status != "paid") if status_filter != "paid" else
+        select(
+            CustomerDebt.customer_id,
+            sa_func.sum(CustomerDebt.amount).label("total_debt"),
+            sa_func.sum(CustomerDebt.total_amount).label("total_original"),
+            sa_func.sum(CustomerDebt.paid_amount).label("total_paid"),
+            sa_func.count(CustomerDebt.id).label("debt_count"),
+            sa_func.max(CustomerDebt.overdue_days).label("max_overdue"),
+            sa_func.max(CustomerDebt.synced_at).label("last_sync"),
+        )
+        .where(CustomerDebt.status == "paid")
+    )
+
+    if status_filter == "overdue":
+        subq = subq.where(CustomerDebt.overdue_days > 0)
+
+    subq = subq.group_by(CustomerDebt.customer_id).subquery()
+
+    # Основной запрос с join на Customer
+    query = (
+        select(
+            Customer.id,
+            Customer.full_name,
+            Customer.phone,
+            subq.c.total_debt,
+            subq.c.total_original,
+            subq.c.total_paid,
+            subq.c.debt_count,
+            subq.c.max_overdue,
+            subq.c.last_sync,
+        )
+        .join(subq, Customer.id == subq.c.customer_id)
+    )
+
+    if search:
+        query = query.where(
+            Customer.full_name.ilike(f"%{search}%") | Customer.phone.ilike(f"%{search}%")
+        )
+
+    # Сортировка
+    if sort_by == "overdue_days":
+        query = query.order_by(subq.c.max_overdue.desc())
+    elif sort_by == "total_debt":
+        query = query.order_by(subq.c.total_debt.desc())
+    elif sort_by == "name":
+        query = query.order_by(Customer.full_name)
+    else:
+        query = query.order_by(subq.c.max_overdue.desc())
+
+    # Общие метрики
+    count_result = await db.execute(
+        select(sa_func.count()).select_from(query.subquery())
+    )
+    total_count = count_result.scalar() or 0
+
+    # Пагинация
+    query = query.offset(offset).limit(limit)
+    rows = (await db.execute(query)).all()
+
+    # Общая сводка
+    stats_result = await db.execute(
+        select(
+            sa_func.count(sa_func.distinct(CustomerDebt.customer_id)),
+            sa_func.sum(CustomerDebt.amount),
+            sa_func.sum(CustomerDebt.total_amount),
+            sa_func.sum(CustomerDebt.paid_amount),
+        ).where(CustomerDebt.status != "paid")
+    )
+    stats = stats_result.one()
+
+    return {
+        "total_customers": stats[0] or 0,
+        "total_debt": float(stats[1] or 0),
+        "total_original": float(stats[2] or 0),
+        "total_paid": float(stats[3] or 0),
+        "count": total_count,
+        "customers": [
+            {
+                "id": str(r[0]),
+                "full_name": r[1],
+                "phone": r[2],
+                "total_debt": float(r[3] or 0),
+                "total_original": float(r[4] or 0),
+                "total_paid": float(r[5] or 0),
+                "debt_count": r[6] or 0,
+                "max_overdue": r[7] or 0,
+                "last_sync": r[8].isoformat() if r[8] else None,
+                "percent_paid": round(float(r[5] or 0) / float(r[4] or 1) * 100, 1),
+            }
+            for r in rows
+        ],
+    }
+
+
+
 @router.post(
     "/transactions/{txn_id}/reverse",
     response_model=SuccessResponse,

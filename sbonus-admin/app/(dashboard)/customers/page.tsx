@@ -44,6 +44,9 @@ export default function CustomersPage() {
 
   // Import states
   const [importModal, setImportModal] = useState(false);
+  const [debtModal, setDebtModal] = useState(false);
+  const [debtData, setDebtData] = useState<any>(null);
+  const [debtLoading, setDebtLoading] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
@@ -107,6 +110,33 @@ export default function CustomersPage() {
     } finally {
       setImportLoading(false);
     }
+  };
+
+  const openDebtModal = async (customer: any) => {
+    setSelectedCustomer(customer);
+    setDebtModal(true);
+    setDebtLoading(true);
+    try {
+      const res = await api.get(\`/api/v1/admin/customers/\${customer.id}/debts\`);
+      setDebtData(res.data);
+    } catch { setDebtData(null); }
+    setDebtLoading(false);
+  };
+
+  const exportDebtsExcel = () => {
+    if (!debtData || !debtData.debts.length) return;
+    const rows = debtData.debts.map((d: any, i: number) => [
+      i + 1, d.reference, d.total_amount, d.paid_amount, d.amount,
+      d.overdue_days, d.status === 'paid' ? 'Погашена' : d.status === 'overdue' ? 'Просрочена' : 'Активная',
+      d.percent_paid + '%', d.created_at ? new Date(d.created_at).toLocaleDateString('ru-RU') : '',
+    ]);
+    const header = ['#', 'Документ', 'Сумма', 'Оплачено', 'Остаток', 'Просрочка дн.', 'Статус', '% оплаты', 'Дата'];
+    const csv = [header, ...rows].map(r => r.join('\t')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = \`debts_\${selectedCustomer?.full_name || 'export'}.csv\`;
+    a.click(); URL.revokeObjectURL(url);
   };
 
   const openModal = (type: any, customer: any) => {
@@ -371,6 +401,7 @@ export default function CustomersPage() {
                 <td style={{ padding: '16px', borderBottom: '1px solid #1c2a3a', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                     <button onClick={() => openModal('edit', c)} style={{ background: 'none', border: '1px solid #1c2a3a', color: '#8899aa', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Pencil size={12} /> Изм.</button>
+                    <button onClick={() => openDebtModal(c)} style={{ background: 'none', border: '1px solid #f59e0b', color: '#f59e0b', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><FileText size={12} /> Долги</button>
                     <button onClick={() => openModal('earn', c)} style={{ background: 'none', border: '1px solid #FFE600', color: '#FFE600', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><PlusCircle size={12} /> Бонус</button>
                     <button onClick={() => openModal('spend', c)} style={{ background: 'none', border: '1px solid #ff4d4d', color: '#ff4d4d', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><MinusCircle size={12} /> Списать</button>
                     <button onClick={() => handleGiftSpin(c)} style={{ background: 'none', border: '1px solid #c084fc', color: '#c084fc', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Disc size={12} /> Спин</button>
@@ -460,6 +491,132 @@ export default function CustomersPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Debt Modal */}
+      {debtModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                <FileText size={18} /> Долги / Рассрочки
+              </h2>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {debtData?.debts?.length > 0 && (
+                  <button onClick={exportDebtsExcel} style={{ background: 'none', border: '1px solid #22c55e', color: '#22c55e', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: 12 }}>
+                    Excel
+                  </button>
+                )}
+                <button onClick={() => setDebtModal(false)} style={{ background: 'none', border: '1px solid #1c2a3a', color: '#8899aa', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: 12 }}>
+                  Закрыть
+                </button>
+              </div>
+            </div>
+
+            {/* Customer info */}
+            <div style={{ background: '#1c2a3a', padding: 12, borderRadius: 12, marginBottom: 16 }}>
+              <span style={{ fontWeight: 700, color: '#e2eaf6' }}>{selectedCustomer?.full_name}</span>
+              <span style={{ color: '#8899aa', marginLeft: 12 }}>{selectedCustomer?.phone}</span>
+            </div>
+
+            {debtLoading ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>Загрузка...</div>
+            ) : !debtData || debtData.count === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>Нет долгов / рассрочек</div>
+            ) : (
+              <>
+                {/* Summary stats */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <div style={{ flex: 1, background: '#1c2a3a', borderRadius: 12, padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: '#8899aa', textTransform: 'uppercase' }}>Общий долг</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#ff4d4d' }}>{debtData.total_debt.toLocaleString('ru-RU')}</div>
+                  </div>
+                  <div style={{ flex: 1, background: '#1c2a3a', borderRadius: 12, padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: '#8899aa', textTransform: 'uppercase' }}>Оплачено</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#22c55e' }}>{debtData.total_paid.toLocaleString('ru-RU')}</div>
+                  </div>
+                  <div style={{ flex: 1, background: '#1c2a3a', borderRadius: 12, padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: '#8899aa', textTransform: 'uppercase' }}>Рассрочек</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#e2eaf6' }}>{debtData.count}</div>
+                  </div>
+                  {debtData.overdue_count > 0 && (
+                    <div style={{ flex: 1, background: 'rgba(255,77,77,0.1)', borderRadius: 12, padding: '10px 12px', textAlign: 'center', border: '1px solid rgba(255,77,77,0.3)' }}>
+                      <div style={{ fontSize: 10, color: '#ff4d4d', textTransform: 'uppercase' }}>Просрочено</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#ff4d4d' }}>{debtData.overdue_count}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Debts table */}
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #1c2a3a' }}>
+                      <th style={{ padding: '8px', textAlign: 'left', fontSize: 11, color: '#8899aa', textTransform: 'uppercase' }}>Документ</th>
+                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#8899aa' }}>Сумма</th>
+                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#8899aa' }}>Оплачено</th>
+                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#8899aa' }}>Остаток</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontSize: 11, color: '#8899aa' }}>Прогресс</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontSize: 11, color: '#8899aa' }}>Статус</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {debtData.debts.map((d: any) => {
+                      const refShort = d.reference.includes('00ЦБ-')
+                        ? d.reference.match(/00ЦБ-\d+/)?.[0] || d.reference.slice(0, 20)
+                        : d.reference.slice(0, 25);
+                      return (
+                        <tr key={d.id} style={{ borderBottom: '1px solid #1c2a3a' }}>
+                          <td style={{ padding: '10px 8px' }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#e2eaf6' }}>{refShort}</div>
+                            <div style={{ fontSize: 10, color: '#8899aa' }}>
+                              {d.created_at ? new Date(d.created_at).toLocaleDateString('ru-RU') : ''}
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: '#e2eaf6' }}>
+                            {d.total_amount.toLocaleString('ru-RU')}
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: '#22c55e', fontWeight: 600 }}>
+                            {d.paid_amount.toLocaleString('ru-RU')}
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: d.overdue_days > 0 ? '#ff4d4d' : '#e2eaf6', fontWeight: 700 }}>
+                            {d.amount.toLocaleString('ru-RU')}
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                              <div style={{ width: 60, height: 6, background: '#1c2a3a', borderRadius: 3, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: d.percent_paid + '%', background: d.status === 'paid' ? '#22c55e' : '#FFE600', borderRadius: 3 }} />
+                              </div>
+                              <span style={{ fontSize: 11, color: '#8899aa' }}>{d.percent_paid}%</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                            {d.status === 'paid' ? (
+                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontWeight: 600 }}>Погашена</span>
+                            ) : d.overdue_days > 0 ? (
+                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(255,77,77,0.15)', color: '#ff4d4d', fontWeight: 600 }}>
+                                <AlertTriangle size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />{d.overdue_days} дн.
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(255,230,0,0.1)', color: '#FFE600', fontWeight: 600 }}>Активная</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Sync info */}
+                {debtData.debts[0]?.synced_at && (
+                  <div style={{ marginTop: 12, fontSize: 11, color: '#8899aa', textAlign: 'right' }}>
+                    Последняя синхр.: {new Date(debtData.debts[0].synced_at).toLocaleString('ru-RU')}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
