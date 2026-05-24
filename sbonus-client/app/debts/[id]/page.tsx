@@ -45,7 +45,7 @@ export default function DebtDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text2)', cursor: 'pointer', padding: 0 }}>
           <ArrowLeft size={20} />
         </button>
-        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text1)' }}>Рассрочка тафсилоти</span>
+        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text1)' }}>Детали рассрочки</span>
       </div>
 
       {/* Hero section */}
@@ -68,7 +68,7 @@ export default function DebtDetailPage() {
             textAlign: 'center',
           }}>
             <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--text1)', margin: 0 }}>{Math.round(debt.percent_paid)}%</p>
-            <p style={{ fontSize: 9, color: 'var(--text3)', margin: 0 }}>тўланган</p>
+            <p style={{ fontSize: 9, color: 'var(--text3)', margin: 0 }}>оплачено</p>
           </div>
         </div>
 
@@ -102,7 +102,7 @@ export default function DebtDetailPage() {
           }}>
             <AlertTriangle size={14} color="#F09595" />
             <span style={{ fontSize: 13, fontWeight: 600, color: '#F09595' }}>
-              Просрочка: {debt.overdue_days} кун!
+              Просрочка: {debt.overdue_days} дн.!
             </span>
           </div>
         )}
@@ -117,7 +117,7 @@ export default function DebtDetailPage() {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <div>
-            <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0 }}>Навбатдаги тўлов</p>
+            <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0 }}>Следующий платёж</p>
             <p style={{ fontSize: 17, fontWeight: 700, color: '#FFE600', margin: '2px 0 0' }}>
               {new Date(debt.next_payment.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
@@ -200,7 +200,7 @@ export default function DebtDetailPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <Receipt size={15} color="var(--text3)" />
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Тўлов тарихи
+              История оплат
             </span>
           </div>
           <div style={{ background: 'var(--card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>

@@ -46,7 +46,7 @@ export default function DebtCard({ amount, updatedAt, debtCount = 0 }: Props) {
         {!hasDebt && (
           <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              Рассрочка йўқ <CheckCircle2 size={14} color="var(--accent)" />
+              Рассрочек нет <CheckCircle2 size={14} color="var(--accent)" />
             </span>
           </p>
         )}

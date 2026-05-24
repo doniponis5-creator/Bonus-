@@ -693,21 +693,21 @@ async def get_debts(
     db: AsyncSession = Depends(get_db),
     current: dict = Depends(get_current_customer),
 ) -> dict:
-    """Клиентнинг барча рассрочкалари (актив + просроченные)."""
+    """Все рассрочки клиента (активные + просроченные + погашенные)."""
     customer_id = current["sub"]
 
     result = await db.execute(
         select(CustomerDebt)
         .where(
             CustomerDebt.customer_id == customer_id,
-            CustomerDebt.status.in_(["active", "overdue"]),
+            CustomerDebt.status.in_(["active", "overdue", "paid"]),
         )
         .order_by(CustomerDebt.overdue_days.desc(), CustomerDebt.created_at.desc())
     )
     debts = result.scalars().all()
 
-    # Жами суммалар
-    total_debt = sum(d.amount for d in debts)
+    # Общие суммы (только активные для total_debt)
+    total_debt = sum(d.amount for d in debts if d.status != "paid")
     total_sum = sum(d.total_amount for d in debts)
     total_paid = sum(d.paid_amount for d in debts)
 

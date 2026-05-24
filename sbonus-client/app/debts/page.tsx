@@ -27,12 +27,12 @@ export default function DebtsPage() {
     <div style={{ padding: 20, textAlign: 'center' }}>
       <div style={{ padding: '16px 0' }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
-          <ArrowLeft size={18} /> Орқага
+          <ArrowLeft size={18} /> Назад
         </button>
       </div>
       <CheckCircle2 size={48} color="var(--accent)" style={{ margin: '40px auto 12px' }} />
-      <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text1)' }}>Рассрочка йўқ</p>
-      <p style={{ fontSize: 13, color: 'var(--text3)' }}>Сизда ҳозирча фаол рассрочка мавжуд эмас</p>
+      <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text1)' }}>Рассрочек нет</p>
+      <p style={{ fontSize: 13, color: 'var(--text3)' }}>У вас пока нет активных рассрочек</p>
     </div>
   );
 
@@ -46,7 +46,7 @@ export default function DebtsPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text2)', cursor: 'pointer', padding: 0 }}>
           <ArrowLeft size={20} />
         </button>
-        <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text1)' }}>Рассрочкалар</span>
+        <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text1)' }}>Рассрочки</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)', background: 'var(--card)', padding: '3px 10px', borderRadius: 12 }}>
           {data.count} та
         </span>
@@ -55,15 +55,15 @@ export default function DebtsPage() {
       {/* Summary */}
       <div style={{ margin: '0 16px 16px', background: 'var(--card)', borderRadius: 14, padding: 16, border: '1px solid var(--border)' }}>
         <div style={{ textAlign: 'center', marginBottom: 12 }}>
-          <p style={{ fontSize: 11, color: 'var(--text3)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 1 }}>Жами долг</p>
+          <p style={{ fontSize: 11, color: 'var(--text3)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 1 }}>Общий долг</p>
           <p style={{ fontSize: 32, fontWeight: 800, color: 'var(--danger)', margin: 0 }}>
             {data.total_debt.toLocaleString('ru-RU')} <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text3)' }}>сом</span>
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <StatMini label="Жами" value={data.total_original} />
-          <StatMini label="Тўланган" value={data.total_paid} color="var(--accent)" />
-          <StatMini label="Қолди" value={data.total_debt} color="var(--danger)" />
+          <StatMini label="Всего" value={data.total_original} />
+          <StatMini label="Оплачено" value={data.total_paid} color="var(--accent)" />
+          <StatMini label="Остаток" value={data.total_debt} color="var(--danger)" />
         </div>
         {/* Overall progress */}
         <div style={{ marginTop: 12 }}>
@@ -71,15 +71,32 @@ export default function DebtsPage() {
             <div style={{ height: '100%', width: `${totalPercent}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width 0.5s' }} />
           </div>
           <p style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 4 }}>
-            {totalPercent}% тўланган
+            {totalPercent}% оплачено
           </p>
         </div>
       </div>
 
-      {/* Debt cards */}
-      {data.debts.map(d => (
+      {/* Активные рассрочки */}
+      {data.debts.filter(d => d.status !== 'paid').length > 0 && (
+        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', margin: '0 20px 8px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          Активные
+        </p>
+      )}
+      {data.debts.filter(d => d.status !== 'paid').map(d => (
         <DebtListCard key={d.id} debt={d} />
       ))}
+
+      {/* Погашенные рассрочки */}
+      {data.debts.filter(d => d.status === 'paid').length > 0 && (
+        <>
+          <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', margin: '16px 20px 8px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Погашенные
+          </p>
+          {data.debts.filter(d => d.status === 'paid').map(d => (
+            <DebtListCard key={d.id} debt={d} />
+          ))}
+        </>
+      )}
     </div>
   );
 }
@@ -97,6 +114,7 @@ function StatMini({ label, value, color }: { label: string; value: number; color
 
 function DebtListCard({ debt }: { debt: DebtSummary }) {
   const isOverdue = debt.overdue_days > 0;
+  const isPaid = debt.status === 'paid';
   const refShort = debt.reference.includes('00ЦБ-')
     ? debt.reference.match(/00ЦБ-\d+/)?.[0] || debt.reference.slice(0, 20)
     : debt.reference.slice(0, 25);
@@ -116,7 +134,8 @@ function DebtListCard({ debt }: { debt: DebtSummary }) {
       <div style={{
         margin: '0 16px 10px', background: 'var(--card)', borderRadius: 14, padding: 14,
         border: '1px solid var(--border)',
-        borderLeft: `3px solid ${isOverdue ? 'var(--danger)' : 'var(--accent)'}`,
+        borderLeft: `3px solid ${isPaid ? 'var(--text3)' : isOverdue ? 'var(--danger)' : 'var(--accent)'}`,
+        opacity: isPaid ? 0.7 : 1,
         cursor: 'pointer',
       }}>
         {/* Top row */}
@@ -126,13 +145,17 @@ function DebtListCard({ debt }: { debt: DebtSummary }) {
             <p style={{ fontSize: 11, color: 'var(--text3)', margin: '2px 0 0' }}>{dateStr}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {isOverdue ? (
+            {isPaid ? (
+              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: 'rgba(93,202,165,0.15)', color: '#5DCAA5', fontWeight: 600 }}>
+                Погашена
+              </span>
+            ) : isOverdue ? (
               <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: 'rgba(240,100,100,0.15)', color: '#F09595', fontWeight: 600 }}>
-                {debt.overdue_days} кун
+                {debt.overdue_days} дн.
               </span>
             ) : (
               <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: 'rgba(93,202,165,0.15)', color: '#5DCAA5', fontWeight: 600 }}>
-                Муддатида
+                В срок
               </span>
             )}
             <ChevronRight size={16} color="var(--text3)" />
@@ -144,7 +167,7 @@ function DebtListCard({ debt }: { debt: DebtSummary }) {
           <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
             <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="var(--bg2)" strokeWidth={stroke} />
             <circle cx={size/2} cy={size/2} r={radius} fill="none"
-              stroke={isOverdue ? '#F09595' : '#FFE600'} strokeWidth={stroke}
+              stroke={isPaid ? 'var(--accent)' : isOverdue ? '#F09595' : '#FFE600'} strokeWidth={stroke}
               strokeDasharray={circ} strokeDashoffset={offset}
               strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s' }}
             />
@@ -180,7 +203,7 @@ function DebtListCard({ debt }: { debt: DebtSummary }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Clock size={13} color="var(--text3)" />
-              <span style={{ fontSize: 11, color: 'var(--text3)' }}>Навбатдаги:</span>
+              <span style={{ fontSize: 11, color: 'var(--text3)' }}>Следующий:</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: '#FFE600' }}>
                 {new Date(debt.next_payment.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}
               </span>
