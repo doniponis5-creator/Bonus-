@@ -174,7 +174,7 @@ async def product_list(
     low_stock_only: bool = Query(False, description="Только товары с низким остатком"),
     search: Optional[str] = Query(None, description="Поиск по названию/SKU"),
     sort_by: str = Query("name", description="Сортировка: name, stock, price, sales"),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),

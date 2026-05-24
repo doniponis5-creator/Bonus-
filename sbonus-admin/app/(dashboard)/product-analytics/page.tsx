@@ -233,7 +233,7 @@ export default function ProductAnalyticsPage() {
           setCrossSell(r.data);
         }
         if (tab === 'all-products' && !allProducts) {
-          const r = await productAPI.products({ limit: 200 });
+          const r = await productAPI.products({ limit: 10000 });
           setAllProducts(r.data);
         }
         if (tab === 'settings' && !settings) {
