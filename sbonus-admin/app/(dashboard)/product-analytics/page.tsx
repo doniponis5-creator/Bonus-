@@ -1044,12 +1044,33 @@ function AllProductsTab({ data }: { data: any }) {
     let items = [...data.products];
 
     if (search) {
-      const words = search.toLowerCase().split(/\s+/).filter(Boolean);
-      items = items.filter((p: any) => {
-        const haystack = [p.name, p.sku, p.category, p.supplier, p.abc_class]
-          .filter(Boolean).join(' ').toLowerCase();
-        return words.every(w => haystack.includes(w));
-      });
+      const q = search.trim().toLowerCase();
+
+      // Exact match: if name or SKU matches exactly → return only that one
+      const exact = items.filter((p: any) =>
+        p.name?.toLowerCase() === q || p.sku?.toLowerCase() === q
+      );
+      if (exact.length > 0) {
+        items = exact;
+      } else {
+        // Smart multi-word search
+        const words = q.split(/\s+/).filter(Boolean);
+        items = items.filter((p: any) => {
+          const haystack = [p.name, p.sku, p.category, p.supplier, p.abc_class]
+            .filter(Boolean).join(' ').toLowerCase();
+          return words.every(w => haystack.includes(w));
+        });
+        // Rank: exact name/SKU start → name contains → rest
+        items.sort((a: any, b: any) => {
+          const aName = (a.name || '').toLowerCase();
+          const bName = (b.name || '').toLowerCase();
+          const aSku = (a.sku || '').toLowerCase();
+          const bSku = (b.sku || '').toLowerCase();
+          const aExact = aName === q || aSku === q ? 0 : aName.startsWith(q) || aSku.endsWith(q) ? 1 : 2;
+          const bExact = bName === q || bSku === q ? 0 : bName.startsWith(q) || bSku.endsWith(q) ? 1 : 2;
+          return aExact - bExact;
+        });
+      }
     }
     if (category) {
       items = items.filter((p: any) => p.category === category);
