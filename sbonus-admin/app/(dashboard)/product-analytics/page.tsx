@@ -1038,15 +1038,18 @@ function AllProductsTab({ data }: { data: any }) {
     return data.categories.map((c: any) => c.name);
   }, [data?.categories]);
 
+  // Smart search: multi-word, searches name + SKU + category + supplier
   const filtered = useMemo(() => {
     if (!data?.products) return [];
     let items = [...data.products];
 
     if (search) {
-      const q = search.toLowerCase();
-      items = items.filter((p: any) =>
-        p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q)
-      );
+      const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+      items = items.filter((p: any) => {
+        const haystack = [p.name, p.sku, p.category, p.supplier, p.abc_class]
+          .filter(Boolean).join(' ').toLowerCase();
+        return words.every(w => haystack.includes(w));
+      });
     }
     if (category) {
       items = items.filter((p: any) => p.category === category);
@@ -1063,6 +1066,18 @@ function AllProductsTab({ data }: { data: any }) {
 
     return items;
   }, [data?.products, search, category, sortBy, sortDir]);
+
+  // Totals
+  const totals = useMemo(() => {
+    if (!filtered.length) return { count: 0, stock: 0, value: 0, costValue: 0 };
+    let stock = 0, value = 0, costValue = 0;
+    for (const p of filtered) {
+      stock += (p.current_stock || 0);
+      value += (p.price || 0) * (p.current_stock || 0);
+      costValue += (p.cost_price || 0) * (p.current_stock || 0);
+    }
+    return { count: filtered.length, stock, value, costValue };
+  }, [filtered]);
 
   if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
@@ -1095,9 +1110,17 @@ function AllProductsTab({ data }: { data: any }) {
 
   return (
     <>
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
+        <KpiCard icon={Package} label="Товаров" value={fmt(totals.count)} sub={`из ${data.total}`} color="#3b82f6" />
+        <KpiCard icon={Layers} label="Общий остаток" value={fmt(totals.stock) + ' шт'} color="#22c55e" />
+        <KpiCard icon={DollarSign} label="Стоимость склада" value={fmtMoney(Math.round(totals.value))} color="#FFE600" />
+        <KpiCard icon={TrendingDown} label="Себестоимость склада" value={fmtMoney(Math.round(totals.costValue))} sub={totals.value > 0 ? `маржа ${Math.round(((totals.value - totals.costValue) / totals.value) * 100)}%` : ''} color="#f59e0b" />
+      </div>
+
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} />
+        <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} placeholder="Умный поиск: название, SKU, категория..." />
         <CategorySelect value={category} onChange={v => { setCategory(v); setVisibleCount(PAGE_SIZE); }} categories={categories} />
         <button onClick={handleExport} style={{
           display: 'flex', alignItems: 'center', gap: 6,
@@ -1106,9 +1129,6 @@ function AllProductsTab({ data }: { data: any }) {
         }}>
           <Download size={14} /> Excel ({filtered.length})
         </button>
-        <div style={{ color: '#5e6e82', fontSize: 12, marginLeft: 'auto' }}>
-          Всего: {data.total} товаров
-        </div>
       </div>
 
       {/* Table */}
@@ -1179,6 +1199,25 @@ function AllProductsTab({ data }: { data: any }) {
                 );
               })}
             </tbody>
+            {filtered.length > 0 && (
+              <tfoot>
+                <tr style={{ borderTop: '2px solid #1e293b', background: '#0a101e' }}>
+                  <td colSpan={4} style={{ ...tdStyle, fontWeight: 700, color: '#FFE600', fontSize: 12, textTransform: 'uppercase' }}>
+                    Итого: {fmt(totals.count)} товаров
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#22c55e' }}>
+                    {fmt(totals.stock)} шт
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#FFE600' }}>
+                    {fmtMoney(Math.round(totals.value))}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
+                    {fmtMoney(Math.round(totals.costValue))}
+                  </td>
+                  <td style={tdStyle} />
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
         <ShowMoreBtn shown={visibleCount} total={filtered.length} onClick={() => setVisibleCount(c => c + PAGE_SIZE)} />
