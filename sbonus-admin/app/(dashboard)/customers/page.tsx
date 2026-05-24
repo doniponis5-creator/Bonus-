@@ -117,7 +117,7 @@ export default function CustomersPage() {
     setDebtModal(true);
     setDebtLoading(true);
     try {
-      const res = await api.get(\`/api/v1/admin/customers/\${customer.id}/debts\`);
+      const res = await api.get(`/api/v1/admin/customers/${customer.id}/debts`);
       setDebtData(res.data);
     } catch { setDebtData(null); }
     setDebtLoading(false);
@@ -135,7 +135,7 @@ export default function CustomersPage() {
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url;
-    a.download = \`debts_\${selectedCustomer?.full_name || 'export'}.csv\`;
+    a.download = `debts_${selectedCustomer?.full_name || 'export'}.csv`;
     a.click(); URL.revokeObjectURL(url);
   };
 
