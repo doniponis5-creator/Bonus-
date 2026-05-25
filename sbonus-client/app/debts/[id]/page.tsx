@@ -139,9 +139,7 @@ export default function DebtDetailPage() {
           </div>
           <div style={{ background: 'var(--card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
             {debt.schedule.map((item, i) => {
-              const isPaid = item.status === 'paid' || debt.payments_history?.some(
-                p => p.date === item.date || (new Date(p.date).getTime() <= new Date(item.date).getTime() && i < (debt.payments_history?.filter(ph => true).length || 0))
-              );
+              const isPaid = item.status === 'paid';
               const isItemOverdue = item.status === 'overdue';
               const dateFormatted = new Date(item.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -165,28 +163,28 @@ export default function DebtDetailPage() {
                   {/* Date + plan */}
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: 'var(--text1)' }}>{dateFormatted}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text3)', margin: '1px 0 0' }}>
-                      План: {item.amount.toLocaleString('ru-RU')} сом
-                    </p>
-                    {isPaid && debt.payments_history && (
-                      <p style={{ fontSize: 10, color: 'var(--accent)', margin: '1px 0 0' }}>
-                        Оплата: {item.amount.toLocaleString('ru-RU')} сом
-                      </p>
+                    {isPaid && (
+                      <p style={{ fontSize: 10, color: 'var(--accent)', margin: '1px 0 0' }}>Оплачено ✓</p>
                     )}
-                    {isItemOverdue && !isPaid && debt.overdue_days > 0 && (
+                    {isItemOverdue && (
                       <p style={{ fontSize: 10, color: '#F09595', margin: '1px 0 0' }}>
-                        Просрочка {debt.overdue_days} дн.
+                        Просрочка {Math.max(1, Math.round((Date.now() - new Date(item.date).getTime()) / 86400000))} дн.
                       </p>
                     )}
                   </div>
 
-                  {/* Status label */}
-                  <span style={{
-                    fontSize: 11, fontWeight: 600,
-                    color: isPaid ? 'var(--accent)' : isItemOverdue ? '#F09595' : 'var(--text3)',
-                  }}>
-                    {isPaid ? 'Оплачен' : isItemOverdue ? 'Просроч' : 'Ожидает'}
-                  </span>
+                  {/* Amount + status */}
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>
+                      {item.amount.toLocaleString('ru-RU')}
+                    </span>
+                    <p style={{
+                      fontSize: 10, fontWeight: 600, margin: '1px 0 0',
+                      color: isPaid ? 'var(--accent)' : isItemOverdue ? '#F09595' : 'var(--text3)',
+                    }}>
+                      {isPaid ? '✅ Оплачен' : isItemOverdue ? '⚠️ Просрочен' : '○ Ожидает'}
+                    </p>
+                  </div>
                 </div>
               );
             })}
