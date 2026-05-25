@@ -1,6 +1,6 @@
 'use client';
 import { Users, FileText, XCircle, PlusCircle, MinusCircle, Pencil, Lock, Unlock, Filter, CheckSquare, Square, Coins, Upload, FileSpreadsheet, X, AlertTriangle, CheckCircle2, Disc } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { customersAPI, adminAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 
@@ -47,6 +47,7 @@ export default function CustomersPage() {
   const [debtModal, setDebtModal] = useState(false);
   const [debtData, setDebtData] = useState<any>(null);
   const [debtLoading, setDebtLoading] = useState(false);
+  const [expandedDebtId, setExpandedDebtId] = useState<string | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
@@ -554,6 +555,7 @@ export default function CustomersPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #1c2a3a' }}>
+                      <th style={{ padding: '8px', textAlign: 'left', fontSize: 11, color: '#8899aa', textTransform: 'uppercase', width: 20 }}></th>
                       <th style={{ padding: '8px', textAlign: 'left', fontSize: 11, color: '#8899aa', textTransform: 'uppercase' }}>Документ</th>
                       <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#8899aa' }}>Сумма</th>
                       <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#8899aa' }}>Оплачено</th>
@@ -567,8 +569,23 @@ export default function CustomersPage() {
                       const refShort = d.reference.includes('00ЦБ-')
                         ? d.reference.match(/00ЦБ-\d+/)?.[0] || d.reference.slice(0, 20)
                         : d.reference.slice(0, 25);
+                      const isExpanded = expandedDebtId === d.id;
+                      const schedule: any[] = d.schedule || [];
+                      const payments: any[] = d.payments_history || [];
+                      const nextPay = d.next_payment;
                       return (
-                        <tr key={d.id} style={{ borderBottom: '1px solid #1c2a3a' }}>
+                        <React.Fragment key={d.id}>
+                        <tr
+                          onClick={() => setExpandedDebtId(isExpanded ? null : d.id)}
+                          style={{ borderBottom: isExpanded ? 'none' : '1px solid #1c2a3a', cursor: 'pointer', transition: 'background 0.15s' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <td style={{ padding: '10px 4px 10px 8px', width: 20 }}>
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                              <path d="M4 2L8 6L4 10" stroke="#8899aa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </td>
                           <td style={{ padding: '10px 8px' }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: '#e2eaf6' }}>{refShort}</div>
                             <div style={{ fontSize: 10, color: '#8899aa' }}>
@@ -604,6 +621,162 @@ export default function CustomersPage() {
                             )}
                           </td>
                         </tr>
+
+                        {/* ══ Expanded Detail Panel ══ */}
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={7} style={{ padding: 0, borderBottom: '1px solid #1c2a3a' }}>
+                              <div style={{ background: '#0a0f18', padding: '16px 20px', borderTop: '1px solid rgba(255,230,0,0.15)' }}>
+
+                                {/* Next Payment Banner */}
+                                {nextPay && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                      <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="1.5"/>
+                                      <path d="M12 6V12L16 14" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
+                                    </svg>
+                                    <div>
+                                      <div style={{ fontSize: 11, color: '#8899aa' }}>Следующий платёж</div>
+                                      <div style={{ fontSize: 14, fontWeight: 700, color: '#3b82f6' }}>
+                                        {Number(nextPay.amount).toLocaleString('ru-RU')} сом
+                                        <span style={{ fontWeight: 400, color: '#8899aa', marginLeft: 8, fontSize: 12 }}>
+                                          до {new Date(nextPay.date).toLocaleDateString('ru-RU')}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+
+                                  {/* ── График платежей ── */}
+                                  <div style={{ flex: 1, minWidth: 260 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="#FFE600" strokeWidth="1.5"/>
+                                        <path d="M3 10H21" stroke="#FFE600" strokeWidth="1.5"/>
+                                        <path d="M8 2V6M16 2V6" stroke="#FFE600" strokeWidth="1.5" strokeLinecap="round"/>
+                                      </svg>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#e2eaf6', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        График платежей
+                                      </span>
+                                      {schedule.length > 0 && (
+                                        <span style={{ fontSize: 10, color: '#8899aa', marginLeft: 4 }}>({schedule.length})</span>
+                                      )}
+                                    </div>
+                                    {schedule.length === 0 ? (
+                                      <div style={{ fontSize: 12, color: '#556677', padding: '8px 0' }}>Нет данных от 1С</div>
+                                    ) : (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        {schedule.map((s: any, i: number) => {
+                                          const isPaid = s.status === 'paid';
+                                          const isOverdue = s.status === 'overdue';
+                                          const statusColor = isPaid ? '#22c55e' : isOverdue ? '#ff4d4d' : '#8899aa';
+                                          return (
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: isPaid ? 'rgba(34,197,94,0.05)' : isOverdue ? 'rgba(255,77,77,0.05)' : 'rgba(255,255,255,0.02)' }}>
+                                              {/* Status icon */}
+                                              {isPaid ? (
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                  <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="1.5"/>
+                                                  <path d="M8 12L11 15L16 9" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                              ) : isOverdue ? (
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                  <path d="M12 2L22 20H2L12 2Z" stroke="#ff4d4d" strokeWidth="1.5" strokeLinejoin="round"/>
+                                                  <path d="M12 10V14" stroke="#ff4d4d" strokeWidth="1.5" strokeLinecap="round"/>
+                                                  <circle cx="12" cy="17" r="0.5" fill="#ff4d4d" stroke="#ff4d4d"/>
+                                                </svg>
+                                              ) : (
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                  <circle cx="12" cy="12" r="10" stroke="#8899aa" strokeWidth="1.5"/>
+                                                  <circle cx="12" cy="12" r="3" fill="#8899aa"/>
+                                                </svg>
+                                              )}
+                                              {/* Date */}
+                                              <span style={{ fontSize: 12, color: '#8899aa', minWidth: 75 }}>
+                                                {new Date(s.date).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })}
+                                              </span>
+                                              {/* Amount */}
+                                              <span style={{ fontSize: 12, fontWeight: 700, color: statusColor, flex: 1, textAlign: 'right' }}>
+                                                {Number(s.amount).toLocaleString('ru-RU')} сом
+                                              </span>
+                                              {/* Status label */}
+                                              <span style={{ fontSize: 10, color: statusColor, minWidth: 70, textAlign: 'right' }}>
+                                                {isPaid ? 'Оплачен' : isOverdue ? 'Просрочен' : 'Ожидает'}
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* ── История оплат ── */}
+                                  <div style={{ flex: 1, minWidth: 260 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+                                        <path d="M22 12c0-5.52-4.48-10-10-10" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 3"/>
+                                        <path d="M12 6V12L8 14" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+                                      </svg>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#e2eaf6', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        История оплат
+                                      </span>
+                                      {payments.length > 0 && (
+                                        <span style={{ fontSize: 10, color: '#8899aa', marginLeft: 4 }}>({payments.length})</span>
+                                      )}
+                                    </div>
+                                    {payments.length === 0 ? (
+                                      <div style={{ fontSize: 12, color: '#556677', padding: '8px 0' }}>Нет оплат</div>
+                                    ) : (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        {payments.map((p: any, i: number) => (
+                                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(34,197,94,0.05)' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                              <rect x="2" y="5" width="20" height="14" rx="2" stroke="#22c55e" strokeWidth="1.5"/>
+                                              <path d="M2 10H22" stroke="#22c55e" strokeWidth="1.5"/>
+                                            </svg>
+                                            <span style={{ fontSize: 12, color: '#8899aa', minWidth: 75 }}>
+                                              {new Date(p.date).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })}
+                                            </span>
+                                            <span style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', flex: 1, textAlign: 'right' }}>
+                                              +{Number(p.amount).toLocaleString('ru-RU')} сом
+                                            </span>
+                                            {p.overdue_days > 0 && (
+                                              <span style={{ fontSize: 10, color: '#ff4d4d', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                                                  <path d="M12 2L22 20H2L12 2Z" stroke="#ff4d4d" strokeWidth="2" strokeLinejoin="round"/>
+                                                  <path d="M12 10V14" stroke="#ff4d4d" strokeWidth="2" strokeLinecap="round"/>
+                                                </svg>
+                                                {p.overdue_days} дн.
+                                              </span>
+                                            )}
+                                            {p.document && (
+                                              <span style={{ fontSize: 10, color: '#556677' }}>{p.document}</span>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Note */}
+                                {d.note && (
+                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ marginTop: 1, flexShrink: 0 }}>
+                                      <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="#8899aa" strokeWidth="1.5" strokeLinejoin="round"/>
+                                      <path d="M14 2V8H20" stroke="#8899aa" strokeWidth="1.5" strokeLinejoin="round"/>
+                                      <path d="M8 13H16M8 17H12" stroke="#8899aa" strokeWidth="1.5" strokeLinecap="round"/>
+                                    </svg>
+                                    <span style={{ fontSize: 12, color: '#8899aa' }}>{d.note}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
