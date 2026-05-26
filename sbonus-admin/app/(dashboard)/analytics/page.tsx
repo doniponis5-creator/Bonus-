@@ -104,10 +104,12 @@ export default function AnalyticsPage() {
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Новые клиенты</div>
           <div style={{ fontSize: 22, fontWeight: 800 }}>{data.new_customers_current}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 13, fontWeight: 600, color: custUp ? '#22c55e' : '#ff4d4d' }}>
-            {custUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-            было {data.new_customers_previous}
-          </div>
+          {data.new_customers_previous > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 13, fontWeight: 600, color: custUp ? '#22c55e' : '#ff4d4d' }}>
+              {custUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+              было {data.new_customers_previous}
+            </div>
+          )}
         </div>
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>
