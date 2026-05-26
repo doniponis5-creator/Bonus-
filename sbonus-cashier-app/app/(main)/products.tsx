@@ -160,20 +160,20 @@ export default function ProductsScreen() {
         {/* Bottom row: prices */}
         <View style={styles.priceRow}>
           <View style={styles.priceItem}>
-            <Text style={styles.priceLabel}>Нарх</Text>
+            <Text style={styles.priceLabel}>Цена</Text>
             <Text style={styles.priceValue}>{fmtPrice(item.price)} сом</Text>
           </View>
 
           {showCost && item.cost_price !== null ? (
             <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>Таннарх</Text>
+              <Text style={styles.priceLabel}>Себестоимость</Text>
               <Text style={styles.costValue}>{fmtPrice(item.cost_price)} сом</Text>
             </View>
           ) : null}
 
           {margin !== null ? (
             <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>Маржа</Text>
+              <Text style={styles.priceLabel}>Наценка</Text>
               <Text style={[
                 styles.marginValue,
                 margin < 15 ? { color: COLORS.danger } : margin > 40 ? { color: COLORS.success } : {},
@@ -194,7 +194,7 @@ export default function ProductsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={22} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Товарлар</Text>
+        <Text style={styles.headerTitle}>Товары</Text>
         <TouchableOpacity
           onPress={() => setShowFilters(!showFilters)}
           style={[styles.filterBtn, showFilters && styles.filterBtnActive]}
@@ -209,7 +209,7 @@ export default function ProductsScreen() {
         <TextInput
           ref={inputRef}
           style={styles.searchInput}
-          placeholder="Ном, штрих-код..."
+          placeholder="Название, штрих-код..."
           placeholderTextColor={COLORS.text3}
           value={query}
           onChangeText={handleQueryChange}
@@ -232,7 +232,7 @@ export default function ProductsScreen() {
             onPress={() => handleCategorySelect(null)}
           >
             <Text style={[styles.chipText, !selectedCategory && styles.chipTextActive]}>
-              Барчаси
+              Все
             </Text>
           </TouchableOpacity>
           <FlatList
@@ -263,19 +263,19 @@ export default function ProductsScreen() {
       ) : !searched ? (
         <View style={styles.centerBox}>
           <Package size={48} color={COLORS.text3} />
-          <Text style={styles.emptyText}>Товар номини ёзинг</Text>
-          <Text style={styles.emptySubtext}>Ном ёки штрих-код бўйича қидиринг</Text>
+          <Text style={styles.emptyText}>Введите название товара</Text>
+          <Text style={styles.emptySubtext}>Поиск по названию или штрих-коду</Text>
         </View>
       ) : products.length === 0 ? (
         <View style={styles.centerBox}>
           <Search size={48} color={COLORS.text3} />
-          <Text style={styles.emptyText}>Топилмади</Text>
-          <Text style={styles.emptySubtext}>«{query}» бўйича товар йўқ</Text>
+          <Text style={styles.emptyText}>Не найдено</Text>
+          <Text style={styles.emptySubtext}>По запросу «{query}» ничего не найдено</Text>
         </View>
       ) : (
         <>
           <Text style={styles.resultCount}>
-            {products.length} та товар топилди
+            {products.length} товаров найдено
           </Text>
           <FlatList
             data={products}

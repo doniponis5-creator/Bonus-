@@ -119,8 +119,8 @@ export default function DashboardScreen() {
           <Package size={22} color={COLORS.success} />
         </View>
         <View style={styles.btnInfo}>
-          <Text style={styles.btnTitle}>Товарлар</Text>
-          <Text style={styles.btnDesc}>Қидирув, нарх, остаток</Text>
+          <Text style={styles.btnTitle}>Товары</Text>
+          <Text style={styles.btnDesc}>Поиск, цены, остатки</Text>
         </View>
         <ChevronRight size={22} color={COLORS.text3} />
       </TouchableOpacity>
