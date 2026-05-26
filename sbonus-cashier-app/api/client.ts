@@ -131,3 +131,16 @@ export const cashierBonusAPI = {
 };
 
 export default api;
+
+// ═══════════════════════════════════════
+// PRODUCTS API (кассир учун)
+// ═══════════════════════════════════════
+
+export const productsAPI = {
+  search: (q: string, category?: string) =>
+    api.get('/api/v1/cashier/products/search', {
+      params: { q, category: category || undefined, limit: 30 },
+    }),
+
+  config: () => api.get('/api/v1/cashier/products/config'),
+};

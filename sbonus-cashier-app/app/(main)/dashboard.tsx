@@ -8,7 +8,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
   ChevronRight, LogOut, Search, UserPlus, Hand,
-  Flame, Clock, TrendingUp,
+  Flame, Clock, TrendingUp, Package,
 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/auth';
 import { COLORS } from '@/constants/theme';
@@ -106,6 +106,21 @@ export default function DashboardScreen() {
         <View style={styles.btnInfo}>
           <Text style={styles.btnTitle}>Новый клиент</Text>
           <Text style={styles.btnDesc}>Зарегистрировать в S Bonus</Text>
+        </View>
+        <ChevronRight size={22} color={COLORS.text3} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.mainBtn}
+        onPress={() => navigation.navigate('Products')}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.btnIcon, { backgroundColor: 'rgba(34,197,94,0.12)' }]}>
+          <Package size={22} color={COLORS.success} />
+        </View>
+        <View style={styles.btnInfo}>
+          <Text style={styles.btnTitle}>Товарлар</Text>
+          <Text style={styles.btnDesc}>Қидирув, нарх, остаток</Text>
         </View>
         <ChevronRight size={22} color={COLORS.text3} />
       </TouchableOpacity>

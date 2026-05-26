@@ -27,6 +27,7 @@ from app.api.v1.ab_testing import router as ab_testing_router
 from app.api.v1.qr_analytics import router as qr_analytics_router
 from app.api.v1.analytics_pro import router as analytics_pro_router
 from app.api.v1.product_analytics import router as product_analytics_router
+from app.api.v1.cashier_products import router as cashier_products_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -53,3 +54,4 @@ api_router.include_router(ab_testing_router)
 api_router.include_router(qr_analytics_router)
 api_router.include_router(analytics_pro_router)
 api_router.include_router(product_analytics_router)
+api_router.include_router(cashier_products_router)
