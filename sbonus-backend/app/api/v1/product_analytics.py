@@ -992,3 +992,372 @@ async def daily_digest(
         },
     }
 
+
+
+# ═══════════════════════════════════════════
+# 12. SMART RECOMMENDATIONS — Умные рекомендации
+# ═══════════════════════════════════════════
+
+@router.get("/smart-recommendations")
+async def smart_recommendations(
+    days: int = Query(90, ge=30, le=365, description="Период анализа"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+) -> dict:
+    """
+    Smart Product Intelligence — автоматические рекомендации:
+    1. Combo/Bundle — товары, которые часто покупают вместе → предложить комплект
+    2. Slow-movers — товары замедлились → рекомендация акции/скидки
+    3. Frozen capital — деньги заморожены в товаре → план разморозки
+    4. Rising stars — товары с растущим трендом → увеличить запас
+    5. Price optimization — маржа слишком низкая/высокая → оптимизация
+    """
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+    since_recent = now - timedelta(days=max(days // 3, 7))  # Последняя 1/3 периода
+    thirty_days_ago = now - timedelta(days=30)
+    sixty_days_ago = now - timedelta(days=60)
+
+    recommendations = []
+
+    # ──────────────────────────────────────
+    # 1. COMBO SUGGESTIONS (часто вместе)
+    # ──────────────────────────────────────
+    from sqlalchemy.orm import aliased
+    PI_A = aliased(PurchaseItem)
+    PI_B = aliased(PurchaseItem)
+    Prod_A = aliased(Product)
+    Prod_B = aliased(Product)
+
+    combo_result = await db.execute(
+        select(
+            Prod_A.id.label("id_a"),
+            Prod_A.sku.label("sku_a"),
+            Prod_A.name.label("name_a"),
+            Prod_A.price.label("price_a"),
+            Prod_A.category.label("cat_a"),
+            Prod_B.id.label("id_b"),
+            Prod_B.sku.label("sku_b"),
+            Prod_B.name.label("name_b"),
+            Prod_B.price.label("price_b"),
+            Prod_B.category.label("cat_b"),
+            func.count().label("times"),
+        )
+        .select_from(PI_A)
+        .join(PI_B, and_(
+            PI_A.receipt_number == PI_B.receipt_number,
+            PI_A.product_id < PI_B.product_id,
+        ))
+        .join(Prod_A, Prod_A.id == PI_A.product_id)
+        .join(Prod_B, Prod_B.id == PI_B.product_id)
+        .where(
+            PI_A.created_at >= since,
+            PI_A.receipt_number != None,
+        )
+        .group_by(
+            Prod_A.id, Prod_A.sku, Prod_A.name, Prod_A.price, Prod_A.category,
+            Prod_B.id, Prod_B.sku, Prod_B.name, Prod_B.price, Prod_B.category,
+        )
+        .having(func.count() >= 3)
+        .order_by(desc("times"))
+        .limit(10)
+    )
+    combos = combo_result.all()
+
+    combo_suggestions = []
+    for c in combos:
+        combo_price = float(c.price_a) + float(c.price_b)
+        discount_5 = round(combo_price * 0.95, 0)
+        discount_10 = round(combo_price * 0.90, 0)
+
+        combo_suggestions.append({
+            "type": "combo",
+            "priority": "high" if c.times >= 10 else "medium",
+            "product_a": {"sku": c.sku_a, "name": c.name_a, "price": float(c.price_a), "category": c.cat_a},
+            "product_b": {"sku": c.sku_b, "name": c.name_b, "price": float(c.price_b), "category": c.cat_b},
+            "times_together": c.times,
+            "total_price": combo_price,
+            "combo_price_5pct": discount_5,
+            "combo_price_10pct": discount_10,
+            "action": f"Создать комплект «{c.name_a} + {c.name_b}» со скидкой 5-10%",
+            "reason": f"Покупают вместе {c.times} раз за {days} дней",
+            "potential_revenue": round(combo_price * c.times * 0.05, 0),
+        })
+
+    # ──────────────────────────────────────
+    # 2. SLOW-MOVERS — товары замедлились
+    # ──────────────────────────────────────
+    # Товары которые продавались, но в последнее время продажи упали
+
+    # Получаем продажи за весь период и за последнюю треть
+    velocity_full = await db.execute(
+        select(
+            PurchaseItem.product_id,
+            func.sum(PurchaseItem.quantity).label("total_qty"),
+            func.sum(PurchaseItem.total).label("total_rev"),
+        )
+        .where(PurchaseItem.created_at >= since)
+        .group_by(PurchaseItem.product_id)
+    )
+    full_sales = {r.product_id: {"qty": float(r.total_qty), "rev": float(r.total_rev)} for r in velocity_full.all()}
+
+    velocity_recent = await db.execute(
+        select(
+            PurchaseItem.product_id,
+            func.sum(PurchaseItem.quantity).label("total_qty"),
+        )
+        .where(PurchaseItem.created_at >= since_recent)
+        .group_by(PurchaseItem.product_id)
+    )
+    recent_sales = {r.product_id: float(r.total_qty) for r in velocity_recent.all()}
+
+    # Товары с историей продаж, но замедлением
+    slow_movers_q = await db.execute(
+        select(Product).where(
+            Product.is_active == True,
+            Product.current_stock > 0,
+            Product.last_sold_at != None,
+            Product.last_sold_at < thirty_days_ago,
+        )
+        .order_by((Product.current_stock * Product.price).desc())
+        .limit(20)
+    )
+    slow_products = slow_movers_q.scalars().all()
+
+    slow_mover_actions = []
+    for p in slow_products:
+        full = full_sales.get(p.id, {"qty": 0, "rev": 0})
+        recent = recent_sales.get(p.id, 0)
+        frozen = float(p.current_stock) * float(p.price)
+        days_since = (now - p.last_sold_at).days if p.last_sold_at else 999
+
+        # Определяем рекомендацию
+        if days_since > 90:
+            action = "Глубокая скидка 30-50% или ликвидация"
+            priority = "critical"
+            discount_pct = 40
+        elif days_since > 60:
+            action = "Акция: скидка 20-30% + выставить на видное место"
+            priority = "high"
+            discount_pct = 25
+        elif days_since > 30:
+            action = "Промо-акция: скидка 10-15% или бонус за покупку"
+            priority = "medium"
+            discount_pct = 12
+        else:
+            continue
+
+        cost_price = float(p.cost_price) if p.cost_price else 0
+        min_price = max(cost_price, float(p.price) * 0.5)  # Не ниже себестоимости
+        suggested_price = round(float(p.price) * (1 - discount_pct / 100), 0)
+        if cost_price > 0:
+            suggested_price = max(suggested_price, cost_price)
+
+        slow_mover_actions.append({
+            "type": "slow_mover",
+            "priority": priority,
+            "sku": p.sku,
+            "name": p.name,
+            "category": p.category,
+            "current_price": float(p.price),
+            "cost_price": cost_price,
+            "suggested_price": suggested_price,
+            "discount_percent": discount_pct,
+            "current_stock": float(p.current_stock),
+            "frozen_capital": frozen,
+            "days_without_sale": days_since,
+            "last_sold_at": p.last_sold_at.isoformat() if p.last_sold_at else None,
+            "total_sold_period": full.get("qty", 0),
+            "action": action,
+            "reason": f"Нет продаж {days_since} дней, заморожено {frozen:,.0f} сом",
+            "recovery_potential": round(frozen * (1 - discount_pct / 100), 0),
+        })
+
+    # Сортировка: critical → high → medium, внутри — по frozen capital
+    priority_order = {"critical": 0, "high": 1, "medium": 2}
+    slow_mover_actions.sort(key=lambda x: (priority_order.get(x["priority"], 3), -x["frozen_capital"]))
+
+    # ──────────────────────────────────────
+    # 3. FROZEN CAPITAL SUMMARY
+    # ──────────────────────────────────────
+    frozen_q = await db.execute(
+        select(
+            func.sum(
+                case(
+                    (and_(Product.last_sold_at != None, Product.last_sold_at < thirty_days_ago),
+                     Product.current_stock * Product.price),
+                    else_=Decimal("0"),
+                )
+            ).label("frozen_30d"),
+            func.sum(
+                case(
+                    (and_(Product.last_sold_at != None, Product.last_sold_at < sixty_days_ago),
+                     Product.current_stock * Product.price),
+                    else_=Decimal("0"),
+                )
+            ).label("frozen_60d"),
+            func.sum(Product.current_stock * Product.price).label("total_inventory"),
+        )
+        .where(Product.is_active == True, Product.current_stock > 0)
+    )
+    frozen_row = frozen_q.one()
+
+    total_inv = float(frozen_row.total_inventory or 0)
+    frozen_30 = float(frozen_row.frozen_30d or 0)
+    frozen_60 = float(frozen_row.frozen_60d or 0)
+
+    frozen_summary = {
+        "total_inventory_value": total_inv,
+        "frozen_30_days": frozen_30,
+        "frozen_60_days": frozen_60,
+        "frozen_percent": round((frozen_30 / total_inv) * 100, 1) if total_inv > 0 else 0,
+        "recovery_plan": [],
+    }
+
+    # План разморозки
+    if frozen_30 > 0:
+        frozen_summary["recovery_plan"].append({
+            "action": "Скидки 10-15% на товары без продаж 30+ дней",
+            "potential_recovery": round(frozen_30 * 0.85, 0),
+            "products_count": len([a for a in slow_mover_actions if a["days_without_sale"] >= 30]),
+        })
+    if frozen_60 > 0:
+        frozen_summary["recovery_plan"].append({
+            "action": "Глубокие скидки 25-40% на товары без продаж 60+ дней",
+            "potential_recovery": round(frozen_60 * 0.65, 0),
+            "products_count": len([a for a in slow_mover_actions if a["days_without_sale"] >= 60]),
+        })
+
+    # ──────────────────────────────────────
+    # 4. RISING STARS — растущий тренд
+    # ──────────────────────────────────────
+    # Товары у которых в последней трети периода продажи выше чем в среднем
+    rising_stars = []
+    if full_sales:
+        recent_period_days = max(days // 3, 7)
+        full_period_days = days
+
+        for pid, data in full_sales.items():
+            avg_daily_full = data["qty"] / full_period_days
+            recent_qty = recent_sales.get(pid, 0)
+            avg_daily_recent = recent_qty / recent_period_days
+
+            # Рост > 50% и минимум 2 продажи в день
+            if avg_daily_full > 0.1 and avg_daily_recent > avg_daily_full * 1.5:
+                rising_stars.append({
+                    "product_id": pid,
+                    "avg_daily_full": round(avg_daily_full, 2),
+                    "avg_daily_recent": round(avg_daily_recent, 2),
+                    "growth_pct": round(((avg_daily_recent - avg_daily_full) / avg_daily_full) * 100, 0),
+                })
+
+        # Подтягиваем информацию о товарах
+        if rising_stars:
+            star_ids = [s["product_id"] for s in rising_stars[:15]]
+            star_products = await db.execute(
+                select(Product).where(Product.id.in_(star_ids))
+            )
+            star_map = {p.id: p for p in star_products.scalars().all()}
+
+            enriched_stars = []
+            for s in sorted(rising_stars, key=lambda x: -x["growth_pct"])[:10]:
+                p = star_map.get(s["product_id"])
+                if not p:
+                    continue
+                days_left = int(float(p.current_stock) / s["avg_daily_recent"]) if s["avg_daily_recent"] > 0 else None
+                enriched_stars.append({
+                    "type": "rising_star",
+                    "priority": "high" if (days_left and days_left <= 7) else "medium",
+                    "sku": p.sku,
+                    "name": p.name,
+                    "category": p.category,
+                    "current_stock": float(p.current_stock),
+                    "price": float(p.price),
+                    "avg_daily_full": s["avg_daily_full"],
+                    "avg_daily_recent": s["avg_daily_recent"],
+                    "growth_percent": s["growth_pct"],
+                    "days_until_stockout": days_left,
+                    "action": f"Увеличить запас! Рост продаж +{s['growth_pct']:.0f}%"
+                        + (f", закончится через {days_left} дн" if days_left and days_left <= 14 else ""),
+                    "reason": f"Продажи выросли с {s['avg_daily_full']}/день до {s['avg_daily_recent']}/день",
+                })
+            rising_stars = enriched_stars
+
+    # ──────────────────────────────────────
+    # 5. MARGIN ALERTS — проблемы с маржой
+    # ──────────────────────────────────────
+    margin_alerts = []
+    margin_q = await db.execute(
+        select(
+            Product.id,
+            Product.sku,
+            Product.name,
+            Product.category,
+            Product.price,
+            Product.cost_price,
+            Product.current_stock,
+            func.sum(PurchaseItem.quantity).label("sold"),
+            func.sum(PurchaseItem.total).label("revenue"),
+        )
+        .join(PurchaseItem, PurchaseItem.product_id == Product.id)
+        .where(
+            PurchaseItem.created_at >= since,
+            Product.is_active == True,
+            Product.cost_price != None,
+            Product.cost_price > 0,
+        )
+        .group_by(Product.id, Product.sku, Product.name, Product.category,
+                  Product.price, Product.cost_price, Product.current_stock)
+        .having(func.sum(PurchaseItem.quantity) >= 3)
+    )
+    for r in margin_q.all():
+        margin_pct = ((float(r.price) - float(r.cost_price)) / float(r.price)) * 100 if float(r.price) > 0 else 0
+
+        if margin_pct < 10:
+            margin_alerts.append({
+                "type": "margin_alert",
+                "priority": "critical" if margin_pct < 5 else "high",
+                "sku": r.sku,
+                "name": r.name,
+                "category": r.category,
+                "price": float(r.price),
+                "cost_price": float(r.cost_price),
+                "margin_percent": round(margin_pct, 1),
+                "total_sold": float(r.sold),
+                "total_revenue": float(r.revenue),
+                "suggested_price": round(float(r.cost_price) * 1.25, 0),  # Мин. 25% маржа
+                "action": f"Поднять цену! Маржа всего {margin_pct:.0f}%",
+                "reason": f"Себестоимость {float(r.cost_price):,.0f} → цена {float(r.price):,.0f} (маржа {margin_pct:.0f}%)",
+                "lost_profit": round(float(r.sold) * float(r.cost_price) * 0.15, 0),
+            })
+
+    margin_alerts.sort(key=lambda x: x["margin_percent"])
+
+    # ──────────────────────────────────────
+    # ИТОГОВЫЙ ОТВЕТ
+    # ──────────────────────────────────────
+    total_actions = (
+        len(combo_suggestions) + len(slow_mover_actions) +
+        len(rising_stars) + len(margin_alerts)
+    )
+    critical_count = sum(1 for a in slow_mover_actions + margin_alerts if a.get("priority") == "critical")
+
+    return {
+        "period_days": days,
+        "generated_at": now.isoformat(),
+        "total_recommendations": total_actions,
+        "critical_count": critical_count,
+        "combos": combo_suggestions,
+        "slow_movers": slow_mover_actions,
+        "rising_stars": rising_stars,
+        "margin_alerts": margin_alerts[:10],
+        "frozen_capital": frozen_summary,
+        "summary": {
+            "combo_count": len(combo_suggestions),
+            "slow_mover_count": len(slow_mover_actions),
+            "rising_star_count": len(rising_stars),
+            "margin_alert_count": len(margin_alerts),
+            "total_frozen_capital": frozen_30,
+            "recovery_potential": sum(a.get("recovery_potential", 0) for a in slow_mover_actions),
+        },
+    }

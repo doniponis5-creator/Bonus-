@@ -44,7 +44,7 @@ const URGENCY_LABELS: Record<string, string> = {
   info: 'Инфо',
 };
 
-type Tab = 'overview' | 'low-stock' | 'top-sellers' | 'abc' | 'dead-stock' | 'margins' | 'cross-sell' | 'all-products' | 'settings';
+type Tab = 'overview' | 'low-stock' | 'top-sellers' | 'abc' | 'dead-stock' | 'margins' | 'cross-sell' | 'smart-ai' | 'all-products' | 'settings';
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'overview', label: 'Обзор', icon: BarChart3 },
@@ -54,6 +54,7 @@ const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: 'dead-stock', label: 'Dead Stock', icon: TrendingDown },
   { key: 'margins', label: 'Маржа', icon: DollarSign },
   { key: 'cross-sell', label: 'Кросс-сейл', icon: ShoppingBag },
+  { key: 'smart-ai', label: 'Smart AI', icon: Zap },
   { key: 'all-products', label: 'Товары', icon: Package },
   { key: 'settings', label: 'Настройки', icon: Settings2 },
 ];
@@ -186,6 +187,7 @@ export default function ProductAnalyticsPage() {
   const [crossSell, setCrossSell] = useState<any>(null);
   const [allProducts, setAllProducts] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
+  const [smartAI, setSmartAI] = useState<any>(null);
 
   const [period, setPeriod] = useState(30);
 
@@ -232,6 +234,10 @@ export default function ProductAnalyticsPage() {
           const r = await productAPI.frequentlyBought(90);
           setCrossSell(r.data);
         }
+        if (tab === 'smart-ai' && !smartAI) {
+          const r = await productAPI.smartRecommendations(90);
+          setSmartAI(r.data);
+        }
         if (tab === 'all-products' && !allProducts) {
           const r = await productAPI.products({ limit: 10000 });
           setAllProducts(r.data);
@@ -243,7 +249,7 @@ export default function ProductAnalyticsPage() {
       } catch {}
     };
     loadTab();
-  }, [tab, period, topSellers, abc, deadStock, margins, crossSell, allProducts, settings]);
+  }, [tab, period, topSellers, abc, deadStock, margins, crossSell, smartAI, allProducts, settings]);
 
   if (loading) {
     return (
@@ -326,6 +332,9 @@ export default function ProductAnalyticsPage() {
       {tab === 'dead-stock' && <DeadStockTab data={deadStock} />}
       {tab === 'margins' && <MarginsTab data={margins} />}
       {tab === 'cross-sell' && <CrossSellTab data={crossSell} />}
+      {tab === 'smart-ai' && <SmartAITab data={smartAI} reload={async () => {
+        const r = await productAPI.smartRecommendations(90); setSmartAI(r.data);
+      }} />}
       {tab === 'all-products' && <AllProductsTab data={allProducts} />}
       {tab === 'settings' && <SettingsTab data={settings} onSave={async (params: any) => {
         await productAPI.updateSettings(params);
@@ -1259,6 +1268,429 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: '10px 14px', color: '#e2eaf6', whiteSpace: 'nowrap',
 };
+
+
+
+// ═══════════════════════════════════════════
+// SMART AI TAB
+// ═══════════════════════════════════════════
+
+function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
+  const [activeSection, setActiveSection] = useState<'overview' | 'combos' | 'slow' | 'rising' | 'margins'>('overview');
+  const [reloading, setReloading] = useState(false);
+
+  if (!data) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#8899aa' }}>
+      <Loader2 size={24} className="animate-spin" style={{ marginRight: 10 }} />
+      Анализ товаров...
+    </div>
+  );
+
+  const s = data.summary || {};
+  const frozen = data.frozen_capital || {};
+
+  const sections = [
+    { key: 'overview' as const, label: 'Обзор', count: data.total_recommendations },
+    { key: 'combos' as const, label: 'Комбо', count: s.combo_count },
+    { key: 'slow' as const, label: 'Замедлились', count: s.slow_mover_count },
+    { key: 'rising' as const, label: 'Растут', count: s.rising_star_count },
+    { key: 'margins' as const, label: 'Маржа', count: s.margin_alert_count },
+  ];
+
+  const handleReload = async () => {
+    setReloading(true);
+    await reload();
+    setReloading(false);
+  };
+
+  return (
+    <>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #FFE600 0%, #ff9500 100%)',
+            borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <Zap size={18} color="#0a101e" />
+            <span style={{ color: '#0a101e', fontWeight: 700, fontSize: 14 }}>SMART AI</span>
+          </div>
+          <span style={{ color: '#8899aa', fontSize: 13 }}>
+            {data.total_recommendations} рекомендаций
+            {data.critical_count > 0 && (
+              <span style={{ color: '#ef4444', marginLeft: 8, fontWeight: 600 }}>
+                ({data.critical_count} критичных)
+              </span>
+            )}
+          </span>
+        </div>
+        <button onClick={handleReload} disabled={reloading} style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '8px 16px', background: '#1e293b', border: '1px solid #334155',
+          borderRadius: 8, color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+          opacity: reloading ? 0.6 : 1,
+        }}>
+          <RefreshCw size={14} className={reloading ? 'animate-spin' : ''} />
+          Пересчитать
+        </button>
+      </div>
+
+      {/* Section Chips */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+        {sections.map(sec => (
+          <button key={sec.key} onClick={() => setActiveSection(sec.key)} style={{
+            padding: '8px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
+            background: activeSection === sec.key ? '#FFE60020' : '#0d1526',
+            color: activeSection === sec.key ? '#FFE600' : '#8899aa',
+            fontSize: 13, fontWeight: activeSection === sec.key ? 600 : 400,
+            border: activeSection === sec.key ? '1px solid #FFE60040' : '1px solid #1e293b',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {sec.label}
+            <span style={{
+              background: sec.count > 0 ? (activeSection === sec.key ? '#FFE60030' : '#1e293b') : '#1e293b',
+              padding: '1px 7px', borderRadius: 10, fontSize: 11,
+              color: sec.count > 0 ? '#FFE600' : '#5e6e82',
+            }}>
+              {sec.count || 0}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Overview Section */}
+      {activeSection === 'overview' && (
+        <>
+          {/* KPI Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
+            <KpiCard icon={ShoppingBag} label="Комбо-пары" value={s.combo_count || 0}
+              sub="Товары для комплектов" color="#3b82f6" />
+            <KpiCard icon={TrendingDown} label="Замедлились" value={s.slow_mover_count || 0}
+              sub="Нужна промо-акция" color="#f59e0b" />
+            <KpiCard icon={TrendingUp} label="Растут" value={s.rising_star_count || 0}
+              sub="Увеличить запас" color="#22c55e" />
+            <KpiCard icon={DollarSign} label="Заморожено" value={fmtMoney(frozen.frozen_30_days || 0)}
+              sub={`${frozen.frozen_percent || 0}% от склада`} color="#ef4444" />
+          </div>
+
+          {/* Frozen Capital Card */}
+          {frozen.frozen_30_days > 0 && (
+            <div style={{
+              background: 'linear-gradient(135deg, #1a0a0a 0%, #0d1526 100%)',
+              border: '1px solid #ef444430', borderRadius: 14, padding: 20, marginBottom: 20,
+            }}>
+              <h3 style={{ color: '#ef4444', fontSize: 15, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertTriangle size={18} /> Замороженный капитал
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <div style={{ color: '#5e6e82', fontSize: 11 }}>Весь склад</div>
+                  <div style={{ color: '#e2eaf6', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.total_inventory_value || 0)}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#5e6e82', fontSize: 11 }}>Заморожено 30+ дн</div>
+                  <div style={{ color: '#f59e0b', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.frozen_30_days || 0)}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#5e6e82', fontSize: 11 }}>Заморожено 60+ дн</div>
+                  <div style={{ color: '#ef4444', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.frozen_60_days || 0)}</div>
+                </div>
+              </div>
+              {(frozen.recovery_plan || []).map((plan: any, i: number) => (
+                <div key={i} style={{
+                  background: '#0a101e', borderRadius: 8, padding: '10px 14px', marginBottom: 8,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <div>
+                    <div style={{ color: '#e2eaf6', fontSize: 13 }}>{plan.action}</div>
+                    <div style={{ color: '#5e6e82', fontSize: 11 }}>{plan.products_count} товаров</div>
+                  </div>
+                  <div style={{ color: '#22c55e', fontSize: 14, fontWeight: 600 }}>
+                    +{fmtMoney(plan.potential_recovery || 0)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          {data.total_recommendations === 0 && (
+            <div style={{
+              background: '#0d1526', border: '1px solid #22c55e30', borderRadius: 14,
+              padding: 40, textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>&#10003;</div>
+              <div style={{ color: '#22c55e', fontSize: 16, fontWeight: 600 }}>Всё в порядке!</div>
+              <div style={{ color: '#8899aa', fontSize: 13, marginTop: 6 }}>
+                Нет критичных рекомендаций. Система проанализирует данные после поступления продаж.
+              </div>
+            </div>
+          )}
+
+          {/* Top-3 urgent from each category */}
+          {(data.slow_movers || []).slice(0, 3).length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <h3 style={{ color: '#f59e0b', fontSize: 14, fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AlertTriangle size={16} /> Срочные действия
+              </h3>
+              {(data.slow_movers || []).slice(0, 3).map((item: any, i: number) => (
+                <ActionCard key={i} item={item} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Combos Section */}
+      {activeSection === 'combos' && (
+        <>
+          <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+            Товары которые часто покупают вместе. Создайте комплект со скидкой для увеличения среднего чека.
+          </div>
+          {(data.combos || []).length === 0 ? (
+            <EmptyState text="Пока нет данных о совместных покупках. Появятся после накопления чеков." />
+          ) : (
+            <div style={{ display: 'grid', gap: 12 }}>
+              {(data.combos || []).map((combo: any, i: number) => (
+                <div key={i} style={{
+                  background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 18,
+                  borderLeft: `4px solid ${combo.priority === 'high' ? '#22c55e' : '#3b82f6'}`,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <Badge text={`#${i + 1}`} color="#FFE600" />
+                        <Badge text={`${combo.times_together}x вместе`} color="#22c55e" />
+                      </div>
+                      <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600 }}>
+                        {combo.product_a.name}
+                      </div>
+                      <div style={{ color: '#5e6e82', fontSize: 12, margin: '4px 0' }}>+</div>
+                      <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600 }}>
+                        {combo.product_b.name}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', minWidth: 140 }}>
+                      <div style={{ color: '#5e6e82', fontSize: 11 }}>По отдельности</div>
+                      <div style={{ color: '#8899aa', fontSize: 14, textDecoration: 'line-through' }}>{fmtMoney(combo.total_price)}</div>
+                      <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 6 }}>Комплект (-5%)</div>
+                      <div style={{ color: '#22c55e', fontSize: 18, fontWeight: 700 }}>{fmtMoney(combo.combo_price_5pct)}</div>
+                      <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 2 }}>или -10%: {fmtMoney(combo.combo_price_10pct)}</div>
+                    </div>
+                  </div>
+                  <div style={{
+                    background: '#0a101e', borderRadius: 8, padding: '10px 14px',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  }}>
+                    <div style={{ color: '#FFE600', fontSize: 12, fontWeight: 500 }}>
+                      {combo.action}
+                    </div>
+                    <div style={{ color: '#5e6e82', fontSize: 11 }}>
+                      Потенциал: +{fmtMoney(combo.potential_revenue)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Slow Movers Section */}
+      {activeSection === 'slow' && (
+        <>
+          <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+            Товары с падающими или остановившимися продажами. Рекомендуем акции и скидки.
+          </div>
+          {(data.slow_movers || []).length === 0 ? (
+            <EmptyState text="Нет товаров с замедлением продаж. Отлично!" />
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+                <KpiCard icon={AlertTriangle} label="Критичные (90+ дн)"
+                  value={(data.slow_movers || []).filter((m: any) => m.priority === 'critical').length}
+                  color="#ef4444" />
+                <KpiCard icon={TrendingDown} label="Высокие (60+ дн)"
+                  value={(data.slow_movers || []).filter((m: any) => m.priority === 'high').length}
+                  color="#f59e0b" />
+                <KpiCard icon={DollarSign} label="Можно вернуть"
+                  value={fmtMoney(s.recovery_potential || 0)} color="#22c55e" />
+              </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {(data.slow_movers || []).map((item: any, i: number) => (
+                  <ActionCard key={i} item={item} showPrice />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Rising Stars Section */}
+      {activeSection === 'rising' && (
+        <>
+          <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+            Товары с растущим спросом. Увеличьте запасы, чтобы не упустить продажи!
+          </div>
+          {(data.rising_stars || []).length === 0 ? (
+            <EmptyState text="Пока нет товаров с ярким ростом. Появятся после накопления данных." />
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {(data.rising_stars || []).map((star: any, i: number) => (
+                <div key={i} style={{
+                  background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 16,
+                  borderLeft: `4px solid ${star.priority === 'high' ? '#ef4444' : '#22c55e'}`,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <Badge text={`+${star.growth_percent}%`} color="#22c55e" />
+                        {star.days_until_stockout && star.days_until_stockout <= 7 && (
+                          <Badge text={`${star.days_until_stockout} дн до 0!`} color="#ef4444" />
+                        )}
+                      </div>
+                      <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600 }}>{star.name}</div>
+                      <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 2 }}>{star.sku} {star.category ? '• ' + star.category : ''}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: '#5e6e82', fontSize: 11 }}>Продажи/день</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: '#8899aa', fontSize: 13 }}>{star.avg_daily_full}</span>
+                        <TrendingUp size={14} color="#22c55e" />
+                        <span style={{ color: '#22c55e', fontSize: 15, fontWeight: 700 }}>{star.avg_daily_recent}</span>
+                      </div>
+                      <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 4 }}>
+                        Остаток: {star.current_stock} шт
+                        {star.days_until_stockout && <span> ({star.days_until_stockout} дн)</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{
+                    background: '#0a101e', borderRadius: 8, padding: '8px 12px', marginTop: 10,
+                    color: '#FFE600', fontSize: 12, fontWeight: 500,
+                  }}>
+                    {star.action}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Margin Alerts Section */}
+      {activeSection === 'margins' && (
+        <>
+          <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+            Товары с подозрительно низкой маржой. Возможно, нужно скорректировать цены.
+          </div>
+          {(data.margin_alerts || []).length === 0 ? (
+            <EmptyState text="Все товары с нормальной маржой." />
+          ) : (
+            <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Товар</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Цена</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Себест.</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Маржа</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Рекоменд. цена</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Упущено</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.margin_alerts || []).map((m: any, i: number) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
+                      <td style={{ padding: '10px 16px' }}>
+                        <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{m.name}</div>
+                        <div style={{ color: '#5e6e82', fontSize: 11 }}>{m.sku}</div>
+                      </td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{fmtMoney(m.price)}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#8899aa' }}>{fmtMoney(m.cost_price)}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                        <Badge text={`${m.margin_percent}%`} color={m.margin_percent < 5 ? '#ef4444' : '#f59e0b'} />
+                      </td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#22c55e', fontWeight: 600 }}>{fmtMoney(m.suggested_price)}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>{fmtMoney(m.lost_profit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+// ─── Helper: Action Card ───
+function ActionCard({ item, showPrice }: { item: any; showPrice?: boolean }) {
+  const priorityColors: Record<string, string> = {
+    critical: '#ef4444', high: '#f59e0b', medium: '#3b82f6',
+  };
+  const priorityLabels: Record<string, string> = {
+    critical: 'Критично', high: 'Важно', medium: 'Рекомендация',
+  };
+  const color = priorityColors[item.priority] || '#8899aa';
+
+  return (
+    <div style={{
+      background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 16,
+      borderLeft: `4px solid ${color}`,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Badge text={priorityLabels[item.priority] || item.priority} color={color} />
+            {item.days_without_sale && (
+              <span style={{ color: '#5e6e82', fontSize: 11 }}>
+                {item.days_without_sale} дн без продаж
+              </span>
+            )}
+          </div>
+          <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600 }}>{item.name}</div>
+          <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 2 }}>
+            {item.sku} {item.category ? '• ' + item.category : ''}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', minWidth: 130 }}>
+          <div style={{ color: '#5e6e82', fontSize: 11 }}>Заморожено</div>
+          <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700 }}>{fmtMoney(item.frozen_capital || 0)}</div>
+          {showPrice && item.suggested_price && (
+            <>
+              <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 6 }}>Скидка → цена</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                <span style={{ color: '#8899aa', fontSize: 12, textDecoration: 'line-through' }}>{fmtMoney(item.current_price)}</span>
+                <span style={{ color: '#22c55e', fontSize: 14, fontWeight: 600 }}>{fmtMoney(item.suggested_price)}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <div style={{
+        background: '#0a101e', borderRadius: 8, padding: '8px 12px', marginTop: 10,
+        color: '#FFE600', fontSize: 12, fontWeight: 500,
+      }}>
+        {item.action}
+      </div>
+    </div>
+  );
+}
+
+// ─── Helper: Empty State ───
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div style={{
+      background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14,
+      padding: 40, textAlign: 'center',
+    }}>
+      <Package size={32} color="#5e6e82" style={{ marginBottom: 12 }} />
+      <div style={{ color: '#8899aa', fontSize: 14 }}>{text}</div>
+    </div>
+  );
+}
 
 
 // ═══════════════════════════════════════════

@@ -288,4 +288,5 @@ export const productAPI = {
   settings: () => api.get('/api/v1/product-analytics/settings'),
   updateSettings: (params: Record<string, any>) => api.put('/api/v1/product-analytics/settings', null, { params }),
   dailyDigest: () => api.get('/api/v1/product-analytics/daily-digest'),
+  smartRecommendations: (days = 90) => api.get(`/api/v1/product-analytics/smart-recommendations?days=${days}`),
 };
