@@ -349,8 +349,11 @@ function OverviewTab({ summary, lowStock }: { summary: any; lowStock: any }) {
     { name: 'C — Аутсайдеры', value: summary.abc_c_count, fill: ABC_COLORS.C },
   ].filter(d => d.value > 0);
 
+  // Круговая диаграмма: только реальные товары (исключая старые из 1С)
+  const realTotal = summary.real_products || summary.active_products;
+  const inStockCount = Math.max(0, realTotal - summary.low_stock_count - summary.out_of_stock_count);
   const stockData = [
-    { name: 'В наличии', value: summary.active_products - summary.low_stock_count - summary.out_of_stock_count, fill: '#22c55e' },
+    { name: 'В наличии', value: inStockCount, fill: '#22c55e' },
     { name: 'Мало', value: summary.low_stock_count, fill: '#f59e0b' },
     { name: 'Нет в наличии', value: summary.out_of_stock_count, fill: '#ef4444' },
   ].filter(d => d.value > 0);
@@ -359,8 +362,8 @@ function OverviewTab({ summary, lowStock }: { summary: any; lowStock: any }) {
     <>
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 24 }}>
-        <KpiCard icon={Package} label="Всего товаров" value={fmt(summary.total_products)} sub={`Активных: ${summary.active_products}`} />
-        <KpiCard icon={AlertTriangle} label="Мало на складе" value={summary.low_stock_count} sub={`Нет в наличии: ${summary.out_of_stock_count}`} color="#f59e0b" />
+        <KpiCard icon={Package} label="Всего товаров" value={fmt(summary.active_products)} sub={`Продавались: ${summary.real_products || 0} · Только 1С: ${summary.from_1c_only || 0}`} />
+        <KpiCard icon={AlertTriangle} label="Мало на складе" value={summary.low_stock_count} sub={`Закончились: ${summary.out_of_stock_count}`} color="#f59e0b" />
         <KpiCard icon={TrendingDown} label="Dead Stock" value={summary.dead_stock_count} sub="Нет продаж 30+ дней" color="#ef4444" />
         <KpiCard icon={DollarSign} label="Стоимость склада" value={fmtMoney(summary.total_inventory_value)} sub={summary.total_cost_value ? `Себестоимость: ${fmtMoney(summary.total_cost_value)}` : undefined} color="#22c55e" />
       </div>

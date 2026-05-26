@@ -99,29 +99,45 @@ async def product_analytics_summary(
     now = datetime.now(timezone.utc)
     thirty_days_ago = now - timedelta(days=30)
 
-    # Базовые подсчёты
+    # ── Умные подсчёты (1С-совместимые) ──
+    # Товары делятся на:
+    #   - "Реальные" = last_sold_at IS NOT NULL (продавались через нашу систему)
+    #   - "Из 1С" = last_sold_at IS NULL (синхронизированы, но не продавались у нас)
+
     total = await db.execute(select(func.count()).select_from(Product))
     active = await db.execute(
         select(func.count()).select_from(Product).where(Product.is_active == True)
     )
+
+    # Товары с историей продаж (реальные)
+    real_products = await db.execute(
+        select(func.count()).select_from(Product).where(
+            Product.is_active == True,
+            Product.last_sold_at != None,
+        )
+    )
+
+    # Мало на складе: остаток > 0, но <= min_stock_level
+    # Только товары с настроенным min_stock ИЛИ с историей продаж
     low_stock = await db.execute(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
             Product.current_stock > 0,
-            Product.min_stock_level > 0,  # Только настроенные товары
+            Product.min_stock_level > 0,
             Product.current_stock <= Product.min_stock_level,
         )
     )
-    # Нет в наличии: ТОЛЬКО реально продававшиеся товары
-    # (исключаем старые товары из 1С которые никогда не продавались)
+
+    # Нет в наличии: ТОЛЬКО реально продававшиеся товары (закончились!)
     out_of_stock = await db.execute(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
             Product.current_stock <= 0,
-            Product.last_sold_at != None,  # Только товары с историей продаж
+            Product.last_sold_at != None,
         )
     )
-    # Все с нулевым остатком (для справки)
+
+    # Все с нулевым остатком (включая старые из 1С, для справки)
     out_of_stock_total = await db.execute(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
@@ -129,12 +145,22 @@ async def product_analytics_summary(
         )
     )
 
-    # Dead stock: нет продаж 30+ дней
+    # Только из 1С (никогда не продавались у нас)
+    from_1c_only = await db.execute(
+        select(func.count()).select_from(Product).where(
+            Product.is_active == True,
+            Product.last_sold_at == None,
+        )
+    )
+
+    # Dead stock: есть остаток > 0, но нет продаж 30+ дней
+    # Исключаем товары которые НИКОГДА не продавались (они отдельная категория)
     dead_stock = await db.execute(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
             Product.current_stock > 0,
-            (Product.last_sold_at == None) | (Product.last_sold_at < thirty_days_ago),
+            Product.last_sold_at != None,
+            Product.last_sold_at < thirty_days_ago,
         )
     )
 
@@ -159,12 +185,20 @@ async def product_analytics_summary(
         .where(Product.is_active == True, Product.cost_price != None)
     )
 
+    real_count = real_products.scalar() or 0
+    from_1c_count = from_1c_only.scalar() or 0
+    oos_count = out_of_stock.scalar() or 0
+    oos_total = out_of_stock_total.scalar() or 0
+
     return {
         "total_products": total.scalar() or 0,
         "active_products": active.scalar() or 0,
+        "real_products": real_count,              # С историей продаж
+        "from_1c_only": from_1c_count,            # Только из 1С (не продавались)
         "low_stock_count": low_stock.scalar() or 0,
-        "out_of_stock_count": out_of_stock.scalar() or 0,
-        "out_of_stock_total": out_of_stock_total.scalar() or 0,  # Все с 0 остатком (вкл. старые из 1С)
+        "out_of_stock_count": oos_count,          # Реально закончились (были продажи)
+        "out_of_stock_total": oos_total,          # Все с 0 остатком
+        "out_of_stock_1c_only": oos_total - oos_count,  # Из 1С с 0 (не проблема)
         "dead_stock_count": dead_stock.scalar() or 0,
         "abc_a_count": abc_a.scalar() or 0,
         "abc_b_count": abc_b.scalar() or 0,
@@ -890,11 +924,12 @@ async def daily_digest(
     )
     ts = today_sales.one()
 
-    # Критические алерты
+    # Критические алерты (только реально продававшиеся товары)
     critical = await db.execute(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
             Product.current_stock <= 0,
+            Product.last_sold_at != None,  # Исключаем старые из 1С
         )
     )
     critical_count = critical.scalar() or 0
@@ -960,60 +995,3 @@ async def daily_digest(
         },
     }
 
-
-# ═══════════════════════════════════════════
-# 12. CLEANUP — деактивация старых товаров
-# ═══════════════════════════════════════════
-
-@router.post("/cleanup-stale")
-async def cleanup_stale_products(
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN)),
-) -> dict:
-    """
-    Деактивировать «мёртвые» товары:
-    - current_stock = 0
-    - last_sold_at = NULL (никогда не продавались в нашей системе)
-    - ИЛИ last_sold_at > 180 дней назад + stock = 0
-
-    Товары НЕ удаляются — при следующем stock-update из 1С
-    с остатком > 0 они автоматически станут active=True.
-    """
-    now = datetime.now(timezone.utc)
-    stale_cutoff = now - timedelta(days=180)
-
-    # 1) Никогда не продавались + остаток 0
-    never_sold = await db.execute(
-        select(Product).where(
-            Product.is_active == True,
-            Product.current_stock <= 0,
-            Product.last_sold_at == None,
-        )
-    )
-    never_sold_products = never_sold.scalars().all()
-
-    # 2) Не продавались 180+ дней + остаток 0
-    old_sold = await db.execute(
-        select(Product).where(
-            Product.is_active == True,
-            Product.current_stock <= 0,
-            Product.last_sold_at != None,
-            Product.last_sold_at < stale_cutoff,
-        )
-    )
-    old_sold_products = old_sold.scalars().all()
-
-    deactivated = 0
-    for p in never_sold_products + old_sold_products:
-        p.is_active = False
-        deactivated += 1
-
-    await db.commit()
-
-    return {
-        "success": True,
-        "deactivated": deactivated,
-        "never_sold": len(never_sold_products),
-        "stale_180_days": len(old_sold_products),
-        "message": f"Деактивировано {deactivated} товаров. При обновлении остатков из 1С они автоматически активируются.",
-    }
