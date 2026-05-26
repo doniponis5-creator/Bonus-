@@ -1,21 +1,22 @@
 /**
- * Products — Товар қидирув экрани (кассир учун).
- * Smart search: ном, штрих-код бўйича.
- * Кўрсатади: ном, остаток(шт), нарх, себестоимость(настройка).
+ * Products — Поиск товаров (кассир).
+ * Mobile-first iOS-style дизайн.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Keyboard, StyleSheet,
-  Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Dimensions, FlatList, Keyboard,
+  ScrollView, StyleSheet, Text, TextInput,
+  TouchableOpacity, View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
-  ArrowLeft, Package, Search, X, AlertTriangle,
-  Filter,
+  ArrowLeft, Package, Search, X, AlertTriangle, Filter,
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/theme';
 import { productsAPI } from '@/api/client';
+
+const { width: SCREEN_W } = Dimensions.get('window');
 
 interface ProductItem {
   id: string;
@@ -42,22 +43,18 @@ export default function ProductsScreen() {
   const [searched, setSearched] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Debounce timer
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-focus
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 300);
   }, []);
 
-  // Search with debounce
   const doSearch = useCallback(async (text: string, cat: string | null) => {
     if (text.trim().length < 1) {
       setProducts([]);
       setSearched(false);
       return;
     }
-
     setLoading(true);
     try {
       const res = await productsAPI.search(text.trim(), cat || undefined);
@@ -67,7 +64,7 @@ export default function ProductsScreen() {
       setShowCost(data.show_cost_price || false);
       setSearched(true);
     } catch (err: any) {
-      console.warn('Product search error:', err?.message);
+      console.warn('Search error:', err?.response?.status, err?.message);
       setProducts([]);
       setSearched(true);
     } finally {
@@ -78,16 +75,12 @@ export default function ProductsScreen() {
   const handleQueryChange = useCallback((text: string) => {
     setQuery(text);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      doSearch(text, selectedCategory);
-    }, 350);
+    debounceRef.current = setTimeout(() => doSearch(text, selectedCategory), 400);
   }, [doSearch, selectedCategory]);
 
   const handleCategorySelect = useCallback((cat: string | null) => {
     setSelectedCategory(cat);
-    if (query.trim().length >= 1) {
-      doSearch(query, cat);
-    }
+    if (query.trim().length >= 1) doSearch(query, cat);
   }, [query, doSearch]);
 
   const clearSearch = () => {
@@ -98,88 +91,74 @@ export default function ProductsScreen() {
     inputRef.current?.focus();
   };
 
-  // ── Format helpers ──
-  const fmtPrice = (n: number) =>
-    n.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+  const fmt = (n: number) => n.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 
-  const fmtStock = (n: number, unit: string) => {
-    if (n <= 0) return '0';
-    return n % 1 === 0 ? n.toFixed(0) : n.toFixed(1);
+  // ── Stock color ──
+  const stockColor = (item: ProductItem) => {
+    if (item.current_stock <= 0) return COLORS.danger;
+    if (item.is_low_stock) return COLORS.warn;
+    return COLORS.success;
   };
 
-  // ── Render product card ──
+  const stockBg = (item: ProductItem) => {
+    if (item.current_stock <= 0) return 'rgba(239,68,68,0.15)';
+    if (item.is_low_stock) return 'rgba(245,158,11,0.15)';
+    return 'rgba(34,197,94,0.12)';
+  };
+
+  // ── Render product ──
   const renderProduct = ({ item }: { item: ProductItem }) => {
-    const isOutOfStock = item.current_stock <= 0;
+    const outOfStock = item.current_stock <= 0;
     const margin = (showCost && item.cost_price && item.cost_price > 0)
       ? Math.round(((item.price - item.cost_price) / item.cost_price) * 100)
       : null;
 
     return (
-      <View style={[
-        styles.productCard,
-        isOutOfStock && styles.outOfStockCard,
-        item.is_low_stock && !isOutOfStock && styles.lowStockCard,
-      ]}>
-        {/* Top row: name + stock badge */}
-        <View style={styles.productTop}>
-          <View style={styles.productNameWrap}>
-            <Text style={[styles.productName, isOutOfStock && styles.outOfStockText]} numberOfLines={2}>
+      <View style={[s.card, outOfStock && s.cardDim]}>
+        {/* Row 1: Name + Stock badge */}
+        <View style={s.cardRow1}>
+          <View style={s.nameWrap}>
+            <Text style={[s.name, outOfStock && { color: COLORS.text3 }]} numberOfLines={2}>
               {item.name}
             </Text>
             {item.category ? (
-              <Text style={styles.productCategory}>{item.category}</Text>
+              <Text style={s.cat} numberOfLines={1}>{item.category}</Text>
             ) : null}
           </View>
 
-          {/* Stock badge */}
-          <View style={[
-            styles.stockBadge,
-            isOutOfStock
-              ? styles.stockBadgeRed
-              : item.is_low_stock
-                ? styles.stockBadgeYellow
-                : styles.stockBadgeGreen,
-          ]}>
-            {item.is_low_stock && !isOutOfStock ? (
-              <AlertTriangle size={12} color={COLORS.warn} style={{ marginRight: 3 }} />
+          <View style={[s.stockBadge, { backgroundColor: stockBg(item) }]}>
+            {item.is_low_stock && !outOfStock ? (
+              <AlertTriangle size={11} color={COLORS.warn} style={{ marginRight: 2 }} />
             ) : null}
-            <Text style={[
-              styles.stockNum,
-              isOutOfStock
-                ? styles.stockNumRed
-                : item.is_low_stock
-                  ? styles.stockNumYellow
-                  : styles.stockNumGreen,
-            ]}>
-              {fmtStock(item.current_stock, item.unit)}
+            <Text style={[s.stockNum, { color: stockColor(item) }]}>
+              {item.current_stock % 1 === 0 ? item.current_stock.toFixed(0) : item.current_stock.toFixed(1)}
             </Text>
-            <Text style={styles.stockUnit}>{item.unit}</Text>
+            <Text style={s.stockUnit}>{item.unit}</Text>
           </View>
         </View>
 
-        {/* Bottom row: prices */}
-        <View style={styles.priceRow}>
-          <View style={styles.priceItem}>
-            <Text style={styles.priceLabel}>Цена</Text>
-            <Text style={styles.priceValue}>{fmtPrice(item.price)} сом</Text>
+        {/* Row 2: Prices */}
+        <View style={s.priceRow}>
+          <View style={s.priceBox}>
+            <Text style={s.priceLabel}>Цена</Text>
+            <Text style={s.priceVal}>{fmt(item.price)}</Text>
           </View>
 
           {showCost && item.cost_price !== null ? (
-            <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>Себестоимость</Text>
-              <Text style={styles.costValue}>{fmtPrice(item.cost_price)} сом</Text>
+            <View style={s.priceBox}>
+              <Text style={s.priceLabel}>Себест.</Text>
+              <Text style={s.costVal}>{fmt(item.cost_price)}</Text>
             </View>
           ) : null}
 
           {margin !== null ? (
-            <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>Наценка</Text>
+            <View style={s.priceBox}>
+              <Text style={s.priceLabel}>Наценка</Text>
               <Text style={[
-                styles.marginValue,
-                margin < 15 ? { color: COLORS.danger } : margin > 40 ? { color: COLORS.success } : {},
-              ]}>
-                {margin}%
-              </Text>
+                s.marginVal,
+                margin < 15 && { color: COLORS.danger },
+                margin > 40 && { color: COLORS.success },
+              ]}>{margin}%</Text>
             </View>
           ) : null}
         </View>
@@ -188,27 +167,29 @@ export default function ProductsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft size={22} color={COLORS.text} />
+    <View style={s.container}>
+      {/* ── Header ── */}
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Товары</Text>
+        <Text style={s.title}>Товары</Text>
         <TouchableOpacity
           onPress={() => setShowFilters(!showFilters)}
-          style={[styles.filterBtn, showFilters && styles.filterBtnActive]}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Filter size={18} color={showFilters ? COLORS.accent : COLORS.text2} />
+          <View style={[s.filterIcon, showFilters && s.filterActive]}>
+            <Filter size={18} color={showFilters ? COLORS.accent : COLORS.text2} />
+          </View>
         </TouchableOpacity>
       </View>
 
-      {/* Search bar */}
-      <View style={styles.searchBar}>
-        <Search size={18} color={COLORS.text3} style={styles.searchIcon} />
+      {/* ── Search bar ── */}
+      <View style={s.searchWrap}>
+        <Search size={18} color={COLORS.text3} />
         <TextInput
           ref={inputRef}
-          style={styles.searchInput}
+          style={s.searchInput}
           placeholder="Название, штрих-код..."
           placeholderTextColor={COLORS.text3}
           value={query}
@@ -218,70 +199,65 @@ export default function ProductsScreen() {
           autoCorrect={false}
         />
         {query.length > 0 ? (
-          <TouchableOpacity onPress={clearSearch} style={styles.clearBtn}>
+          <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <X size={18} color={COLORS.text3} />
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {/* Category filter chips */}
+      {/* ── Category chips ── */}
       {showFilters && categories.length > 0 ? (
-        <View style={styles.chipRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.chipScroll}
+          style={s.chipContainer}
+        >
           <TouchableOpacity
-            style={[styles.chip, !selectedCategory && styles.chipActive]}
+            style={[s.chip, !selectedCategory && s.chipOn]}
             onPress={() => handleCategorySelect(null)}
           >
-            <Text style={[styles.chipText, !selectedCategory && styles.chipTextActive]}>
-              Все
-            </Text>
+            <Text style={[s.chipTxt, !selectedCategory && s.chipTxtOn]}>Все</Text>
           </TouchableOpacity>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={categories}
-            keyExtractor={(c) => c}
-            renderItem={({ item: cat }) => (
-              <TouchableOpacity
-                style={[styles.chip, selectedCategory === cat && styles.chipActive]}
-                onPress={() => handleCategorySelect(cat)}
-              >
-                <Text style={[styles.chipText, selectedCategory === cat && styles.chipTextActive]}
-                      numberOfLines={1}>
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
+          {categories.map(cat => (
+            <TouchableOpacity
+              key={cat}
+              style={[s.chip, selectedCategory === cat && s.chipOn]}
+              onPress={() => handleCategorySelect(cat)}
+            >
+              <Text style={[s.chipTxt, selectedCategory === cat && s.chipTxtOn]} numberOfLines={1}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       ) : null}
 
-      {/* Results */}
+      {/* ── Content ── */}
       {loading ? (
-        <View style={styles.centerBox}>
+        <View style={s.center}>
           <ActivityIndicator color={COLORS.accent} size="large" />
         </View>
       ) : !searched ? (
-        <View style={styles.centerBox}>
-          <Package size={48} color={COLORS.text3} />
-          <Text style={styles.emptyText}>Введите название товара</Text>
-          <Text style={styles.emptySubtext}>Поиск по названию или штрих-коду</Text>
+        <View style={s.center}>
+          <Package size={44} color={COLORS.text3} />
+          <Text style={s.emptyTitle}>Введите название товара</Text>
+          <Text style={s.emptySub}>Поиск по названию или штрих-коду</Text>
         </View>
       ) : products.length === 0 ? (
-        <View style={styles.centerBox}>
-          <Search size={48} color={COLORS.text3} />
-          <Text style={styles.emptyText}>Не найдено</Text>
-          <Text style={styles.emptySubtext}>По запросу «{query}» ничего не найдено</Text>
+        <View style={s.center}>
+          <Search size={44} color={COLORS.text3} />
+          <Text style={s.emptyTitle}>Не найдено</Text>
+          <Text style={s.emptySub}>По запросу «{query}» ничего не найдено</Text>
         </View>
       ) : (
         <>
-          <Text style={styles.resultCount}>
-            {products.length} товаров найдено
-          </Text>
+          <Text style={s.resultCount}>{products.length} товаров найдено</Text>
           <FlatList
             data={products}
-            keyExtractor={(p) => p.id}
+            keyExtractor={p => p.id}
             renderItem={renderProduct}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           />
@@ -291,120 +267,81 @@ export default function ProductsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+// ═══ Styles ═══
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
 
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 56, paddingHorizontal: 20, paddingBottom: 12,
+    paddingTop: 52, paddingHorizontal: 16, paddingBottom: 10,
   },
-  backBtn: { padding: 8 },
-  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
-  filterBtn: {
-    padding: 8, borderRadius: 10,
-    backgroundColor: COLORS.card,
+  title: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+  filterIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: COLORS.card, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.cardBorder,
   },
-  filterBtnActive: {
-    backgroundColor: 'rgba(255,230,0,0.12)',
-  },
+  filterActive: { backgroundColor: 'rgba(255,230,0,0.1)', borderColor: 'rgba(255,230,0,0.3)' },
 
   // Search
-  searchBar: {
+  searchWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.card, borderRadius: 14,
-    marginHorizontal: 20, marginBottom: 8,
-    paddingHorizontal: 14, height: 50,
-    borderWidth: 1, borderColor: COLORS.cardBorder,
+    backgroundColor: COLORS.card, borderRadius: 12,
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 12, height: 44,
+    borderWidth: 1, borderColor: COLORS.cardBorder, gap: 8,
   },
-  searchIcon: { marginRight: 10 },
-  searchInput: {
-    flex: 1, color: COLORS.text, fontSize: 16,
-    height: 50, paddingVertical: 0,
-  },
-  clearBtn: { padding: 8 },
+  searchInput: { flex: 1, color: COLORS.text, fontSize: 15, height: 44, paddingVertical: 0 },
 
-  // Category chips
-  chipRow: {
-    flexDirection: 'row', paddingHorizontal: 20,
-    marginBottom: 8, gap: 6,
-  },
+  // Chips
+  chipContainer: { maxHeight: 40, marginBottom: 6 },
+  chipScroll: { paddingHorizontal: 16, gap: 6 },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: COLORS.card,
-    borderWidth: 1, borderColor: COLORS.cardBorder,
-    marginRight: 6,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
+    backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder,
   },
-  chipActive: {
-    backgroundColor: 'rgba(255,230,0,0.12)',
-    borderColor: COLORS.accent,
-  },
-  chipText: { color: COLORS.text2, fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: COLORS.accent },
+  chipOn: { backgroundColor: 'rgba(255,230,0,0.12)', borderColor: COLORS.accent },
+  chipTxt: { color: COLORS.text2, fontSize: 12, fontWeight: '600' },
+  chipTxtOn: { color: COLORS.accent },
 
-  // Results count
-  resultCount: {
-    color: COLORS.text3, fontSize: 12, paddingHorizontal: 24, marginBottom: 6,
-  },
+  // Results
+  resultCount: { color: COLORS.text3, fontSize: 11, paddingHorizontal: 20, marginBottom: 6 },
 
-  // Product list
-  list: { paddingHorizontal: 20, paddingBottom: 40 },
-
-  // Product card
-  productCard: {
-    backgroundColor: COLORS.card, borderRadius: 16,
-    padding: 16, marginBottom: 10,
+  // Card
+  card: {
+    backgroundColor: COLORS.card, borderRadius: 14,
+    padding: 14, marginBottom: 8,
     borderWidth: 1, borderColor: COLORS.cardBorder,
   },
-  outOfStockCard: {
-    borderColor: 'rgba(239,68,68,0.3)',
-    opacity: 0.6,
-  },
-  lowStockCard: {
-    borderColor: 'rgba(245,158,11,0.3)',
-  },
+  cardDim: { opacity: 0.5 },
 
-  productTop: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'flex-start', marginBottom: 12,
-  },
-  productNameWrap: { flex: 1, marginRight: 12 },
-  productName: { color: COLORS.text, fontSize: 15, fontWeight: '700', lineHeight: 20 },
-  outOfStockText: { color: COLORS.text3 },
-  productCategory: { color: COLORS.text3, fontSize: 11, marginTop: 3 },
+  cardRow1: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  nameWrap: { flex: 1, marginRight: 10 },
+  name: { color: COLORS.text, fontSize: 14, fontWeight: '700', lineHeight: 18 },
+  cat: { color: COLORS.text3, fontSize: 11, marginTop: 2 },
 
   // Stock badge
   stockBadge: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 10, minWidth: 60, justifyContent: 'center',
+    paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8,
   },
-  stockBadgeGreen: { backgroundColor: 'rgba(34,197,94,0.12)' },
-  stockBadgeYellow: { backgroundColor: 'rgba(245,158,11,0.12)' },
-  stockBadgeRed: { backgroundColor: 'rgba(239,68,68,0.12)' },
+  stockNum: { fontSize: 15, fontWeight: '900' },
+  stockUnit: { color: COLORS.text3, fontSize: 10, marginLeft: 2, marginTop: 1 },
 
-  stockNum: { fontSize: 16, fontWeight: '900' },
-  stockNumGreen: { color: COLORS.success },
-  stockNumYellow: { color: COLORS.warn },
-  stockNumRed: { color: COLORS.danger },
-  stockUnit: { color: COLORS.text3, fontSize: 11, marginLeft: 3 },
-
-  // Prices row
+  // Prices
   priceRow: {
-    flexDirection: 'row', gap: 16,
-    borderTopWidth: 1, borderTopColor: COLORS.cardBorder,
-    paddingTop: 10,
+    flexDirection: 'row', gap: 20,
+    borderTopWidth: 1, borderTopColor: COLORS.cardBorder, paddingTop: 8,
   },
-  priceItem: {},
-  priceLabel: { color: COLORS.text3, fontSize: 11, marginBottom: 2 },
-  priceValue: { color: COLORS.accent, fontSize: 15, fontWeight: '800' },
-  costValue: { color: COLORS.text2, fontSize: 15, fontWeight: '700' },
-  marginValue: { color: COLORS.text2, fontSize: 15, fontWeight: '800' },
+  priceBox: {},
+  priceLabel: { color: COLORS.text3, fontSize: 10, marginBottom: 1 },
+  priceVal: { color: COLORS.accent, fontSize: 14, fontWeight: '800' },
+  costVal: { color: COLORS.text2, fontSize: 14, fontWeight: '700' },
+  marginVal: { color: COLORS.text2, fontSize: 14, fontWeight: '800' },
 
-  // Empty states
-  centerBox: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80,
-  },
-  emptyText: { color: COLORS.text2, fontSize: 18, fontWeight: '700', marginTop: 16 },
-  emptySubtext: { color: COLORS.text3, fontSize: 13, marginTop: 6 },
+  // Empty
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 60 },
+  emptyTitle: { color: COLORS.text2, fontSize: 16, fontWeight: '700', marginTop: 14 },
+  emptySub: { color: COLORS.text3, fontSize: 12, marginTop: 4 },
 });
