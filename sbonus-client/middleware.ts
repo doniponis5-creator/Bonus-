@@ -13,6 +13,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow root page with magic-link token (campaign direct access)
+  if (pathname === '/' && request.nextUrl.searchParams.has('token')) {
+    return NextResponse.next();
+  }
+
   // Check for auth token in cookie
   const token = request.cookies.get('customer_token')?.value;
 

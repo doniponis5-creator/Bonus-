@@ -17,8 +17,8 @@ import Leaderboard from '@/components/Leaderboard';
 import MyCoupons from '@/components/MyCoupons';
 import ReviewBonus from '@/components/ReviewBonus';
 import PWAInstall from '@/components/PWAInstall';
-import { customerAPI, type CabinetMe } from '@/lib/api';
-import { clearToken, getToken, isTokenValid } from '@/lib/auth';
+import { customerAPI, customerAuthAPI, type CabinetMe } from '@/lib/api';
+import { clearToken, getToken, isTokenValid, setToken } from '@/lib/auth';
 
 type Tab = 'home' | 'history' | 'wheel' | 'promo' | 'rank' | 'profile';
 
@@ -86,10 +86,32 @@ function DashboardPage() {
   };
 
   useEffect(() => {
+    const magicToken = searchParams.get('token');
+    if (magicToken) {
+      // Magic-link: verify token, auto-login, then load data
+      setRefreshing(true);
+      customerAuthAPI.verify(magicToken)
+        .then((res) => {
+          setToken(res.data.access_token);
+          window.history.replaceState({}, '', '/');
+          fetchData();
+        })
+        .catch(() => {
+          // Token invalid/expired — try existing JWT
+          if (isTokenValid(getToken())) {
+            window.history.replaceState({}, '', '/');
+            fetchData();
+          } else {
+            router.replace('/login');
+          }
+        })
+        .finally(() => setRefreshing(false));
+      return;
+    }
     fetchData();
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
-  }, [router]);
+  }, [router, searchParams]);
 
   // Load transactions when tab=history
   const loadTxns = (p = txPage, type = txType) => {

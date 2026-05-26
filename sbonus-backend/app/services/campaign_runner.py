@@ -17,6 +17,7 @@ from app.models import (
     CampaignStatus,
     CampaignTargetType,
     Customer,
+    CustomerAuthToken,
     Setting,
     Transaction,
     TransactionType,
@@ -178,6 +179,9 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
                 sent_count += 1
 
                 if wa_enabled and wa_instance and wa_token and campaign.message_template:
+                    import secrets
+                    from datetime import timedelta
+
                     balance_str = "0"
                     acct = accounts_by_cid.get(customer.id)
                     if acct:
@@ -185,7 +189,21 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
 
                     from app.core.config import get_settings
                     cfg = get_settings()
-                    cabinet_link = cfg.customer_cabinet_base_url.rstrip("/")
+                    cabinet_base = cfg.customer_cabinet_base_url.rstrip("/")
+
+                    # Magic-link для прямого доступа (все типы кампаний)
+                    token_value = secrets.token_urlsafe(32)[:64]
+                    auth_token = CustomerAuthToken(
+                        customer_id=customer.id,
+                        token=token_value,
+                        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+                    )
+                    db.add(auth_token)
+
+                    if is_wheel:
+                        cabinet_link = f"{cabinet_base}/wheel?token={token_value}"
+                    else:
+                        cabinet_link = f"{cabinet_base}?token={token_value}"
 
                     msg = (
                         campaign.message_template
