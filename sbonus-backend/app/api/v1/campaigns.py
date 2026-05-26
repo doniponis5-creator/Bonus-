@@ -11,15 +11,17 @@ POST   /api/v1/admin/campaigns/{id}/cancel — отменить pending
 DELETE /api/v1/admin/campaigns/{id}      — удалить (только pending/cancelled)
 """
 
+import asyncio
+import logging
 import uuid
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.database import get_db
+from app.core.database import get_db, async_session
 from app.core.security import UserRole, get_current_user, require_role
 from app.models import (
     BonusCampaign,
@@ -178,6 +180,39 @@ async def get_campaign(
     }
 
 
+logger = logging.getLogger("sbonus.campaign")
+
+
+async def _run_campaign_in_background(campaign_id: uuid.UUID):
+    """Фоновая задача: отправка кампании без блокировки HTTP запроса."""
+    async with async_session() as db:
+        try:
+            result = await db.execute(
+                select(BonusCampaign).where(BonusCampaign.id == campaign_id)
+            )
+            campaign = result.scalar_one_or_none()
+            if not campaign or campaign.status != CampaignStatus.PROCESSING:
+                return
+            sent = await process_campaign(db, campaign)
+            await db.commit()
+            logger.info(f"Фоновая отправка кампании «{campaign.name}» завершена: {sent} отправлено")
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Ошибка фоновой отправки кампании {campaign_id}: {e}")
+            # Попытка вернуть статус кампании
+            try:
+                async with async_session() as db2:
+                    r = await db2.execute(
+                        select(BonusCampaign).where(BonusCampaign.id == campaign_id)
+                    )
+                    c = r.scalar_one_or_none()
+                    if c and c.status == CampaignStatus.PROCESSING:
+                        c.status = CampaignStatus.PENDING
+                    await db2.commit()
+            except Exception:
+                pass
+
+
 @router.post(
     "/{campaign_id}/send",
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
@@ -186,7 +221,7 @@ async def send_campaign_now(
     campaign_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Запустить отправку кампании немедленно (минуя cron)."""
+    """Запустить отправку кампании немедленно (фоновая задача, без ожидания)."""
     result = await db.execute(select(BonusCampaign).where(BonusCampaign.id == campaign_id))
     campaign = result.scalar_one_or_none()
     if not campaign:
@@ -194,9 +229,14 @@ async def send_campaign_now(
     if campaign.status not in (CampaignStatus.PENDING,):
         raise HTTPException(status_code=400, detail={"code": "CAMPAIGN_NOT_PENDING", "message": f"Статус: {campaign.status.value}"})
 
-    sent = await process_campaign(db, campaign)
+    # Сразу ставим PROCESSING чтобы заблокировать повторный запуск
+    campaign.status = CampaignStatus.PROCESSING
     await db.commit()
-    return {"success": True, "sent_count": sent}
+
+    # Запускаем в фоне — HTTP ответ возвращается мгновенно
+    asyncio.create_task(_run_campaign_in_background(campaign_id))
+
+    return {"success": True, "message": "Кампания запущена в фоновом режиме", "status": "processing"}
 
 
 @router.post(

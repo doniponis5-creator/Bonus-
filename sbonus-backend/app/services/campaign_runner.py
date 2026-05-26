@@ -72,7 +72,7 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
     Возвращает количество успешных отправок.
     Не делает commit — это ответственность вызывающей стороны.
     """
-    if campaign.status not in (CampaignStatus.PENDING,):
+    if campaign.status not in (CampaignStatus.PENDING, CampaignStatus.PROCESSING):
         return 0
 
     campaign.status = CampaignStatus.PROCESSING
@@ -146,7 +146,11 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
                     )
                     free_record = free_result.scalar_one_or_none()
                     if free_record:
-                        free_record.value = str(int(free_record.value) + 1)
+                        try:
+                            current = int(free_record.value)
+                        except (ValueError, TypeError):
+                            current = 0
+                        free_record.value = str(current + 1)
                     else:
                         db.add(Setting(key=free_key, value="1"))
                 else:
@@ -198,8 +202,8 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
                             instance_id=wa_instance,
                             api_token=wa_token,
                         )
-                    except Exception:
-                        pass  # Ошибка отправки WA не блокирует кампанию
+                    except Exception as wa_err:
+                        logger.warning(f"WhatsApp отправка не удалась для {customer.phone}: {wa_err}")
                     # Задержка между сообщениями (защита от блокировки WhatsApp)
                     if wa_interval > 0:
                         await asyncio.sleep(wa_interval)
