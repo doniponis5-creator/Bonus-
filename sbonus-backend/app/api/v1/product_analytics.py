@@ -112,7 +112,17 @@ async def product_analytics_summary(
             Product.current_stock <= Product.min_stock_level,
         )
     )
+    # Нет в наличии: ТОЛЬКО реально продававшиеся товары
+    # (исключаем старые товары из 1С которые никогда не продавались)
     out_of_stock = await db.execute(
+        select(func.count()).select_from(Product).where(
+            Product.is_active == True,
+            Product.current_stock <= 0,
+            Product.last_sold_at != None,  # Только товары с историей продаж
+        )
+    )
+    # Все с нулевым остатком (для справки)
+    out_of_stock_total = await db.execute(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
             Product.current_stock <= 0,
@@ -154,6 +164,7 @@ async def product_analytics_summary(
         "active_products": active.scalar() or 0,
         "low_stock_count": low_stock.scalar() or 0,
         "out_of_stock_count": out_of_stock.scalar() or 0,
+        "out_of_stock_total": out_of_stock_total.scalar() or 0,  # Все с 0 остатком (вкл. старые из 1С)
         "dead_stock_count": dead_stock.scalar() or 0,
         "abc_a_count": abc_a.scalar() or 0,
         "abc_b_count": abc_b.scalar() or 0,
@@ -319,18 +330,35 @@ async def low_stock_alerts(
     current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Алерты: товары с остатком ниже минимума (только с настроенным min_stock_level)."""
-    query = (
-        select(Product)
-        .where(
-            Product.is_active == True,
-            Product.min_stock_level > 0,  # Только настроенные товары (не default 5)
-            Product.current_stock <= Product.min_stock_level,
-        )
-        .order_by(Product.current_stock.asc())
-    )
+    # Smart filter: только реальные товары (продавались ИЛИ настроен min_stock)
+    base_filter = [
+        Product.is_active == True,
+        Product.current_stock <= Product.min_stock_level,
+    ]
 
-    if not include_out_of_stock:
-        query = query.where(Product.current_stock > 0)
+    if include_out_of_stock:
+        # Для out-of-stock: только товары с историей продаж (не старый хлам из 1С)
+        query = (
+            select(Product)
+            .where(
+                Product.is_active == True,
+                Product.current_stock <= Product.min_stock_level,
+                # Товар реальный: или продавался, или настроен min_stock
+                (Product.last_sold_at != None) | (Product.min_stock_level > 0),
+            )
+            .order_by(Product.current_stock.asc())
+        )
+    else:
+        query = (
+            select(Product)
+            .where(
+                Product.is_active == True,
+                Product.current_stock > 0,
+                Product.min_stock_level > 0,
+                Product.current_stock <= Product.min_stock_level,
+            )
+            .order_by(Product.current_stock.asc())
+        )
 
     if search:
         search_term = f"%{search.strip()}%"
@@ -930,4 +958,62 @@ async def daily_digest(
             "critical_alerts": critical_count,
             "low_stock_alerts": low_count,
         },
+    }
+
+
+# ═══════════════════════════════════════════
+# 12. CLEANUP — деактивация старых товаров
+# ═══════════════════════════════════════════
+
+@router.post("/cleanup-stale")
+async def cleanup_stale_products(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN)),
+) -> dict:
+    """
+    Деактивировать «мёртвые» товары:
+    - current_stock = 0
+    - last_sold_at = NULL (никогда не продавались в нашей системе)
+    - ИЛИ last_sold_at > 180 дней назад + stock = 0
+
+    Товары НЕ удаляются — при следующем stock-update из 1С
+    с остатком > 0 они автоматически станут active=True.
+    """
+    now = datetime.now(timezone.utc)
+    stale_cutoff = now - timedelta(days=180)
+
+    # 1) Никогда не продавались + остаток 0
+    never_sold = await db.execute(
+        select(Product).where(
+            Product.is_active == True,
+            Product.current_stock <= 0,
+            Product.last_sold_at == None,
+        )
+    )
+    never_sold_products = never_sold.scalars().all()
+
+    # 2) Не продавались 180+ дней + остаток 0
+    old_sold = await db.execute(
+        select(Product).where(
+            Product.is_active == True,
+            Product.current_stock <= 0,
+            Product.last_sold_at != None,
+            Product.last_sold_at < stale_cutoff,
+        )
+    )
+    old_sold_products = old_sold.scalars().all()
+
+    deactivated = 0
+    for p in never_sold_products + old_sold_products:
+        p.is_active = False
+        deactivated += 1
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "deactivated": deactivated,
+        "never_sold": len(never_sold_products),
+        "stale_180_days": len(old_sold_products),
+        "message": f"Деактивировано {deactivated} товаров. При обновлении остатков из 1С они автоматически активируются.",
     }

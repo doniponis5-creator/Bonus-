@@ -795,6 +795,9 @@ async def webhook_1c_stock_update(
         if product:
             product.current_stock = item.current_stock
             product.last_synced_at = now
+            # Авто-активация: если пришёл остаток > 0, товар "просыпается"
+            if item.current_stock > 0 and not product.is_active:
+                product.is_active = True
             updated += 1
         else:
             not_found_skus.append(item.sku)
