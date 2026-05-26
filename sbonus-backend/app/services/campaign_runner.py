@@ -51,13 +51,16 @@ async def _ensure_recipients(db: AsyncSession, campaign: BonusCampaign) -> list[
     return list(refreshed.scalars().all())
 
 
-async def _get_whatsapp_config(db: AsyncSession) -> dict:
+async def _get_campaign_config(db: AsyncSession) -> dict:
+    """Загрузить все настройки кампаний + WhatsApp из БД."""
     result = await db.execute(
         select(Setting).where(Setting.key.in_([
             "ENABLE_WHATSAPP_NOTIFICATIONS",
             "GREENAPI_INSTANCE_ID",
             "GREENAPI_API_TOKEN",
             "WA_MESSAGE_INTERVAL",
+            "CAMPAIGN_BATCH_SIZE",
+            "CAMPAIGN_BATCH_PAUSE",
         ]))
     )
     return {s.key: s.value for s in result.scalars().all()}
@@ -76,23 +79,36 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
     await db.flush()
 
     recipients = await _ensure_recipients(db, campaign)
-    wa_cfg = await _get_whatsapp_config(db)
-    wa_enabled = wa_cfg.get("ENABLE_WHATSAPP_NOTIFICATIONS") == "true"
-    wa_instance = wa_cfg.get("GREENAPI_INSTANCE_ID")
-    wa_token = wa_cfg.get("GREENAPI_API_TOKEN")
+    cfg = await _get_campaign_config(db)
+    wa_enabled = cfg.get("ENABLE_WHATSAPP_NOTIFICATIONS") == "true"
+    wa_instance = cfg.get("GREENAPI_INSTANCE_ID")
+    wa_token = cfg.get("GREENAPI_API_TOKEN")
 
-    # Filter out already-sent recipients
+    # Filter out already-sent recipients (дубликат ҳимояси)
     pending = [r for r in recipients if r.status != "sent"]
 
     # Интервал между WhatsApp сообщениями (по умолчанию 3 секунды)
-    wa_interval = float(wa_cfg.get("WA_MESSAGE_INTERVAL", "3"))
+    wa_interval = float(cfg.get("WA_MESSAGE_INTERVAL", "3"))
+
+    # Размер батча и пауза между батчами (из DB Settings)
+    BATCH_SIZE = int(cfg.get("CAMPAIGN_BATCH_SIZE", "50"))
+    BATCH_PAUSE = float(cfg.get("CAMPAIGN_BATCH_PAUSE", "30"))
+
+    import logging
+    logger = logging.getLogger("sbonus.campaign")
+    logger.info(
+        f"Кампания «{campaign.name}»: {len(pending)} получателей, "
+        f"batch={BATCH_SIZE}, пауза={BATCH_PAUSE}с, интервал WA={wa_interval}с"
+    )
 
     sent_count = 0
-    BATCH_SIZE = 100
+    total_batches = (len(pending) + BATCH_SIZE - 1) // BATCH_SIZE if pending else 0
     txn_note = f"Кампания: {campaign.name}" + (f" — {campaign.reason}" if campaign.reason else "")
 
-    for i in range(0, len(pending), BATCH_SIZE):
+    for batch_num, i in enumerate(range(0, len(pending), BATCH_SIZE), 1):
         batch = pending[i : i + BATCH_SIZE]
+
+        logger.info(f"  Батч {batch_num}/{total_batches}: отправка {len(batch)} сообщений...")
         batch_customer_ids = [r.customer_id for r in batch]
 
         # Batch-load customers
@@ -193,7 +209,14 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
 
         # Flush each batch to keep memory usage bounded
         await db.flush()
+        logger.info(f"  Батч {batch_num}/{total_batches} завершён: отправлено {sent_count}")
 
+        # Пауза между батчами (защита от блокировки WhatsApp)
+        if BATCH_PAUSE > 0 and i + BATCH_SIZE < len(pending):
+            logger.info(f"  Пауза {BATCH_PAUSE}с перед следующим батчем...")
+            await asyncio.sleep(BATCH_PAUSE)
+
+    logger.info(f"Кампания «{campaign.name}» завершена: {sent_count}/{len(pending)} отправлено")
     campaign.sent_count = sent_count
     campaign.sent_at = datetime.now(timezone.utc)
     campaign.status = CampaignStatus.SENT

@@ -56,6 +56,8 @@ export default function SettingsPage() {
     BALANCE_REMINDER_INACTIVE_DAYS: "14",
     BALANCE_REMINDER_MIN_BALANCE: "100",
     WA_MESSAGE_INTERVAL: "3",
+    CAMPAIGN_BATCH_SIZE: "50",
+    CAMPAIGN_BATCH_PAUSE: "30",
     WHEEL_FREE_SPINS_ON_REGISTER: "1",
     BONUS_EXPIRATION_DAYS: "365",
     BONUS_EXPIRATION_WARNING_DAYS: "14",
@@ -417,6 +419,53 @@ export default function SettingsPage() {
             <span style={{ fontSize: "13px", color: colors.textMuted }}>
               Задержка между WhatsApp сообщениями для защиты от блокировки (рекомендуется 3-5 сек)
             </span>
+          </div>
+        </div>
+
+        {/* Campaign batch settings */}
+        <div style={{ marginTop: "20px", padding: "16px", background: "rgba(255,230,0,0.04)", borderRadius: "12px", border: "1px solid rgba(255,230,0,0.1)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="#FFE600" strokeWidth="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="#FFE600" strokeWidth="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="#FFE600" strokeWidth="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="#FFE600" strokeWidth="1.5"/></svg>
+            Батч-рассылка кампаний
+          </div>
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: "150px" }}>
+              <label style={{ fontSize: "12px", color: colors.textMuted, display: "block", marginBottom: "6px" }}>
+                Размер батча (чел.)
+              </label>
+              <input
+                style={{ ...styles.input, maxWidth: "120px" }}
+                type="number"
+                min={10}
+                max={500}
+                value={settings.CAMPAIGN_BATCH_SIZE}
+                onChange={(e) => handleChange("CAMPAIGN_BATCH_SIZE", e.target.value)}
+                placeholder="50"
+              />
+              <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "4px" }}>
+                Сколько сообщений отправлять за раз (10-500)
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: "150px" }}>
+              <label style={{ fontSize: "12px", color: colors.textMuted, display: "block", marginBottom: "6px" }}>
+                Пауза между батчами (сек)
+              </label>
+              <input
+                style={{ ...styles.input, maxWidth: "120px" }}
+                type="number"
+                min={10}
+                max={300}
+                value={settings.CAMPAIGN_BATCH_PAUSE}
+                onChange={(e) => handleChange("CAMPAIGN_BATCH_PAUSE", e.target.value)}
+                placeholder="30"
+              />
+              <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "4px" }}>
+                Перерыв между группами для защиты от блокировки (рекомендуется 30 сек)
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: "12px", color: colors.textMuted, marginTop: "10px", padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
+            Пример: 900 клиентов, батч 50, пауза 30с → 18 батчей → ~{Math.ceil(900 / Number(settings.CAMPAIGN_BATCH_SIZE || 50))} батчей, ~{Math.ceil(900 / Number(settings.CAMPAIGN_BATCH_SIZE || 50) * (Number(settings.CAMPAIGN_BATCH_PAUSE || 30) + Number(settings.CAMPAIGN_BATCH_SIZE || 50) * Number(settings.WA_MESSAGE_INTERVAL || 3)) / 60)} мин
           </div>
         </div>
       </div>
