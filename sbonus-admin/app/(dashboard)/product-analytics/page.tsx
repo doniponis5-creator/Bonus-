@@ -1339,7 +1339,7 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
       <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
         {sections.map(sec => (
           <button key={sec.key} onClick={() => setActiveSection(sec.key)} style={{
-            padding: '8px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
+            padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
             background: activeSection === sec.key ? '#FFE60020' : '#0d1526',
             color: activeSection === sec.key ? '#FFE600' : '#8899aa',
             fontSize: 13, fontWeight: activeSection === sec.key ? 600 : 400,
