@@ -364,21 +364,16 @@ async def low_stock_alerts(
     current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Алерты: товары с остатком ниже минимума (только с настроенным min_stock_level)."""
-    # Smart filter: только реальные товары (продавались ИЛИ настроен min_stock)
-    base_filter = [
-        Product.is_active == True,
-        Product.current_stock <= Product.min_stock_level,
-    ]
-
+    # Smart filter: ТОЛЬКО товары с реальной историей продаж
+    # (last_sold_at устанавливается при покупке через 1С webhook)
+    # Товары без продаж = просто каталог из 1С, не алерт
     if include_out_of_stock:
-        # Для out-of-stock: только товары с историей продаж (не старый хлам из 1С)
         query = (
             select(Product)
             .where(
                 Product.is_active == True,
+                Product.last_sold_at != None,  # Только реально продававшиеся
                 Product.current_stock <= Product.min_stock_level,
-                # Товар реальный: или продавался, или настроен min_stock
-                (Product.last_sold_at != None) | (Product.min_stock_level > 0),
             )
             .order_by(Product.current_stock.asc())
         )
@@ -387,6 +382,7 @@ async def low_stock_alerts(
             select(Product)
             .where(
                 Product.is_active == True,
+                Product.last_sold_at != None,
                 Product.current_stock > 0,
                 Product.min_stock_level > 0,
                 Product.current_stock <= Product.min_stock_level,
@@ -937,6 +933,7 @@ async def daily_digest(
     low = await db.execute(
         select(func.count()).select_from(Product).where(
             Product.is_active == True,
+            Product.last_sold_at != None,  # Только реальные товары
             Product.current_stock > 0,
             Product.min_stock_level > 0,
             Product.current_stock <= Product.min_stock_level,
