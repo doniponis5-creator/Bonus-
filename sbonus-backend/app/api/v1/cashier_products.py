@@ -9,7 +9,7 @@ Endpoints:
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -75,7 +75,7 @@ async def cashier_product_search(
     # Сортировка: сначала точные совпадения SKU/barcode, потом по остатку
     query = query.order_by(
         # Exact SKU match first
-        func.case(
+        case(
             (Product.sku.ilike(search_term), 0),
             (Product.barcode == search_term, 0),
             else_=1,
