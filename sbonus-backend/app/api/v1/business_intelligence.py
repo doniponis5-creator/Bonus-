@@ -115,7 +115,7 @@ async def _build_pnl_text(db: AsyncSession, month: str) -> str:
     )
     bonus_exp = float(bonus_q.scalar() or 0)
 
-    net_profit = gross - opex - bonus_exp
+    net_profit = gross - opex  # Без бонусов
     margin = round(net_profit / revenue * 100, 1) if revenue > 0 else 0
 
     # Top expense categories
@@ -146,7 +146,6 @@ async def _build_pnl_text(db: AsyncSession, month: str) -> str:
         f"📊 Валовая прибыль: <b>{_fmt(gross)} сом</b>",
         "",
         f"🏢 Операционные расходы: {_fmt(opex)} сом",
-        f"🎁 Бонусные расходы: {_fmt(bonus_exp)} сом",
         "",
         f"{'✅' if net_profit > 0 else '❌'} <b>Чистая прибыль: {_fmt(net_profit)} сом</b>",
         f"📐 Маржинальность: {margin}%",
@@ -327,7 +326,7 @@ async def export_excel(
         txn_count = txn_q.scalar() or 0
 
         gross = revenue - cogs
-        net = gross - opex - bonus
+        net = gross - opex  # Без бонусов
         margin = round(net / revenue * 100, 1) if revenue > 0 else 0
         avg_receipt = round(revenue / max(txn_count, 1), 0)
 

@@ -188,7 +188,7 @@ async def financials_summary(
         for r in cat_result.all()
     ]
 
-    total_expenses = expenses_total + bonus_expense
+    total_expenses = expenses_total  # Бонусы НЕ входят в расходы
     net_profit = rev_data["gross_profit"] - total_expenses
     margin_pct = round((net_profit / rev_data["revenue"]) * 100, 1) if rev_data["revenue"] > 0 else 0
 
@@ -198,7 +198,7 @@ async def financials_summary(
     prev_rev = await _get_revenue_data(db, prev_start, prev_end)
     prev_expenses = await _get_expenses_total(db, prev)
     prev_bonus = await _get_bonus_expense(db, prev_start, prev_end)
-    prev_net = prev_rev["gross_profit"] - prev_expenses - prev_bonus
+    prev_net = prev_rev["gross_profit"] - prev_expenses  # Без бонусов
 
     rev_change = round(((rev_data["revenue"] - prev_rev["revenue"]) / prev_rev["revenue"]) * 100, 1) if prev_rev["revenue"] > 0 else 0
     profit_change = round(((net_profit - prev_net) / abs(prev_net)) * 100, 1) if prev_net != 0 else 0
@@ -250,7 +250,7 @@ async def monthly_breakdown(
         rev = await _get_revenue_data(db, start, end)
         expenses = await _get_expenses_total(db, m_str)
         bonus = await _get_bonus_expense(db, start, end)
-        total_exp = expenses + bonus
+        total_exp = expenses  # Без бонусов
         net = rev["gross_profit"] - total_exp
 
         y, m = int(m_str[:4]), int(m_str[5:7])
@@ -336,7 +336,7 @@ async def pnl_report(
     cogs = rev["cost_of_goods"]
     gross = revenue - cogs
     opex = float(total_opex)
-    net = gross - opex - bonus
+    net = gross - opex  # Без бонусов
 
     return {
         "month": target,
@@ -609,7 +609,7 @@ async def plan_fact(
     rev = await _get_revenue_data(db, start, end)
     expenses = await _get_expenses_total(db, target)
     bonus = await _get_bonus_expense(db, start, end)
-    net = rev["gross_profit"] - expenses - bonus
+    net = rev["gross_profit"] - expenses  # Без бонусов
 
     # План из Settings
     plan_revenue = await _get_plan_setting(db, f"PLAN_REVENUE_{target}", "0")
@@ -627,7 +627,7 @@ async def plan_fact(
     return {
         "month": target,
         "revenue": _pf(plan_revenue, rev["revenue"]),
-        "expenses": _pf(plan_expenses, expenses + bonus),
+        "expenses": _pf(plan_expenses, expenses),
         "net_profit": _pf(plan_profit, net),
     }
 
