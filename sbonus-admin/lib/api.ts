@@ -330,7 +330,17 @@ export const biAPI = {
   budgetAlerts: (month?: string) => api.get('/api/v1/bi/budget-alerts' + (month ? `?month=${month}` : '')),
   // Debts
   debtsAnalytics: () => api.get('/api/v1/bi/debts-analytics'),
-  debtsRisk: (limit = 20) => api.get(`/api/v1/bi/debts-risk?limit=${limit}`),
+  debtsRegistry: (params: { page?: number; per_page?: number; category?: string; search?: string } = {}) => {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', String(params.page));
+    if (params.per_page) q.set('per_page', String(params.per_page));
+    if (params.category) q.set('category', params.category);
+    if (params.search) q.set('search', params.search);
+    return api.get('/api/v1/bi/debts-registry?' + q.toString());
+  },
+  debtsOverride: (customerId: string, newCategory: string) =>
+    api.put(`/api/v1/bi/debts-override?customer_id=${customerId}&new_category=${newCategory}`),
+  debtCheck: (phone: string) => api.get(`/api/v1/bi/debt-check/${encodeURIComponent(phone)}`),
   // Cashier KPI
   cashierKpi: (month?: string) => api.get('/api/v1/bi/cashier-kpi' + (month ? `?month=${month}` : '')),
   // RFM Pro

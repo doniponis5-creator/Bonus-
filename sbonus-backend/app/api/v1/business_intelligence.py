@@ -546,50 +546,368 @@ async def debts_analytics(
     }
 
 
-@router.get("/debts-risk", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
-async def debts_risk(
-    limit: int = Query(20, ge=5, le=100),
+# ─── Кредит рейтинг калькулятор ───
+def _calc_credit_score(debts_data: list[dict]) -> int:
+    """Кредит рейтинг 0-100. Юқори = яхши."""
+    if not debts_data:
+        return 50  # Янги клиент — ўрта
+
+    score = 60  # Базовый
+
+    total_debts = len(debts_data)
+    paid_debts = sum(1 for d in debts_data if d["status"] == "paid")
+    active_debts = sum(1 for d in debts_data if d["status"] != "paid")
+    max_overdue = max((d["overdue_days"] for d in debts_data), default=0)
+    total_amount = sum(d["amount"] for d in debts_data if d["status"] != "paid")
+    total_ever = sum(d["total_amount"] for d in debts_data)
+    total_paid = sum(d["paid_amount"] for d in debts_data)
+
+    # 1. Тўлов тарихи (+20 / -20)
+    if total_ever > 0:
+        paid_ratio = total_paid / total_ever
+        score += int(paid_ratio * 20)  # 0..+20
+    else:
+        score += 10
+
+    # 2. Просрочка (-35 max)
+    if max_overdue > 180:
+        score -= 35
+    elif max_overdue > 90:
+        score -= 28
+    elif max_overdue > 60:
+        score -= 20
+    elif max_overdue > 30:
+        score -= 12
+    elif max_overdue > 0:
+        score -= 5
+
+    # 3. Актив долглар сони (-15 max)
+    if active_debts >= 3:
+        score -= 15
+    elif active_debts == 2:
+        score -= 8
+    elif active_debts == 1:
+        score -= 3
+
+    # 4. Тўланган долглар бонус (+10)
+    if paid_debts > 0 and active_debts == 0:
+        score += 10
+    elif paid_debts > active_debts:
+        score += 5
+
+    # 5. Қолдиқ суммаси (-10 max)
+    if total_amount > 100000:
+        score -= 10
+    elif total_amount > 50000:
+        score -= 5
+
+    return max(0, min(100, score))
+
+
+def _auto_category(credit_score: int, debts_data: list[dict]) -> str:
+    """Автоматик категория — 5 сегмент."""
+    if not debts_data:
+        return "new"
+
+    active = [d for d in debts_data if d["status"] != "paid"]
+    max_overdue = max((d["overdue_days"] for d in active), default=0)
+    overdue_count = sum(1 for d in active if d["overdue_days"] > 30)
+
+    # Чёрный список: 90+ кун ёки 2+ просрочка > 30
+    if max_overdue > 90 or overdue_count >= 2:
+        return "blacklist"
+
+    # Проблемный: 30-90 кун
+    if max_overdue > 30:
+        return "problematic"
+
+    # На контроле: 1-30 кун
+    if max_overdue > 0:
+        return "monitoring"
+
+    # Надёжный: просрочка йўқ
+    if len(active) > 0 or any(d["status"] == "paid" for d in debts_data):
+        return "reliable"
+
+    return "new"
+
+
+def _installment_recommendation(category: str, credit_score: int) -> dict:
+    """Рассрочка тавсияси."""
+    if category == "blacklist":
+        return {"allowed": False, "label": "Запрещено", "color": "#ef4444",
+                "reason": "Клиент в чёрном списке — хроническая просрочка"}
+    if category == "problematic":
+        return {"allowed": False, "label": "Не рекомендуется", "color": "#f97316",
+                "reason": "Просрочка 30-90 дней — высокий риск невозврата"}
+    if category == "monitoring":
+        return {"allowed": True, "label": "С осторожностью", "color": "#f59e0b",
+                "reason": "Небольшая просрочка — малая сумма, короткий срок"}
+    if category == "new":
+        return {"allowed": True, "label": "Малая сумма", "color": "#3b82f6",
+                "reason": "Новый клиент — начните с небольшой суммы"}
+    # reliable
+    return {"allowed": True, "label": "Разрешено", "color": "#22c55e",
+            "reason": "Надёжный клиент — оплачивает вовремя"}
+
+
+CATEGORY_META = {
+    "blacklist":   {"label": "Чёрный список", "icon": "ban",           "color": "#ef4444", "sort": 0},
+    "problematic": {"label": "Проблемный",    "icon": "alert-triangle", "color": "#f97316", "sort": 1},
+    "monitoring":  {"label": "На контроле",   "icon": "eye",           "color": "#f59e0b", "sort": 2},
+    "reliable":    {"label": "Надёжный",      "icon": "shield-check",  "color": "#22c55e", "sort": 3},
+    "new":         {"label": "Новый",         "icon": "user-plus",     "color": "#3b82f6", "sort": 4},
+}
+
+
+@router.get("/debts-registry", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))])
+async def debts_registry(
+    category: str = Query(None, description="blacklist/problematic/monitoring/reliable/new"),
+    search: str = Query(None, description="Поиск по телефону или имени"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(30, ge=10, le=100),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """ТОП рисковые должники (по сумме * просрочке)."""
-    q = await db.execute(
+    """Полный реестр должников с категоризацией и кредитным рейтингом."""
+    # 1. Все долги сгруппированные по клиенту
+    q = (
         select(
-            CustomerDebt.id,
-            CustomerDebt.amount,
-            CustomerDebt.total_amount,
-            CustomerDebt.paid_amount,
-            CustomerDebt.overdue_days,
-            CustomerDebt.status,
-            CustomerDebt.reference,
+            Customer.id.label("cid"),
             Customer.full_name,
             Customer.phone,
+            Customer.is_active,
+            func.count(CustomerDebt.id).label("debt_count"),
+            func.sum(CustomerDebt.amount).label("total_remaining"),
+            func.sum(CustomerDebt.total_amount).label("total_amount"),
+            func.sum(CustomerDebt.paid_amount).label("total_paid"),
+            func.max(CustomerDebt.overdue_days).label("max_overdue"),
+            func.array_agg(CustomerDebt.status).label("statuses"),
+            func.array_agg(CustomerDebt.overdue_days).label("overdue_arr"),
+            func.array_agg(CustomerDebt.amount).label("amount_arr"),
+            func.array_agg(CustomerDebt.total_amount).label("total_arr"),
+            func.array_agg(CustomerDebt.paid_amount).label("paid_arr"),
+            func.array_agg(CustomerDebt.id).label("debt_ids"),
         )
         .join(Customer, Customer.id == CustomerDebt.customer_id)
-        .where(CustomerDebt.status != "paid")
-        .order_by(desc(CustomerDebt.overdue_days * CustomerDebt.amount))
-        .limit(limit)
+        .group_by(Customer.id, Customer.full_name, Customer.phone, Customer.is_active)
     )
-    rows = q.all()
 
-    risk_list = []
-    for r in rows:
-        risk_score = float(r.amount) * max(r.overdue_days, 1) / 1000
-        risk_level = "critical" if risk_score > 500 else ("high" if risk_score > 100 else ("medium" if risk_score > 30 else "low"))
-        risk_list.append({
-            "id": str(r.id),
-            "customer_name": r.full_name or "—",
+    # Поиск
+    if search:
+        search_term = f"%{search.strip()}%"
+        q = q.where(
+            (Customer.phone.ilike(search_term)) | (Customer.full_name.ilike(search_term))
+        )
+
+    result = await db.execute(q)
+    all_rows = result.all()
+
+    # 2. Загрузить админские override-ы
+    override_keys = [f"DEBT_CAT_{r.cid}" for r in all_rows]
+    overrides: dict[str, str] = {}
+    if override_keys:
+        ov_q = await db.execute(
+            select(Setting.key, Setting.value).where(Setting.key.in_(override_keys))
+        )
+        for ok in ov_q.all():
+            cid = ok.key.replace("DEBT_CAT_", "")
+            overrides[cid] = ok.value
+
+    # 3. Вычислить категорию + рейтинг для каждого клиента
+    customers = []
+    for r in all_rows:
+        debts_data = []
+        for i in range(len(r.statuses)):
+            debts_data.append({
+                "status": r.statuses[i],
+                "overdue_days": r.overdue_arr[i],
+                "amount": float(r.amount_arr[i]),
+                "total_amount": float(r.total_arr[i]),
+                "paid_amount": float(r.paid_arr[i]),
+            })
+
+        credit_score = _calc_credit_score(debts_data)
+        auto_cat = _auto_category(credit_score, debts_data)
+        cid_str = str(r.cid)
+        admin_cat = overrides.get(cid_str)
+        final_cat = admin_cat if admin_cat and admin_cat in CATEGORY_META else auto_cat
+
+        recommendation = _installment_recommendation(final_cat, credit_score)
+
+        customers.append({
+            "customer_id": cid_str,
+            "name": r.full_name or "—",
             "phone": r.phone,
-            "amount": float(r.amount),
-            "total_amount": float(r.total_amount),
-            "paid_amount": float(r.paid_amount),
-            "overdue_days": r.overdue_days,
-            "status": r.status,
-            "reference": r.reference,
-            "risk_score": round(risk_score, 1),
-            "risk_level": risk_level,
+            "is_active": r.is_active,
+            "debt_count": r.debt_count,
+            "total_remaining": float(r.total_remaining or 0),
+            "total_amount": float(r.total_amount or 0),
+            "total_paid": float(r.total_paid or 0),
+            "max_overdue": r.max_overdue or 0,
+            "credit_score": credit_score,
+            "auto_category": auto_cat,
+            "admin_override": admin_cat,
+            "category": final_cat,
+            "category_meta": CATEGORY_META[final_cat],
+            "recommendation": recommendation,
         })
 
-    return {"risks": risk_list, "total": len(risk_list)}
+    # 4. Фильтр по категории
+    if category and category in CATEGORY_META:
+        customers = [c for c in customers if c["category"] == category]
+
+    # Сортировка: blacklist → new, внутри по max_overdue desc
+    customers.sort(key=lambda c: (CATEGORY_META[c["category"]]["sort"], -c["max_overdue"]))
+
+    # 5. Сводка по категориям
+    summary = {}
+    for cat, meta in CATEGORY_META.items():
+        cat_items = [c for c in customers if c["category"] == cat] if not category else                     [c for c in [cc for cc in all_rows] if False]  # placeholder
+        summary[cat] = {**meta, "count": 0, "total_debt": 0}
+
+    # Пересчитать summary из полного списка (без фильтра)
+    all_customers_cats: dict[str, list] = {k: [] for k in CATEGORY_META}
+    for r in all_rows:
+        debts_data = []
+        for i in range(len(r.statuses)):
+            debts_data.append({
+                "status": r.statuses[i], "overdue_days": r.overdue_arr[i],
+                "amount": float(r.amount_arr[i]), "total_amount": float(r.total_arr[i]),
+                "paid_amount": float(r.paid_arr[i]),
+            })
+        cs = _calc_credit_score(debts_data)
+        ac = _auto_category(cs, debts_data)
+        cid_str = str(r.cid)
+        fc = overrides.get(cid_str) if overrides.get(cid_str) in CATEGORY_META else ac
+        all_customers_cats[fc].append(float(r.total_remaining or 0))
+
+    summary = {}
+    for cat, meta in CATEGORY_META.items():
+        items = all_customers_cats.get(cat, [])
+        summary[cat] = {**meta, "count": len(items), "total_debt": round(sum(items), 2)}
+
+    # 6. Пагинация
+    total = len(customers)
+    start = (page - 1) * per_page
+    paginated = customers[start:start + per_page]
+
+    return {
+        "customers": paginated,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page,
+        "summary": summary,
+        "categories_meta": CATEGORY_META,
+    }
+
+
+@router.put("/debts-override", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))])
+async def debts_override(
+    customer_id: str = Query(...),
+    new_category: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Админ вручную устанавливает категорию клиента (override)."""
+    if new_category not in CATEGORY_META and new_category != "auto":
+        return {"error": "Неверная категория"}
+
+    key = f"DEBT_CAT_{customer_id}"
+
+    if new_category == "auto":
+        # Удалить override — вернуться к авто
+        existing = await db.execute(select(Setting).where(Setting.key == key))
+        setting = existing.scalar_one_or_none()
+        if setting:
+            await db.delete(setting)
+            await db.commit()
+        return {"status": "ok", "message": "Категория сброшена на автоматическую"}
+
+    # Upsert
+    existing = await db.execute(select(Setting).where(Setting.key == key))
+    setting = existing.scalar_one_or_none()
+    if setting:
+        setting.value = new_category
+    else:
+        db.add(Setting(key=key, value=new_category))
+    await db.commit()
+
+    return {"status": "ok", "category": new_category, "label": CATEGORY_META[new_category]["label"]}
+
+
+@router.get("/debt-check/{phone}", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN, UserRole.CASHIER))])
+async def debt_check(
+    phone: str,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Быстрая проверка клиента по телефону перед выдачей рассрочки."""
+    # Нормализация
+    p = phone.strip().replace(" ", "").replace("-", "")
+    if not p.startswith("+"):
+        p = "+" + p
+
+    # Найти клиента
+    cust_q = await db.execute(
+        select(Customer).where(Customer.phone.ilike(f"%{p[-9:]}%"))
+    )
+    customer = cust_q.scalar_one_or_none()
+
+    if not customer:
+        return {
+            "found": False,
+            "message": "Клиент не найден в базе",
+            "recommendation": {"allowed": True, "label": "Новый клиент", "color": "#3b82f6",
+                               "reason": "Клиент не в базе — начните с малой суммы"},
+        }
+
+    # Долги
+    debts_q = await db.execute(
+        select(CustomerDebt).where(CustomerDebt.customer_id == customer.id)
+    )
+    debts = debts_q.scalars().all()
+
+    debts_data = [{
+        "status": d.status,
+        "overdue_days": d.overdue_days,
+        "amount": float(d.amount),
+        "total_amount": float(d.total_amount),
+        "paid_amount": float(d.paid_amount),
+    } for d in debts]
+
+    credit_score = _calc_credit_score(debts_data)
+    auto_cat = _auto_category(credit_score, debts_data)
+
+    # Override?
+    ov = await db.execute(select(Setting.value).where(Setting.key == f"DEBT_CAT_{customer.id}"))
+    admin_cat = ov.scalar_one_or_none()
+    final_cat = admin_cat if admin_cat and admin_cat in CATEGORY_META else auto_cat
+
+    recommendation = _installment_recommendation(final_cat, credit_score)
+
+    active_debts = [d for d in debts if d.status != "paid"]
+    return {
+        "found": True,
+        "customer_id": str(customer.id),
+        "name": customer.full_name,
+        "phone": customer.phone,
+        "credit_score": credit_score,
+        "category": final_cat,
+        "category_meta": CATEGORY_META[final_cat],
+        "admin_override": admin_cat,
+        "active_debts": len(active_debts),
+        "total_remaining": sum(float(d.amount) for d in active_debts),
+        "max_overdue": max((d.overdue_days for d in active_debts), default=0),
+        "debts": [{
+            "id": str(d.id),
+            "total_amount": float(d.total_amount),
+            "paid_amount": float(d.paid_amount),
+            "remaining": float(d.amount),
+            "overdue_days": d.overdue_days,
+            "status": d.status,
+            "reference": d.reference,
+        } for d in debts],
+        "recommendation": recommendation,
+    }
 
 
 # ═══════════════════════════════════════════════════

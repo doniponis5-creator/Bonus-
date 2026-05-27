@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { biAPI } from '@/lib/api';
 import {
   Brain, Loader2, Send, Download, Shield, AlertTriangle, Users, Target,
-  TrendingUp, Crown, Star,
+  TrendingUp, Crown, Star, Ban, ShieldCheck, UserPlus, Search, RotateCcw, Phone,
   Zap, Eye, DollarSign, BarChart3, PieChart as PieIcon, Clock, Hash,
   Award, ChevronDown, ChevronUp, FileSpreadsheet, MessageCircle,
 } from 'lucide-react';
@@ -353,118 +353,328 @@ function BudgetTab({ month }: { month: string }) {
 // ═══════════════════════════════════════
 function DebtsTab() {
   const [data, setData] = useState<any>(null);
-  const [risks, setRisks] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [overrideLoading, setOverrideLoading] = useState<string | null>(null);
+  const [phoneCheck, setPhoneCheck] = useState('');
+  const [checkResult, setCheckResult] = useState<any>(null);
+  const [checkLoading, setCheckLoading] = useState(false);
 
-  useEffect(() => {
-    Promise.all([biAPI.debtsAnalytics(), biAPI.debtsRisk()])
-      .then(([d, r]) => { setData(d.data); setRisks(r.data.risks || []); })
-      .catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  const CAT_ICONS: Record<string, any> = {
+    blacklist: Ban, problematic: AlertTriangle, monitoring: Eye,
+    reliable: ShieldCheck, new: UserPlus,
+  };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><Loader2 size={28} color="#FFE600" className="animate-spin" /></div>;
-  if (!data) return <div style={{ color: '#5e6e82', textAlign: 'center', padding: 40 }}>Нет данных</div>;
+  const loadData = useCallback(() => {
+    setLoading(true);
+    const params: any = { page, per_page: 30 };
+    if (activeCategory) params.category = activeCategory;
+    if (searchQuery) params.search = searchQuery;
 
-  const agingColors = ['#22c55e', '#f59e0b', '#ef4444', '#7f1d1d'];
-  const statusLabels: Record<string, string> = { active: 'Активные', overdue: 'Просрочено', paid: 'Погашены' };
+    Promise.all([
+      biAPI.debtsRegistry(params),
+      biAPI.debtsAnalytics(),
+    ]).then(([reg, ana]) => {
+      setCustomers(reg.data.customers || []);
+      setSummary(reg.data.summary || {});
+      setTotalPages(reg.data.pages || 1);
+      setTotal(reg.data.total || 0);
+      setData(ana.data);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [page, activeCategory, searchQuery]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleSearch = () => {
+    setPage(1);
+    setSearchQuery(searchInput.trim());
+  };
+
+  const handleOverride = async (customerId: string, newCat: string) => {
+    setOverrideLoading(customerId);
+    try {
+      await biAPI.debtsOverride(customerId, newCat);
+      loadData();
+    } catch { /* ignore */ }
+    setOverrideLoading(null);
+  };
+
+  const handlePhoneCheck = async () => {
+    if (!phoneCheck.trim()) return;
+    setCheckLoading(true);
+    try {
+      const r = await biAPI.debtCheck(phoneCheck.trim());
+      setCheckResult(r.data);
+    } catch { setCheckResult({ found: false, message: 'Ошибка запроса' }); }
+    setCheckLoading(false);
+  };
+
+  if (loading && !data) return <div style={{ textAlign: 'center', padding: 60 }}><Loader2 size={28} color="#FFE600" className="animate-spin" /></div>;
+
+  const catOrder = ['blacklist', 'problematic', 'monitoring', 'reliable', 'new'];
+  const catLabels: Record<string, string> = {
+    blacklist: 'Чёрный список', problematic: 'Проблемный', monitoring: 'На контроле',
+    reliable: 'Надёжный', new: 'Новый',
+  };
+
+  const scoreColor = (s: number) => s >= 70 ? '#22c55e' : s >= 45 ? '#f59e0b' : '#ef4444';
+  const scoreBg = (s: number) => s >= 70 ? '#22c55e15' : s >= 45 ? '#f59e0b15' : '#ef444415';
 
   return (
     <div>
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
-        <KpiCard icon={DollarSign} label="Общая задолженность" value={fmtMoney(data.total_remaining)} color="#ef4444" />
-        <KpiCard icon={Clock} label="Просрочено" value={fmtMoney(data.overdue_amount)} sub={`${data.overdue_count} договоров`} color="#f59e0b" />
-        <KpiCard icon={TrendingUp} label="Оплата" value={`${data.paid_rate}%`} sub={`${fmtMoney(data.total_paid)} из ${fmtMoney(data.total_amount)}`} color="#22c55e" />
-        <KpiCard icon={Hash} label="Активных" value={data.total_debts} color="#3b82f6" />
-      </div>
+      {data && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
+          <KpiCard icon={DollarSign} label="Общий долг" value={fmtMoney(data.total_remaining)} color="#ef4444" />
+          <KpiCard icon={Clock} label="Просрочено" value={fmtMoney(data.overdue_amount)} sub={data.overdue_count + ' дог.'} color="#f59e0b" />
+          <KpiCard icon={TrendingUp} label="Оплата" value={data.paid_rate + '%'} sub={fmtMoney(data.total_paid)} color="#22c55e" />
+          <KpiCard icon={Users} label="Должников" value={total} color="#3b82f6" />
+        </div>
+      )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
-        {/* Aging chart */}
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20 }}>
-          <div style={{ color: '#e2eaf6', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>Старение долгов</div>
-          {data.aging && data.aging.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={data.aging}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="bucket" tick={{ fill: '#5e6e82', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#5e6e82', fontSize: 11 }} tickFormatter={fmtShort} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => fmtMoney(v)} />
-                <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                  {(data.aging || []).map((_: any, i: number) => (
-                    <Cell key={i} fill={agingColors[i] || '#64748b'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : <div style={{ color: '#3a4a5e', textAlign: 'center', padding: 40 }}>Нет просроченных</div>}
+      {/* Phone Check */}
+      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+        <div style={{ color: '#e2eaf6', fontWeight: 600, fontSize: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Phone size={16} /> Проверка перед рассрочкой
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={phoneCheck}
+            onChange={(e) => setPhoneCheck(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handlePhoneCheck()}
+            placeholder="Введите номер телефона..."
+            style={{
+              flex: 1, background: '#141c2b', border: '1px solid #1e293b', borderRadius: 10,
+              color: '#e2eaf6', padding: '10px 14px', fontSize: 14, outline: 'none',
+            }}
+          />
+          <button onClick={handlePhoneCheck} disabled={checkLoading}
+            style={{
+              background: '#FFE600', color: '#000', border: 'none', borderRadius: 10,
+              padding: '10px 20px', fontWeight: 700, cursor: 'pointer', fontSize: 13,
+              opacity: checkLoading ? 0.5 : 1,
+            }}>
+            {checkLoading ? 'Проверка...' : 'Проверить'}
+          </button>
         </div>
 
-        {/* Status pie */}
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20 }}>
-          <div style={{ color: '#e2eaf6', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>По статусу</div>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={data.by_status?.map((s: any) => ({ ...s, name: statusLabels[s.status] || s.status }))}
-                dataKey="amount" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}
-                label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
-                labelLine={{ stroke: '#3a4a5e' }}>
-                {(data.by_status || []).map((_: any, i: number) => (
-                  <Cell key={i} fill={['#3b82f6', '#ef4444', '#22c55e'][i] || '#64748b'} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => fmtMoney(v)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Risk table */}
-      {risks.length > 0 && (
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20, marginTop: 16 }}>
-          <div style={{ color: '#e2eaf6', fontWeight: 600, fontSize: 14, marginBottom: 14 }}>
-            ТОП рисковые должники
+        {checkResult && (
+          <div style={{
+            marginTop: 12, background: '#141c2b', borderRadius: 10, padding: 14,
+            border: '1px solid ' + (checkResult.recommendation?.color || '#1e293b'),
+          }}>
+            {!checkResult.found ? (
+              <div style={{ color: '#5e6e82' }}>{checkResult.message || 'Клиент не найден'}</div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ color: '#e2eaf6', fontWeight: 600 }}>{checkResult.name}</div>
+                    <div style={{ color: '#5e6e82', fontSize: 12 }}>{checkResult.phone}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{
+                      display: 'inline-block', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                      background: scoreBg(checkResult.credit_score), color: scoreColor(checkResult.credit_score),
+                    }}>
+                      Рейтинг: {checkResult.credit_score}/100
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: '#5e6e82' }}>Активных долгов<br/><span style={{ color: '#e2eaf6', fontWeight: 600, fontSize: 14 }}>{checkResult.active_debts}</span></div>
+                  <div style={{ fontSize: 11, color: '#5e6e82' }}>Остаток<br/><span style={{ color: '#ef4444', fontWeight: 600, fontSize: 14 }}>{fmtMoney(checkResult.total_remaining)}</span></div>
+                  <div style={{ fontSize: 11, color: '#5e6e82' }}>Просрочка<br/><span style={{ color: checkResult.max_overdue > 30 ? '#ef4444' : '#f59e0b', fontWeight: 600, fontSize: 14 }}>{checkResult.max_overdue} дн.</span></div>
+                </div>
+                <div style={{
+                  padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  background: checkResult.recommendation.color + '15', color: checkResult.recommendation.color,
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <Shield size={14} />
+                  {checkResult.recommendation.label}: {checkResult.recommendation.reason}
+                </div>
+              </div>
+            )}
           </div>
+        )}
+      </div>
+
+      {/* Category tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+        <button onClick={() => { setActiveCategory(null); setPage(1); }}
+          style={{
+            padding: '8px 16px', borderRadius: 10, border: '1px solid ' + (!activeCategory ? '#FFE600' : '#1e293b'),
+            background: !activeCategory ? '#FFE60015' : '#0d1526', color: !activeCategory ? '#FFE600' : '#5e6e82',
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+          }}>
+          Все ({Object.values(summary).reduce((s: number, c: any) => s + (c.count || 0), 0)})
+        </button>
+        {catOrder.map(cat => {
+          const meta = summary[cat] || { count: 0, color: '#5e6e82' };
+          const CatIcon = CAT_ICONS[cat] || Users;
+          return (
+            <button key={cat} onClick={() => { setActiveCategory(cat); setPage(1); }}
+              style={{
+                padding: '8px 16px', borderRadius: 10, border: '1px solid ' + (activeCategory === cat ? meta.color : '#1e293b'),
+                background: activeCategory === cat ? meta.color + '15' : '#0d1526',
+                color: activeCategory === cat ? meta.color : '#5e6e82',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+              <CatIcon size={13} />
+              {catLabels[cat]} ({meta.count || 0})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#5e6e82' }} />
+          <input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Поиск по имени или телефону..."
+            style={{
+              width: '100%', background: '#0d1526', border: '1px solid #1e293b', borderRadius: 10,
+              color: '#e2eaf6', padding: '10px 14px 10px 36px', fontSize: 13, outline: 'none',
+            }}
+          />
+        </div>
+        <button onClick={handleSearch}
+          style={{
+            background: '#1e293b', color: '#e2eaf6', border: 'none', borderRadius: 10,
+            padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          }}>
+          Найти
+        </button>
+      </div>
+
+      {/* Customers table */}
+      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={24} color="#FFE600" className="animate-spin" /></div>
+        ) : customers.length === 0 ? (
+          <div style={{ color: '#5e6e82', textAlign: 'center', padding: 40 }}>Нет должников</div>
+        ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ color: '#5e6e82', fontSize: 11, textTransform: 'uppercase' }}>
-                  <th style={{ textAlign: 'left', padding: '8px 10px' }}>Клиент</th>
-                  <th style={{ textAlign: 'right', padding: '8px 10px' }}>Долг</th>
-                  <th style={{ textAlign: 'center', padding: '8px 10px' }}>Дней</th>
-                  <th style={{ textAlign: 'center', padding: '8px 10px' }}>Риск</th>
+                <tr style={{ color: '#5e6e82', fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #1e293b' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px' }}>Клиент</th>
+                  <th style={{ textAlign: 'right', padding: '10px 8px' }}>Долг</th>
+                  <th style={{ textAlign: 'center', padding: '10px 8px' }}>Дней</th>
+                  <th style={{ textAlign: 'center', padding: '10px 8px' }}>Рейтинг</th>
+                  <th style={{ textAlign: 'center', padding: '10px 8px' }}>Категория</th>
+                  <th style={{ textAlign: 'center', padding: '10px 8px' }}>Рассрочка</th>
+                  <th style={{ textAlign: 'center', padding: '10px 8px' }}>Действие</th>
                 </tr>
               </thead>
               <tbody>
-                {risks.slice(0, 15).map((r: any) => (
-                  <tr key={r.id} style={{ borderTop: '1px solid #1e293b22' }}>
-                    <td style={{ padding: '8px 10px', color: '#e2eaf6' }}>
-                      <div>{r.customer_name}</div>
-                      <div style={{ color: '#5e6e82', fontSize: 11 }}>{r.phone}</div>
-                    </td>
-                    <td style={{ textAlign: 'right', padding: '8px 10px', color: '#e2eaf6', fontWeight: 600 }}>
-                      {fmtMoney(r.amount)}
-                    </td>
-                    <td style={{ textAlign: 'center', padding: '8px 10px', color: r.overdue_days > 60 ? '#ef4444' : '#f59e0b' }}>
-                      {r.overdue_days}
-                    </td>
-                    <td style={{ textAlign: 'center', padding: '8px 10px' }}>
-                      <span style={{
-                        display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                        background: RISK_COLORS[r.risk_level] + '20', color: RISK_COLORS[r.risk_level],
-                      }}>
-                        {r.risk_level === 'critical' ? 'Критический' : r.risk_level === 'high' ? 'Высокий' : r.risk_level === 'medium' ? 'Средний' : 'Низкий'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {customers.map((c: any) => {
+                  const CatIcon = CAT_ICONS[c.category] || Users;
+                  return (
+                    <tr key={c.customer_id} style={{ borderTop: '1px solid #1e293b22' }}>
+                      <td style={{ padding: '10px 12px' }}>
+                        <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{c.name}</div>
+                        <div style={{ color: '#5e6e82', fontSize: 11 }}>{c.phone} &middot; {c.debt_count} долг(ов)</div>
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '10px 8px', color: '#e2eaf6', fontWeight: 600 }}>
+                        {fmtMoney(c.total_remaining)}
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '10px 8px', color: c.max_overdue > 60 ? '#ef4444' : c.max_overdue > 0 ? '#f59e0b' : '#22c55e', fontWeight: 600 }}>
+                        {c.max_overdue}
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '10px 8px' }}>
+                        <div style={{
+                          display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                          background: scoreBg(c.credit_score), color: scoreColor(c.credit_score),
+                        }}>
+                          {c.credit_score}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '10px 8px' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                          background: (c.category_meta?.color || '#64748b') + '20',
+                          color: c.category_meta?.color || '#64748b',
+                        }}>
+                          <CatIcon size={11} />
+                          {c.category_meta?.label || c.category}
+                          {c.admin_override && <span title="Установлено админом" style={{ fontSize: 9 }}>*</span>}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '10px 8px' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '3px 8px', borderRadius: 20, fontSize: 10, fontWeight: 600,
+                          background: (c.recommendation?.color || '#64748b') + '15',
+                          color: c.recommendation?.color || '#64748b',
+                        }}>
+                          {c.recommendation?.label || '—'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '10px 8px' }}>
+                        <select
+                          value={c.admin_override || 'auto'}
+                          onChange={(e) => handleOverride(c.customer_id, e.target.value)}
+                          disabled={overrideLoading === c.customer_id}
+                          style={{
+                            background: '#141c2b', border: '1px solid #1e293b', borderRadius: 8,
+                            color: '#e2eaf6', padding: '4px 6px', fontSize: 11, cursor: 'pointer', outline: 'none',
+                          }}>
+                          <option value="auto">Авто</option>
+                          {catOrder.map(cat => (
+                            <option key={cat} value={cat}>{catLabels[cat]}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12,
+            padding: '12px 16px', borderTop: '1px solid #1e293b',
+          }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              style={{
+                background: '#141c2b', border: '1px solid #1e293b', borderRadius: 8,
+                color: page === 1 ? '#3a4a5e' : '#e2eaf6', padding: '6px 12px', fontSize: 12, cursor: 'pointer',
+              }}>
+              Назад
+            </button>
+            <span style={{ color: '#5e6e82', fontSize: 12 }}>{page} из {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              style={{
+                background: '#141c2b', border: '1px solid #1e293b', borderRadius: 8,
+                color: page === totalPages ? '#3a4a5e' : '#e2eaf6', padding: '6px 12px', fontSize: 12, cursor: 'pointer',
+              }}>
+              Далее
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════
 //  CASHIER KPI TAB
@@ -614,7 +824,7 @@ function RfmTab() {
           <div style={{ color: '#e2eaf6', fontWeight: 600, fontSize: 14, marginBottom: 10 }}>Распределение</div>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={50}
+              <Pie data={pieData} dataKey="value" nameKey="name" name="Клиенты" cx="50%" cy="50%" outerRadius={100} innerRadius={50}
                 label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
                 labelLine={{ stroke: '#3a4a5e' }}>
                 {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
@@ -636,8 +846,8 @@ function RfmTab() {
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis type="number" tick={{ fill: '#5e6e82', fontSize: 11 }} unit="%" />
               <YAxis dataKey="name" type="category" tick={{ fill: '#8899aa', fontSize: 11 }} width={110} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${v}%`} />
-              <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`${v}%`, 'Доля']} />
+              <Bar dataKey="value" name="Доля" radius={[0, 6, 6, 0]} background={false}>
                 {segOrder.map(k => <Cell key={k} fill={segments[k]?.color || '#64748b'} />)}
               </Bar>
             </BarChart>
