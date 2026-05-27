@@ -531,7 +531,15 @@ function KpiTab({ month }: { month: string }) {
               {data.kpis.map((k: any) => (
                 <tr key={k.cashier_id} style={{ borderTop: '1px solid #1e293b22' }}>
                   <td style={{ textAlign: 'center', padding: '10px 8px', color: '#5e6e82' }}>
-                    {k.rank <= 3 ? ['🥇', '🥈', '🥉'][k.rank - 1] : k.rank}
+                    {k.rank <= 3 ? (
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: ['linear-gradient(135deg, #FFD700, #FFA500)', 'linear-gradient(135deg, #C0C0C0, #A0A0A0)', 'linear-gradient(135deg, #CD7F32, #A0522D)'][k.rank - 1],
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 800, color: '#fff',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      }}>{k.rank}</div>
+                    ) : <span style={{ color: '#5e6e82' }}>{k.rank}</span>}
                   </td>
                   <td style={{ padding: '10px 8px', color: '#e2eaf6', fontWeight: 500 }}>{k.name}</td>
                   <td style={{ textAlign: 'center', padding: '10px 8px' }}>
@@ -650,7 +658,22 @@ function RfmTab() {
             <div onClick={() => setExpanded(isOpen ? null : key)} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', cursor: 'pointer',
             }}>
-              <span style={{ fontSize: 22 }}>{seg.emoji}</span>
+              {(() => {
+                const iconMap: Record<string, any> = {
+                  'champions': Crown, 'loyal': Star, 'potential_loyal': Zap,
+                  'new_customers': Users, 'sleeping': Clock, 'at_risk': AlertTriangle, 'lost': Eye,
+                };
+                const SegIcon = iconMap[key] || Target;
+                return (
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 10,
+                    background: seg.color + '20', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <SegIcon size={20} color={seg.color} />
+                  </div>
+                );
+              })()}
               <div style={{ flex: 1 }}>
                 <div style={{ color: seg.color, fontWeight: 600, fontSize: 14 }}>
                   {seg.label} — {seg.count} клиентов ({seg.percent}%)

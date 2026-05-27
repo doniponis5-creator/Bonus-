@@ -735,19 +735,19 @@ async def cashier_kpi(
 # ═══════════════════════════════════════════════════
 
 RFM_SEGMENTS = {
-    "champions": {"label": "Чемпионы", "color": "#22c55e", "emoji": "🏆",
+    "champions": {"label": "Чемпионы", "color": "#22c55e", "icon": "crown",
                   "desc": "Покупают часто, много, недавно", "action": "VIP программа, эксклюзивные предложения"},
-    "loyal": {"label": "Лояльные", "color": "#3b82f6", "emoji": "💎",
+    "loyal": {"label": "Лояльные", "color": "#3b82f6", "icon": "star",
               "desc": "Регулярные, хорошие суммы", "action": "Программа лояльности, бонусы за повторные"},
-    "potential_loyal": {"label": "Перспективные", "color": "#8b5cf6", "emoji": "🌟",
+    "potential_loyal": {"label": "Перспективные", "color": "#8b5cf6", "icon": "zap",
                         "desc": "Недавние, но редкие", "action": "Стимулировать повторные покупки"},
-    "new_customers": {"label": "Новые", "color": "#06b6d4", "emoji": "🆕",
+    "new_customers": {"label": "Новые", "color": "#06b6d4", "icon": "users",
                       "desc": "Только зарегистрировались", "action": "Welcome бонус, знакомство с акциями"},
-    "sleeping": {"label": "Засыпающие", "color": "#f59e0b", "emoji": "😴",
+    "sleeping": {"label": "Засыпающие", "color": "#f59e0b", "icon": "clock",
                  "desc": "Давно не были", "action": "Напоминание о бонусах, спец. предложение"},
-    "at_risk": {"label": "Под угрозой", "color": "#ef4444", "emoji": "⚠️",
+    "at_risk": {"label": "Под угрозой", "color": "#ef4444", "icon": "alert-triangle",
                 "desc": "Раньше были активны, исчезли", "action": "Срочная реактивация, промокод"},
-    "lost": {"label": "Потерянные", "color": "#64748b", "emoji": "💤",
+    "lost": {"label": "Потерянные", "color": "#64748b", "icon": "eye-off",
              "desc": "Давно не покупали", "action": "Агрессивный win-back или исключить"},
 }
 
@@ -853,7 +853,7 @@ async def rfm_pro(
             "avg_revenue": round(data["revenue"] / max(cnt, 1), 0),
             "label": meta["label"],
             "color": meta["color"],
-            "emoji": meta["emoji"],
+            "icon": meta["icon"],
             "description": meta["desc"],
             "action": meta["action"],
             "top_customers": data["customers"][:20],
