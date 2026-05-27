@@ -45,7 +45,7 @@ router = APIRouter(
 # ─── Schemas ───
 
 class ExpenseCreate(BaseModel):
-    category: str = Field(..., description="rent/salary/utilities/transport/marketing/equipment/supplies/taxes/insurance/communication/maintenance/other")
+    category: str = Field(..., min_length=1, max_length=100, description="Категория расхода (произвольный текст)")
     amount: float = Field(..., gt=0, description="Сумма в сом")
     month: str = Field(..., pattern=r"^\d{4}-\d{2}$", description="Месяц: 2026-05")
     description: Optional[str] = None

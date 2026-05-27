@@ -28,6 +28,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   rent: '#ef4444', salary: '#f59e0b', utilities: '#3b82f6', transport: '#8b5cf6',
   marketing: '#ec4899', equipment: '#14b8a6', supplies: '#f97316', taxes: '#6366f1',
   insurance: '#06b6d4', communication: '#84cc16', maintenance: '#a855f7', other: '#64748b',
+  'Аренда': '#ef4444', 'Зарплата': '#f59e0b', 'Коммунальные': '#3b82f6', 'Транспорт': '#8b5cf6',
+  'Маркетинг': '#ec4899', 'Оборудование': '#14b8a6', 'Расходные материалы': '#f97316', 'Налоги': '#6366f1',
+  'Страхование': '#06b6d4', 'Связь/Интернет': '#84cc16', 'Ремонт': '#a855f7', 'Прочие': '#64748b',
 };
 
 const CATEGORIES = [
@@ -663,11 +666,11 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
   data: any; byCategory: any; month: string; onReload: () => void;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ category: 'rent', amount: '', description: '', is_recurring: false });
+  const [form, setForm] = useState({ category: '', amount: '', description: '', is_recurring: false });
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.amount || parseFloat(form.amount) <= 0) return;
+    if (!form.category.trim() || !form.amount || parseFloat(form.amount) <= 0) return;
     setSaving(true);
     try {
       await financialsAPI.createExpense({
@@ -721,12 +724,14 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 12, marginBottom: 12 }}>
             <div>
               <label style={{ color: '#8899aa', fontSize: 11, display: 'block', marginBottom: 4 }}>Категория</label>
-              <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={{
-                width: '100%', padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
-                borderRadius: 8, color: '#e2eaf6', fontSize: 13,
-              }}>
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
+              <input list="cat-list" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                placeholder="Введите или выберите" style={{
+                  width: '100%', padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
+                  borderRadius: 8, color: '#e2eaf6', fontSize: 13,
+                }} />
+              <datalist id="cat-list">
+                {CATEGORIES.map(c => <option key={c.value} value={c.label} />)}
+              </datalist>
             </div>
             <div>
               <label style={{ color: '#8899aa', fontSize: 11, display: 'block', marginBottom: 4 }}>Сумма (сом)</label>
