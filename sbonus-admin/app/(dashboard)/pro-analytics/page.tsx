@@ -843,11 +843,11 @@ function RfmTab() {
               value: segments[k]?.revenue_share || 0,
               fill: segments[k]?.color || '#64748b',
             })).filter(d => d.value > 0)} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
               <XAxis type="number" tick={{ fill: '#5e6e82', fontSize: 11 }} unit="%" />
               <YAxis dataKey="name" type="category" tick={{ fill: '#8899aa', fontSize: 11 }} width={110} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`${v}%`, 'Доля']} />
-              <Bar dataKey="value" name="Доля" radius={[0, 6, 6, 0]} background={{ fill: '#0d1526' }}>
+              <Bar dataKey="value" name="Доля" radius={[0, 6, 6, 0]}>
                 {segOrder.map(k => <Cell key={k} fill={segments[k]?.color || '#64748b'} />)}
               </Bar>
             </BarChart>
