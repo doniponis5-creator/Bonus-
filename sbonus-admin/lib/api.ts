@@ -308,6 +308,9 @@ export const financialsAPI = {
   byCashier: (month?: string) => api.get('/api/v1/financials/by-cashier' + (month ? `?month=${month}` : '')),
   byCategory: (month?: string) => api.get('/api/v1/financials/by-category' + (month ? `?month=${month}` : '')),
   planFact: (month?: string) => api.get('/api/v1/financials/plan-fact' + (month ? `?month=${month}` : '')),
+  verifyPin: (pin: string) => api.post("/api/v1/financials/verify-pin", { pin }),
+  setPin: (pin: string, current_pin?: string) => api.put("/api/v1/financials/pin", { pin, current_pin }),
+  pinStatus: () => api.get("/api/v1/financials/pin-status"),
   setPlan: (month: string, params: { revenue?: number; expenses?: number; profit?: number }) =>
     api.put(`/api/v1/financials/plan?month=${month}`, null, { params }),
 };

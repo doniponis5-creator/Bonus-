@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { financialsAPI } from '@/lib/api';
 import {
   Wallet, Loader2, TrendingUp, TrendingDown, DollarSign,
   Plus, Trash2, Edit3, RefreshCw, BarChart3, PieChart as PieIcon,
-  Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X,
+  Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X, Lock, Shield, Delete, Settings, Eye, EyeOff,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -40,6 +40,265 @@ const CATEGORIES = [
 ];
 
 type Tab = 'overview' | 'pnl' | 'expenses' | 'cashiers' | 'trends';
+
+
+// ─── PIN Gate ───
+function PinGate({ onUnlock }: { onUnlock: () => void }) {
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [hasPin, setHasPin] = useState(true);
+  const [showSetup, setShowSetup] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [setupStep, setSetupStep] = useState<'new' | 'confirm'>('new');
+  const [shake, setShake] = useState(false);
+  const [dots, setDots] = useState<number[]>([]);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('pnl_unlocked');
+    if (saved === 'true') { onUnlock(); return; }
+    financialsAPI.pinStatus().then(r => {
+      setHasPin(r.data.has_pin);
+      if (!r.data.has_pin) setShowSetup(true);
+      setChecking(false);
+    }).catch(() => setChecking(false));
+  }, []);
+
+  const handleDigit = (d: string) => {
+    if (showSetup) {
+      if (setupStep === 'new') {
+        if (newPin.length < 6) setNewPin(p => p + d);
+      } else {
+        if (confirmPin.length < 6) setConfirmPin(p => p + d);
+      }
+      return;
+    }
+    if (pin.length < 6) {
+      const next = pin + d;
+      setPin(next);
+      setDots(prev => [...prev, Date.now()]);
+      if (next.length >= 4) {
+        // Auto-submit at 4+ digits
+        setTimeout(() => submitPin(next), 200);
+      }
+    }
+  };
+
+  const handleDelete = () => {
+    if (showSetup) {
+      if (setupStep === 'new') setNewPin(p => p.slice(0, -1));
+      else setConfirmPin(p => p.slice(0, -1));
+      return;
+    }
+    setPin(p => p.slice(0, -1));
+    setError('');
+  };
+
+  const submitPin = async (p: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      await financialsAPI.verifyPin(p);
+      sessionStorage.setItem('pnl_unlocked', 'true');
+      onUnlock();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Неверный PIN-код');
+      setPin('');
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitSetup = async () => {
+    if (setupStep === 'new') {
+      if (newPin.length < 4) { setError('Минимум 4 цифры'); return; }
+      setSetupStep('confirm');
+      setError('');
+      return;
+    }
+    if (confirmPin !== newPin) {
+      setError('PIN-коды не совпадают');
+      setConfirmPin('');
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      return;
+    }
+    setLoading(true);
+    try {
+      await financialsAPI.setPin(newPin);
+      sessionStorage.setItem('pnl_unlocked', 'true');
+      onUnlock();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Ошибка установки PIN');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (checking) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#080e1a' }}>
+        <Loader2 size={32} color="#FFE600" style={{ animation: 'spin 1s linear infinite' }} />
+      </div>
+    );
+  }
+
+  const currentPin = showSetup ? (setupStep === 'new' ? newPin : confirmPin) : pin;
+  const maxLen = 6;
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      minHeight: '100vh', background: '#080e1a', padding: '20px',
+    }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shakeX {
+          0%,100% { transform: translateX(0); }
+          20%,60% { transform: translateX(-8px); }
+          40%,80% { transform: translateX(8px); }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+        .pin-digit:active { transform: scale(0.9); background: #1e293b !important; }
+        @media (max-width: 480px) {
+          .pin-container { padding: 16px !important; }
+          .pin-digit { width: 64px !important; height: 64px !important; font-size: 24px !important; }
+        }
+      `}</style>
+
+      <div className="pin-container" style={{
+        background: '#0d1526', border: '1px solid #1e293b', borderRadius: 24,
+        padding: '40px 32px', maxWidth: 380, width: '100%',
+        animation: 'fadeInUp 0.4s ease-out',
+      }}>
+        {/* Icon */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #FFE600 0%, #f59e0b 100%)',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(255,230,0,0.2)',
+          }}>
+            {showSetup ? <Shield size={36} color="#080e1a" /> : <Lock size={36} color="#080e1a" />}
+          </div>
+        </div>
+
+        {/* Title */}
+        <h2 style={{
+          color: '#e2eaf6', textAlign: 'center', fontSize: 20, fontWeight: 700,
+          margin: '0 0 6px', letterSpacing: 0.3,
+        }}>
+          {showSetup
+            ? (setupStep === 'new' ? 'Установите PIN-код' : 'Подтвердите PIN-код')
+            : 'P&L Финансы'}
+        </h2>
+        <p style={{ color: '#5e6e82', textAlign: 'center', fontSize: 13, margin: '0 0 28px' }}>
+          {showSetup
+            ? (setupStep === 'new' ? 'Придумайте PIN (4–6 цифр)' : 'Введите PIN ещё раз')
+            : 'Введите PIN-код для доступа'}
+        </p>
+
+        {/* Dots */}
+        <div style={{
+          display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 28,
+          animation: shake ? 'shakeX 0.4s ease' : 'none',
+        }}>
+          {Array.from({ length: maxLen }).map((_, i) => (
+            <div key={i} style={{
+              width: 14, height: 14, borderRadius: '50%',
+              background: i < currentPin.length ? '#FFE600' : 'transparent',
+              border: `2px solid ${i < currentPin.length ? '#FFE600' : '#2a3a4e'}`,
+              transition: 'all 0.15s ease',
+              animation: i < currentPin.length ? 'pulse 0.2s ease' : 'none',
+            }} />
+          ))}
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            color: '#ef4444', textAlign: 'center', fontSize: 13, marginBottom: 16,
+            background: '#ef444415', padding: '8px 12px', borderRadius: 8,
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Numpad */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 10, maxWidth: 260, margin: '0 auto',
+        }}>
+          {['1','2','3','4','5','6','7','8','9'].map(d => (
+            <button key={d} className="pin-digit" onClick={() => handleDigit(d)} style={{
+              width: 76, height: 76, borderRadius: '50%', border: '1px solid #1e293b',
+              background: '#141c2b', color: '#e2eaf6', fontSize: 28, fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.15s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {d}
+            </button>
+          ))}
+          {/* Bottom row */}
+          <div />
+          <button className="pin-digit" onClick={() => handleDigit('0')} style={{
+            width: 76, height: 76, borderRadius: '50%', border: '1px solid #1e293b',
+            background: '#141c2b', color: '#e2eaf6', fontSize: 28, fontWeight: 600,
+            cursor: 'pointer', transition: 'all 0.15s',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            0
+          </button>
+          <button onClick={handleDelete} style={{
+            width: 76, height: 76, borderRadius: '50%', border: 'none',
+            background: 'transparent', color: '#8899aa', fontSize: 14,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Delete size={24} />
+          </button>
+        </div>
+
+        {/* Setup confirm button */}
+        {showSetup && currentPin.length >= 4 && (
+          <button onClick={submitSetup} disabled={loading} style={{
+            width: '100%', marginTop: 20, padding: '14px',
+            background: 'linear-gradient(135deg, #FFE600, #f59e0b)',
+            border: 'none', borderRadius: 12, color: '#080e1a',
+            fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            opacity: loading ? 0.6 : 1,
+          }}>
+            {loading ? 'Сохранение...' : (setupStep === 'new' ? 'Далее' : 'Установить PIN')}
+          </button>
+        )}
+
+        {showSetup && setupStep === 'confirm' && (
+          <button onClick={() => { setSetupStep('new'); setConfirmPin(''); setError(''); }}
+            style={{
+              width: '100%', marginTop: 10, padding: '12px',
+              background: 'transparent', border: '1px solid #1e293b',
+              borderRadius: 12, color: '#8899aa', fontSize: 13, cursor: 'pointer',
+            }}>
+            Назад
+          </button>
+        )}
+
+        {loading && !showSetup && (
+          <div style={{ textAlign: 'center', marginTop: 20 }}>
+            <Loader2 size={24} color="#FFE600" style={{ animation: 'spin 1s linear infinite' }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function KpiCard({ icon: Icon, label, value, sub, color = '#FFE600', trend }: {
   icon: any; label: string; value: string | number; sub?: string; color?: string;
@@ -82,6 +341,7 @@ function getCurrentMonth() {
 }
 
 export default function FinancialsPage() {
+  const [pinUnlocked, setPinUnlocked] = useState(false);
   const [tab, setTab] = useState<Tab>('overview');
   const [month, setMonth] = useState(getCurrentMonth());
   const [loading, setLoading] = useState(true);
@@ -143,6 +403,11 @@ export default function FinancialsPage() {
     { key: 'cashiers' as const, label: 'Кассиры', icon: Users },
     { key: 'trends' as const, label: 'Тренды', icon: TrendingUp },
   ];
+
+  // PIN Gate
+  if (!pinUnlocked) {
+    return <PinGate onUnlock={() => setPinUnlocked(true)} />;
+  }
 
   if (loading) {
     return (

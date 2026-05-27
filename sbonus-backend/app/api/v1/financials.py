@@ -666,3 +666,88 @@ async def set_plan(
 
     await db.commit()
     return {"success": True, "updated": list(updates.keys())}
+
+
+# ─── PIN-защита P&L ───
+
+import hashlib
+import secrets
+
+def _hash_pin(pin: str) -> str:
+    """SHA256 хэш пин-кода с солью."""
+    salt = "sbonus_pnl_salt_2026"
+    return hashlib.sha256(f"{salt}:{pin}".encode()).hexdigest()
+
+
+class PinVerify(BaseModel):
+    pin: str = Field(..., min_length=4, max_length=8, description="PIN-код")
+
+
+class PinSet(BaseModel):
+    pin: str = Field(..., min_length=4, max_length=8, description="Новый PIN-код")
+    current_pin: Optional[str] = Field(None, description="Текущий PIN (для смены)")
+
+
+@router.post("/verify-pin")
+async def verify_pin(
+    body: PinVerify,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Проверить PIN-код для доступа к P&L."""
+    result = await db.execute(
+        select(Setting).where(Setting.key == "FINANCIALS_PIN")
+    )
+    setting = result.scalar_one_or_none()
+
+    if not setting:
+        raise HTTPException(400, "PIN-код не установлен. Обратитесь к администратору.")
+
+    if _hash_pin(body.pin) != setting.value:
+        raise HTTPException(403, "Неверный PIN-код")
+
+    return {"success": True, "message": "Доступ разрешён"}
+
+
+@router.put("/pin")
+async def set_pin(
+    body: PinSet,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN)),
+) -> dict:
+    """Установить / сменить PIN-код (только SUPER_ADMIN)."""
+    result = await db.execute(
+        select(Setting).where(Setting.key == "FINANCIALS_PIN")
+    )
+    existing = result.scalar_one_or_none()
+
+    # Если PIN уже есть — проверяем старый
+    if existing and existing.value:
+        if not body.current_pin:
+            raise HTTPException(400, "Укажите текущий PIN для смены")
+        if _hash_pin(body.current_pin) != existing.value:
+            raise HTTPException(403, "Текущий PIN неверный")
+        existing.value = _hash_pin(body.pin)
+    else:
+        # Первая установка
+        if existing:
+            existing.value = _hash_pin(body.pin)
+        else:
+            db.add(Setting(key="FINANCIALS_PIN", value=_hash_pin(body.pin)))
+
+    await db.commit()
+    return {"success": True, "message": "PIN-код установлен"}
+
+
+@router.get("/pin-status")
+async def pin_status(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Проверить — установлен ли PIN."""
+    result = await db.execute(
+        select(Setting).where(Setting.key == "FINANCIALS_PIN")
+    )
+    setting = result.scalar_one_or_none()
+    has_pin = bool(setting and setting.value)
+    return {"has_pin": has_pin}
