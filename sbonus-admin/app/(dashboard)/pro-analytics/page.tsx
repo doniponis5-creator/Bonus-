@@ -709,11 +709,11 @@ function KpiTab({ month }: { month: string }) {
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={data.kpis.slice(0, 8)} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis type="number" tick={{ fill: '#5e6e82', fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+              <XAxis type="number" tick={{ fill: '#5e6e82', fontSize: 11 }} domain={[0, 100]} />
               <YAxis dataKey="name" type="category" tick={{ fill: '#8899aa', fontSize: 12 }} width={100} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="score" radius={[0, 6, 6, 0]} fill="#FFE600" name="KPI Score" />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [v, 'Балл']} />
+              <Bar dataKey="score" radius={[0, 6, 6, 0]} fill="#FFE600" name="Балл" />
             </BarChart>
           </ResponsiveContainer>
         </div>

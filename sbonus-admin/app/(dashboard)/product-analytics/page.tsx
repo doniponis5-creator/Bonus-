@@ -600,7 +600,7 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
           <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Топ-10 по выручке</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 100 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
               <XAxis type="number" stroke="#5e6e82" tickFormatter={(v: number) => fmt(v)} />
               <YAxis type="category" dataKey="name" stroke="#8899aa" width={100} tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
@@ -910,7 +910,7 @@ function MarginsTab({ data }: { data: any }) {
           <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Маржа по товарам, %</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 100 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
               <XAxis type="number" stroke="#5e6e82" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
               <YAxis type="category" dataKey="name" stroke="#8899aa" width={100} tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number, name: string) => name === 'margin' ? `${v}%` : fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
