@@ -173,7 +173,7 @@ export default function BusinessAnalyticsPage() {
             <Tooltip
               contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}
               formatter={(v: number, name: string) => [name === 'revenue' ? fmtCur(v) : fmt(v), name === 'revenue' ? 'Выручка' : 'Транзакции']}
-            />
+            cursor={{ fill: 'transparent' }} />
             <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#22c55e" fill="url(#gRev)" strokeWidth={2} name="revenue" />
             <Line yAxisId="right" type="monotone" dataKey="tx_count" stroke="#3b82f6" strokeWidth={2} dot={false} name="tx_count" />
           </AreaChart>

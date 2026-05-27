@@ -712,7 +712,7 @@ function KpiTab({ month }: { month: string }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
               <XAxis type="number" tick={{ fill: '#5e6e82', fontSize: 11 }} domain={[0, 100]} />
               <YAxis dataKey="name" type="category" tick={{ fill: '#8899aa', fontSize: 12 }} width={100} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [v, 'Балл']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [v, 'Балл']} cursor={{ fill: 'transparent' }} />
               <Bar dataKey="score" radius={[0, 6, 6, 0]} fill="#FFE600" name="Балл" />
             </BarChart>
           </ResponsiveContainer>
@@ -829,7 +829,7 @@ function RfmTab() {
                 labelLine={{ stroke: '#3a4a5e' }}>
                 {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -846,7 +846,7 @@ function RfmTab() {
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
               <XAxis type="number" tick={{ fill: '#5e6e82', fontSize: 11 }} unit="%" />
               <YAxis dataKey="name" type="category" tick={{ fill: '#8899aa', fontSize: 11 }} width={110} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`${v}%`, 'Доля']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`${v}%`, 'Доля']} cursor={{ fill: 'transparent' }} />
               <Bar dataKey="value" name="Доля" radius={[0, 6, 6, 0]}>
                 {segOrder.map(k => <Cell key={k} fill={segments[k]?.color || '#64748b'} />)}
               </Bar>

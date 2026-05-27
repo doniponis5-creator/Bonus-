@@ -81,7 +81,7 @@ export default function QRAnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                 <XAxis dataKey="hour" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(v: number) => `${v}:00`} />
                 <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
-                <Tooltip contentStyle={tooltipStyle} labelFormatter={(v: number) => `${v}:00 — ${v + 1}:00`} />
+                <Tooltip contentStyle={tooltipStyle} labelFormatter={(v: number) => `${v}:00 — ${v + 1}:00`} cursor={{ fill: 'transparent' }} />
                 <Bar dataKey="count" fill="#FFE600" radius={[3, 3, 0, 0]} name="Сканы" />
               </BarChart>
             </ResponsiveContainer>
@@ -97,7 +97,7 @@ export default function QRAnalyticsPage() {
                 <Pie data={deviceData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" stroke="none">
                   {deviceData.map((e, i) => <Cell key={i} fill={e.color} />)}
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
                 <Legend verticalAlign="bottom" iconType="circle" iconSize={8}
                   formatter={(v: string) => <span style={{ color: '#94a3b8', fontSize: 11 }}>{v}</span>} />
               </PieChart>

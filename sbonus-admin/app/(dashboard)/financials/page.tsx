@@ -552,7 +552,7 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
                     <Cell key={i} fill={CATEGORY_COLORS[c.category] || '#64748b'} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'transparent' }} />
               </PieChart>
             </ResponsiveContainer>
             <div style={{ flex: 1 }}>
@@ -778,7 +778,7 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
                 <Pie data={catData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} dataKey="value" paddingAngle={3} strokeWidth={0}>
                   {catData.map((d: any, i: number) => <Cell key={i} fill={d.fill} />)}
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'transparent' }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -931,7 +931,7 @@ function TrendsSection({ data }: { data: any }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
             <XAxis dataKey="name" stroke="#5e6e82" tick={{ fontSize: 11 }} />
             <YAxis stroke="#5e6e82" tickFormatter={fmtShort} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'transparent' }} />
             <Area type="monotone" dataKey="revenue" stroke="#22c55e" fillOpacity={1} fill="url(#gRevenue)" name="Выручка" strokeWidth={2} />
             <Area type="monotone" dataKey="netProfit" stroke="#3b82f6" fillOpacity={1} fill="url(#gProfit)" name="Чистая прибыль" strokeWidth={2} />
             <Legend wrapperStyle={{ fontSize: 12 }} />

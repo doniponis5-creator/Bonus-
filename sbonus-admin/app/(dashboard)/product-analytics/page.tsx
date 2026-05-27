@@ -387,7 +387,7 @@ function OverviewTab({ summary, lowStock }: { summary: any; lowStock: any }) {
               <Pie data={stockData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" paddingAngle={3} strokeWidth={0}>
                 {stockData.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
               <Legend wrapperStyle={{ fontSize: 12, color: '#8899aa' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -402,7 +402,7 @@ function OverviewTab({ summary, lowStock }: { summary: any; lowStock: any }) {
                 <Pie data={abcData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" paddingAngle={3} strokeWidth={0}>
                   {abcData.map((d, i) => <Cell key={i} fill={d.fill} />)}
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
                 <Legend wrapperStyle={{ fontSize: 12, color: '#8899aa' }} />
               </PieChart>
             </ResponsiveContainer>
