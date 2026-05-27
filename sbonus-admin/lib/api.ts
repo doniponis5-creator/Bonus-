@@ -315,3 +315,24 @@ export const financialsAPI = {
     api.put(`/api/v1/financials/plan?month=${month}`, null, { params }),
 };
 
+
+// ═══ PRO Business Intelligence API ═══
+export const biAPI = {
+  // Telegram P&L
+  tgPnlPreview: (month?: string) => api.get('/api/v1/bi/tg-pnl-preview' + (month ? `?month=${month}` : '')),
+  tgPnlSend: (month?: string) => api.post('/api/v1/bi/tg-pnl-send' + (month ? `?month=${month}` : '')),
+  // Excel
+  exportExcel: (month?: string, months = 3) =>
+    api.get('/api/v1/bi/export-excel' + `?months=${months}` + (month ? `&month=${month}` : ''), { responseType: 'blob' }),
+  // Budgets
+  budgets: (month?: string) => api.get('/api/v1/bi/budgets' + (month ? `?month=${month}` : '')),
+  setBudget: (data: { category: string; limit_amount: number; month: string }) => api.put('/api/v1/bi/budgets', data),
+  budgetAlerts: (month?: string) => api.get('/api/v1/bi/budget-alerts' + (month ? `?month=${month}` : '')),
+  // Debts
+  debtsAnalytics: () => api.get('/api/v1/bi/debts-analytics'),
+  debtsRisk: (limit = 20) => api.get(`/api/v1/bi/debts-risk?limit=${limit}`),
+  // Cashier KPI
+  cashierKpi: (month?: string) => api.get('/api/v1/bi/cashier-kpi' + (month ? `?month=${month}` : '')),
+  // RFM Pro
+  rfmPro: () => api.get('/api/v1/bi/rfm-pro'),
+};

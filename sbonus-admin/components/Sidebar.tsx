@@ -7,7 +7,7 @@ import {
   Settings, LogOut, FileSearch, Gift, Tag, Star, BarChart3, Disc3,
   Flame, Send, MessageCircle, Menu, X, ChevronDown,
   FlaskConical, QrCode, Bot, Percent, Activity, PieChart, Crosshair,
-  Package, Wallet,
+  Package, Wallet, Brain,
 } from 'lucide-react';
 
 // ─── Navigation structure with groups ───
@@ -51,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/analytics', icon: BarChart3, label: 'Аналитика' },
       { href: '/product-analytics', icon: Package, label: 'Товары' },
       { href: '/financials', icon: Wallet, label: 'P&L Финансы' },
+      { href: '/pro-analytics', icon: Brain, label: 'PRO Аналитика' },
       { href: '/qr-analytics', icon: QrCode, label: 'QR аналитика' },
       { href: '/business-analytics', icon: PieChart, label: 'Бизнес PRO' },
       { href: '/marketing-roi', icon: Crosshair, label: 'Воронка и ROI' },

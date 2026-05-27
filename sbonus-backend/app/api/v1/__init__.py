@@ -29,6 +29,7 @@ from app.api.v1.analytics_pro import router as analytics_pro_router
 from app.api.v1.product_analytics import router as product_analytics_router
 from app.api.v1.cashier_products import router as cashier_products_router
 from app.api.v1.financials import router as financials_router
+from app.api.v1.business_intelligence import router as bi_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -57,3 +58,4 @@ api_router.include_router(analytics_pro_router)
 api_router.include_router(product_analytics_router)
 api_router.include_router(cashier_products_router)
 api_router.include_router(financials_router)
+api_router.include_router(bi_router)

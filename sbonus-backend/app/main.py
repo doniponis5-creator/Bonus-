@@ -42,6 +42,7 @@ from app.services.customer_telegram_bot import (
     stop_customer_bot,
 )
 from app.services.product_alerts import send_product_daily_digest, check_critical_stock
+from app.api.v1.business_intelligence import send_pnl_telegram_report
 
 settings = get_settings()
 logger = get_logger("main")
@@ -172,6 +173,14 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
+    # Cron: P&L отчёт в Telegram — 21:30
+    scheduler.add_job(
+        send_pnl_telegram_report,
+        CronTrigger(hour=21, minute=30),
+        id="tg_pnl_report",
+        replace_existing=True,
+    )
+
     scheduler.start()
 
     # Telegram bot polling (обработка команд)
@@ -186,6 +195,7 @@ async def lifespan(app: FastAPI):
     logger.info("Cron: smart comeback reminder at 12:00 daily (max 2 per cycle, 50/run)")
     logger.info("Cron: WA auto-triggers: birthday 09:30 (sleeping DISABLED → smart reminder)")
     logger.info("Cron: Telegram reports at 09:00 & 21:00 daily")
+    logger.info("Cron: P&L Telegram report at 21:30 daily")
     logger.info("Cron: Product daily digest at 08:00, critical stock check every 30 min")
     logger.info("Server started! Swagger: http://localhost:8000/docs")
     logger.info("=" * 50)
