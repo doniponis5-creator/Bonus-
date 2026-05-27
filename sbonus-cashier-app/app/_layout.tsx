@@ -24,6 +24,7 @@ import SpendScreen from './(main)/spend';
 import HistoryScreen from './(main)/history';
 import MotivationScreen from './(main)/motivation';
 import ProductsScreen from './(main)/products';
+import DebtCheckScreen from './(main)/debt-check';
 
 const Stack = createNativeStackNavigator();
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ export default function RootLayout() {
           <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: true, title: 'История' }} />
           <Stack.Screen name="Products" component={ProductsScreen} options={{ headerShown: false, title: 'Товары' }} />
           <Stack.Screen name="Motivation" component={MotivationScreen} options={{ headerShown: true, title: 'Моя мотивация' }} />
+          <Stack.Screen name="DebtCheck" component={DebtCheckScreen} options={{ headerShown: false, title: 'Проверка клиента' }} />
         </Stack.Navigator>
       </NavigationContainer>
       <Toast />

@@ -834,22 +834,30 @@ async def debts_override(
     return {"status": "ok", "category": new_category, "label": CATEGORY_META[new_category]["label"]}
 
 
-@router.get("/debt-check/{phone}", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN, UserRole.CASHIER))])
+@router.get("/debt-check/{query}", dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN, UserRole.CASHIER))])
 async def debt_check(
-    phone: str,
+    query: str,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Быстрая проверка клиента по телефону перед выдачей рассрочки."""
-    # Нормализация
-    p = phone.strip().replace(" ", "").replace("-", "")
-    if not p.startswith("+"):
-        p = "+" + p
+    """Быстрая проверка клиента по телефону или ФИО перед выдачей рассрочки."""
+    q = query.strip()
 
-    # Найти клиента
-    cust_q = await db.execute(
-        select(Customer).where(Customer.phone.ilike(f"%{p[-9:]}%"))
-    )
-    customer = cust_q.scalar_one_or_none()
+    # Определяем: телефон или имя
+    digits_only = q.replace("+", "").replace(" ", "").replace("-", "")
+    is_phone = len(digits_only) >= 7 and digits_only.isdigit()
+
+    if is_phone:
+        p = digits_only
+        cust_q = await db.execute(
+            select(Customer).where(Customer.phone.ilike(f"%{p[-9:]}%"))
+        )
+        customer = cust_q.scalar_one_or_none()
+    else:
+        # Поиск по ФИО (case-insensitive, partial match)
+        cust_q = await db.execute(
+            select(Customer).where(Customer.full_name.ilike(f"%{q}%")).limit(1)
+        )
+        customer = cust_q.scalar_one_or_none()
 
     if not customer:
         return {

@@ -8,7 +8,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
   ChevronRight, LogOut, Search, UserPlus, Hand,
-  Flame, Clock, TrendingUp, Package,
+  Flame, Clock, TrendingUp, Package, ShieldCheck,
 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/auth';
 import { COLORS } from '@/constants/theme';
@@ -121,6 +121,21 @@ export default function DashboardScreen() {
         <View style={styles.btnInfo}>
           <Text style={styles.btnTitle}>Товары</Text>
           <Text style={styles.btnDesc}>Поиск, цены, остатки</Text>
+        </View>
+        <ChevronRight size={22} color={COLORS.text3} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.mainBtn}
+        onPress={() => navigation.navigate('DebtCheck')}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.btnIcon, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+          <ShieldCheck size={22} color={COLORS.danger} />
+        </View>
+        <View style={styles.btnInfo}>
+          <Text style={styles.btnTitle}>Проверка клиента</Text>
+          <Text style={styles.btnDesc}>Рассрочка — рейтинг и долги</Text>
         </View>
         <ChevronRight size={22} color={COLORS.text3} />
       </TouchableOpacity>

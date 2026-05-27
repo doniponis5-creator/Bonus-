@@ -449,7 +449,7 @@ function DebtsTab() {
             value={phoneCheck}
             onChange={(e) => setPhoneCheck(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handlePhoneCheck()}
-            placeholder="Введите номер телефона..."
+            placeholder="Телефон или ФИО..."
             style={{
               flex: 1, background: '#141c2b', border: '1px solid #1e293b', borderRadius: 10,
               color: '#e2eaf6', padding: '10px 14px', fontSize: 14, outline: 'none',
