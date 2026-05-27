@@ -25,7 +25,7 @@ Endpoints:
 """
 
 import io
-import json
+
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -39,13 +39,13 @@ from sqlalchemy import desc, func, select, and_, case, distinct, literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, async_session
-from app.core.security import get_current_user, require_role, UserRole
+from app.core.security import require_role, UserRole
 from app.core.logging import get_logger
 from app.models import (
-    Customer, BonusAccount, Branch, CustomerDebt,
+    Customer, CustomerDebt,
     Expense, EXPENSE_CATEGORY_LABELS,
     Product, PurchaseItem, Setting,
-    Transaction, TransactionType, Tier,
+    Transaction, TransactionType,
     User,
 )
 
@@ -607,7 +607,7 @@ async def cashier_kpi(
 
     # All cashiers
     cashiers_q = await db.execute(
-        select(User).where(User.role == "CASHIER", User.is_active == True)
+        select(User).where(User.role == "cashier", User.is_active == True)
     )
     cashiers = cashiers_q.scalars().all()
 

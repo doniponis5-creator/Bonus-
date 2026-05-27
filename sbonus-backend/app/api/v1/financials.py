@@ -25,7 +25,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, func, select, and_, extract
+from sqlalchemy import case, desc, func, select, and_, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -516,13 +516,13 @@ async def revenue_by_cashier(
             func.count(Transaction.id).label("tx_count"),
             func.coalesce(func.sum(Transaction.purchase_amount), 0).label("total_revenue"),
             func.coalesce(func.sum(
-                func.case(
+                case(
                     (Transaction.type == TransactionType.EARN, Transaction.amount),
                     else_=Decimal("0"),
                 )
             ), 0).label("bonuses_earned"),
             func.coalesce(func.sum(
-                func.case(
+                case(
                     (Transaction.type == TransactionType.SPEND, Transaction.amount),
                     else_=Decimal("0"),
                 )
@@ -671,7 +671,6 @@ async def set_plan(
 # ─── PIN-защита P&L ───
 
 import hashlib
-import secrets
 
 def _hash_pin(pin: str) -> str:
     """SHA256 хэш пин-кода с солью."""

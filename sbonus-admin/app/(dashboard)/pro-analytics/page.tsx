@@ -3,9 +3,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { biAPI } from '@/lib/api';
 import {
   Brain, Loader2, Send, Download, Shield, AlertTriangle, Users, Target,
-  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Crown, Star,
+  TrendingUp, Crown, Star,
   Zap, Eye, DollarSign, BarChart3, PieChart as PieIcon, Clock, Hash,
-  Award, Medal, ChevronDown, ChevronUp, FileSpreadsheet, MessageCircle,
+  Award, ChevronDown, ChevronUp, FileSpreadsheet, MessageCircle,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,

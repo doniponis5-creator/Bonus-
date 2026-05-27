@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { financialsAPI } from '@/lib/api';
 import {
   Wallet, Loader2, TrendingUp, TrendingDown, DollarSign,
   Plus, Trash2, Edit3, RefreshCw, BarChart3, PieChart as PieIcon,
-  Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X, Lock, Shield, Delete, Settings, Eye, EyeOff,
+  Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X, Lock, Shield, Delete,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -355,6 +355,7 @@ export default function FinancialsPage() {
   const [byCategory, setByCategory] = useState<any>(null);
 
   const loadData = useCallback(async () => {
+    if (!pinUnlocked) return;
     setLoading(true);
     setError('');
     try {
@@ -369,7 +370,7 @@ export default function FinancialsPage() {
     } finally {
       setLoading(false);
     }
-  }, [month]);
+  }, [month, pinUnlocked]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
