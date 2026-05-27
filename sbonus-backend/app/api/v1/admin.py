@@ -283,7 +283,8 @@ async def dashboard_trends(
             Transaction.type == TransactionType.EARN,
         )
         .group_by(Customer.id, Customer.full_name, Customer.phone)
-        .order_by(func.sum(Transaction.purchase_amount).desc())
+        .having(func.coalesce(func.sum(Transaction.purchase_amount), 0) > 0)
+        .order_by(func.coalesce(func.sum(Transaction.purchase_amount), 0).desc())
         .limit(5)
     )
     top_rows = top_customers.all()
