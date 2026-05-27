@@ -585,8 +585,6 @@ function PnlSection({ data }: { data: any }) {
 
   const lines = [
     { ...r.revenue, bold: false, positive: true },
-    { ...r.bonus_discount, bold: false, positive: false },
-    { ...r.net_revenue, bold: true, positive: true, separator: true },
     { ...r.cost_of_goods, bold: false, positive: false },
     { ...r.gross_profit, bold: true, positive: true, separator: true, showMargin: true },
   ];
@@ -615,9 +613,6 @@ function PnlSection({ data }: { data: any }) {
           <PnlRow key={i} label={`  ${line.label}`} amount={-line.amount} indent />
         ))}
         <PnlRow label="Итого опер. расходы" amount={opex.total} bold />
-
-        <div style={{ borderTop: '1px solid #1e293b', margin: '4px 0' }} />
-        <PnlRow label={r.bonus_accrual.label} amount={r.bonus_accrual.amount} />
 
         <div style={{ borderTop: '3px solid #FFE600', margin: '8px 0' }} />
         <PnlRow label={r.net_profit.label} amount={r.net_profit.amount} bold big margin={r.net_profit.margin_pct} />

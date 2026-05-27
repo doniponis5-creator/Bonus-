@@ -345,14 +345,6 @@ async def pnl_report(
                 "label": "Выручка (продажи)",
                 "amount": revenue,
             },
-            "bonus_discount": {
-                "label": "Скидки бонусами",
-                "amount": -spent_val,
-            },
-            "net_revenue": {
-                "label": "Чистая выручка",
-                "amount": revenue - spent_val,
-            },
             "cost_of_goods": {
                 "label": "Себестоимость товаров",
                 "amount": -cogs,
@@ -366,10 +358,6 @@ async def pnl_report(
                 "label": "Операционные расходы",
                 "total": -opex,
                 "lines": expense_lines,
-            },
-            "bonus_accrual": {
-                "label": "Начисление бонусов (резерв)",
-                "amount": -bonus,
             },
             "net_profit": {
                 "label": "Чистая прибыль",
