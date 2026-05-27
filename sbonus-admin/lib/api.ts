@@ -290,3 +290,25 @@ export const productAPI = {
   dailyDigest: () => api.get('/api/v1/product-analytics/daily-digest'),
   smartRecommendations: (days = 90) => api.get(`/api/v1/product-analytics/smart-recommendations?days=${days}`),
 };
+
+export const financialsAPI = {
+  summary: (month?: string) => api.get('/api/v1/financials/summary' + (month ? `?month=${month}` : '')),
+  monthly: (months = 6) => api.get(`/api/v1/financials/monthly?months=${months}`),
+  pnl: (month?: string) => api.get('/api/v1/financials/pnl' + (month ? `?month=${month}` : '')),
+  expenses: (month?: string, category?: string) => {
+    const params = new URLSearchParams();
+    if (month) params.set('month', month);
+    if (category) params.set('category', category);
+    return api.get('/api/v1/financials/expenses' + (params.toString() ? `?${params}` : ''));
+  },
+  createExpense: (data: { category: string; amount: number; month: string; description?: string; is_recurring?: boolean }) =>
+    api.post('/api/v1/financials/expenses', data),
+  updateExpense: (id: string, data: any) => api.put(`/api/v1/financials/expenses/${id}`, data),
+  deleteExpense: (id: string) => api.delete(`/api/v1/financials/expenses/${id}`),
+  byCashier: (month?: string) => api.get('/api/v1/financials/by-cashier' + (month ? `?month=${month}` : '')),
+  byCategory: (month?: string) => api.get('/api/v1/financials/by-category' + (month ? `?month=${month}` : '')),
+  planFact: (month?: string) => api.get('/api/v1/financials/plan-fact' + (month ? `?month=${month}` : '')),
+  setPlan: (month: string, params: { revenue?: number; expenses?: number; profit?: number }) =>
+    api.put(`/api/v1/financials/plan?month=${month}`, null, { params }),
+};
+

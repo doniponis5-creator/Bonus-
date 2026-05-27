@@ -568,3 +568,67 @@ CREATE TRIGGER trg_immutable_transactions
     FOR EACH ROW
     EXECUTE FUNCTION prevent_transaction_modification();
 """
+
+
+# ═══════════════════════════════════════════
+# Expense — Расходы (для P&L отчёта)
+# ═══════════════════════════════════════════
+
+class ExpenseCategory(str, enum.Enum):
+    """Категории расходов."""
+    RENT = "rent"                   # Аренда
+    SALARY = "salary"               # Зарплата
+    UTILITIES = "utilities"         # Коммунальные
+    TRANSPORT = "transport"         # Транспорт/Доставка
+    MARKETING = "marketing"         # Маркетинг/Реклама
+    EQUIPMENT = "equipment"         # Оборудование
+    SUPPLIES = "supplies"           # Расходные материалы
+    TAXES = "taxes"                 # Налоги
+    INSURANCE = "insurance"         # Страхование
+    COMMUNICATION = "communication" # Связь/Интернет
+    MAINTENANCE = "maintenance"     # Ремонт/Обслуживание
+    OTHER = "other"                 # Прочие
+
+EXPENSE_CATEGORY_LABELS = {
+    "rent": "Аренда",
+    "salary": "Зарплата",
+    "utilities": "Коммунальные",
+    "transport": "Транспорт",
+    "marketing": "Маркетинг",
+    "equipment": "Оборудование",
+    "supplies": "Расходные материалы",
+    "taxes": "Налоги",
+    "insurance": "Страхование",
+    "communication": "Связь/Интернет",
+    "maintenance": "Ремонт/Обслуживание",
+    "other": "Прочие",
+}
+
+
+class Expense(Base):
+    """Расходы магазина (для P&L отчёта)."""
+    __tablename__ = "expenses"
+    __table_args__ = (
+        Index("ix_expenses_month", "month"),
+        Index("ix_expenses_category", "category"),
+        Index("ix_expenses_created_at", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    category: Mapped[str] = mapped_column(String(30), nullable=False, default="other")
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    month: Mapped[str] = mapped_column(String(7), nullable=False)  # "2026-05" format
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    branch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("branches.id"), nullable=True
+    )
+    source: Mapped[str] = mapped_column(String(10), nullable=False, default="manual")  # "manual" | "1c"
+    reference: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 1C document ref
+    is_recurring: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

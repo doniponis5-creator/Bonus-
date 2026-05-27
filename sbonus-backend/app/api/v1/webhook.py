@@ -918,3 +918,62 @@ async def webhook_greenapi(
         ))
 
     return {"success": True}
+
+
+# ═══════════════════════════════════════════
+# 1С — Расходы (expenses)
+# ═══════════════════════════════════════════
+
+@router.post("/1c/expenses")
+async def webhook_1c_expenses(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    1С отправляет расходы.
+    Body: {
+        "expenses": [
+            {"category": "rent", "amount": 50000, "month": "2026-05", "description": "Аренда май", "reference": "DOC-001"},
+            ...
+        ]
+    }
+    """
+    from app.models import Expense
+
+    enable = await db.execute(select(Setting).where(Setting.key == "ENABLE_1C_WEBHOOK"))
+    s = enable.scalar_one_or_none()
+    if not s or s.value != "true":
+        raise HTTPException(status_code=403, detail="1C webhook disabled")
+
+    body = await request.json()
+    expenses_data = body.get("expenses", [])
+
+    if not expenses_data:
+        raise HTTPException(status_code=400, detail="No expenses provided")
+
+    created = 0
+    skipped = 0
+    for item in expenses_data:
+        # Проверяем дублирование по reference
+        ref = item.get("reference")
+        if ref:
+            exists = await db.execute(
+                select(Expense).where(Expense.reference == ref, Expense.source == "1c")
+            )
+            if exists.scalar_one_or_none():
+                skipped += 1
+                continue
+
+        expense = Expense(
+            category=item.get("category", "other"),
+            amount=Decimal(str(item.get("amount", 0))),
+            month=item.get("month", datetime.now(timezone.utc).strftime("%Y-%m")),
+            description=item.get("description"),
+            reference=ref,
+            source="1c",
+        )
+        db.add(expense)
+        created += 1
+
+    await db.commit()
+    return {"success": True, "created": created, "skipped": skipped}
