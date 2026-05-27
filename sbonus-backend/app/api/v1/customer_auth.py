@@ -469,3 +469,165 @@ async def verify_magic_link(
         expires_in=days * 24 * 3600,
         customer_id=str(customer.id),
     )
+
+
+# ═══════════════════════════════════════════════════════════════
+# OTP — Одноразовый код для входа (вместо magic-link)
+# ═══════════════════════════════════════════════════════════════
+
+class OTPRequest(BaseModel):
+    phone: str
+
+
+class OTPVerifyRequest(BaseModel):
+    phone: str
+    code: str
+
+
+@router.post("/send-otp", status_code=200)
+async def send_otp(
+    body: OTPRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Отправить 4-значный OTP код клиенту в WhatsApp.
+
+    Rate limit: 3 попытки в 2 минуты на IP + телефон.
+    Код действует 5 минут.
+    """
+    from app.core.redis import redis_client
+
+    phone = normalize_phone(body.phone.strip())
+
+    # Rate limit: 3 попытки за 2 минуты
+    ip = request.client.host if request.client else "unknown"
+    rate_key = f"otp_send:{ip}:{phone}"
+    allowed = await check_rate_limit(rate_key, max_attempts=3, window_seconds=120)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail={"code": "RATE_LIMIT_EXCEEDED", "message": "Слишком много запросов. Подождите 2 минуты."},
+        )
+
+    # Проверить что клиент существует
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
+    customer = result.scalar_one_or_none()
+    if not customer:
+        # Безопасность: не раскрываем существование номера
+        # Но всё равно "отправляем" — чтоб не было phone enumeration
+        return {"success": True, "message": "Если номер зарегистрирован, код отправлен в WhatsApp"}
+
+    # Генерировать 4-значный код
+    import random
+    code = f"{random.randint(1000, 9999)}"
+
+    # Сохранить в Redis: otp:{phone} = code, TTL 5 минут
+    otp_key = f"otp:{phone}"
+    await redis_client.setex(otp_key, 300, code)  # 5 минут
+
+    # Счётчик попыток верификации (защита от brute-force)
+    attempts_key = f"otp_attempts:{phone}"
+    await redis_client.delete(attempts_key)
+
+    # Отправить код в WhatsApp
+    instance_id, api_token, wa_enabled = await _get_whatsapp_credentials(db)
+    if wa_enabled and instance_id and api_token:
+        try:
+            wa_phone = phone.replace("+", "")
+            message = (
+                f"🔐 *S Bonus — Код входа*\n\n"
+                f"Ваш код: *{code}*\n\n"
+                f"Код действителен 5 минут.\n"
+                f"Никому не сообщайте этот код!"
+            )
+            await send_whatsapp_message(
+                instance_id=instance_id,
+                api_token=api_token,
+                phone=wa_phone,
+                message=message,
+            )
+            logger.info(f"OTP sent to {phone[-4:]}")
+        except Exception as e:
+            logger.error(f"OTP WhatsApp send error: {e}")
+            # Не падаем — код всё равно в Redis, можно для дебага
+    else:
+        logger.warning("WhatsApp disabled — OTP not sent")
+
+    return {"success": True, "message": "Если номер зарегистрирован, код отправлен в WhatsApp"}
+
+
+@router.post("/verify-otp", status_code=200)
+async def verify_otp(
+    body: OTPVerifyRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> CustomerTokenResponse:
+    """
+    Проверить OTP код и выдать JWT.
+
+    Максимум 5 попыток на код. После 5 — код аннулируется.
+    """
+    from app.core.redis import redis_client
+
+    phone = normalize_phone(body.phone.strip())
+    code = body.code.strip()
+
+    if len(code) != 4 or not code.isdigit():
+        raise HTTPException(status_code=400, detail="Код должен быть 4 цифры")
+
+    # Проверить попытки (brute-force protection)
+    attempts_key = f"otp_attempts:{phone}"
+    attempts = await redis_client.incr(attempts_key)
+    if attempts == 1:
+        await redis_client.expire(attempts_key, 300)  # 5 мин
+    if attempts > 5:
+        # Удалить код — слишком много попыток
+        await redis_client.delete(f"otp:{phone}")
+        await redis_client.delete(attempts_key)
+        raise HTTPException(status_code=429, detail="Слишком много попыток. Запросите новый код.")
+
+    # Проверить код из Redis
+    otp_key = f"otp:{phone}"
+    stored_code = await redis_client.get(otp_key)
+
+    if not stored_code or stored_code != code:
+        remaining = 5 - attempts
+        raise HTTPException(
+            status_code=401,
+            detail=f"Неверный код. Осталось попыток: {remaining}",
+        )
+
+    # Код верный — удалить из Redis
+    await redis_client.delete(otp_key)
+    await redis_client.delete(attempts_key)
+
+    # Найти клиента
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
+    customer = result.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Клиент не найден")
+
+    # Выдать JWT (как в verify magic-link)
+    days = settings.customer_token_expire_days
+    jwt_token = create_customer_token(str(customer.id), days=days)
+
+    # Set httpOnly cookie
+    response.set_cookie(
+        key="customer_token",
+        value=jwt_token,
+        max_age=days * 24 * 3600,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        path="/",
+    )
+
+    logger.info(f"OTP login success: {phone[-4:]}")
+
+    return CustomerTokenResponse(
+        access_token=jwt_token,
+        expires_in=days * 24 * 3600,
+        customer_id=str(customer.id),
+    )

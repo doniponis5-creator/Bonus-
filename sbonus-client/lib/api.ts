@@ -67,6 +67,13 @@ export const customerAuthAPI = {
       '/api/v1/customer-auth/verify',
       { token },
     ),
+  sendOtp: (phone: string) =>
+    api.post('/api/v1/customer-auth/send-otp', { phone }),
+  verifyOtp: (phone: string, code: string) =>
+    api.post<{ access_token: string; expires_in: number; customer_id: string }>(
+      '/api/v1/customer-auth/verify-otp',
+      { phone, code },
+    ),
 };
 
 export const customerAPI = {
