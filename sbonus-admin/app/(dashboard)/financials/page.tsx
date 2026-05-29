@@ -44,7 +44,7 @@ const getCategoryColor = (cat: string, index: number) =>
   CATEGORY_COLORS[cat] || DYNAMIC_PALETTE[index % DYNAMIC_PALETTE.length];
 
 // Group small categories: top N + "Прочее"
-const MAX_PIE_SLICES = 10;
+const MAX_PIE_SLICES = 50;
 const groupExpenseCategories = (cats: any[]) => {
   if (!cats || cats.length <= MAX_PIE_SLICES) return cats;
   const sorted = [...cats].sort((a, b) => b.amount - a.amount);
