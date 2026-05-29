@@ -734,6 +734,10 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
   const catData = catGrouped.map((c: any, i: number) => ({
     name: c.label, value: c.amount, fill: getCategoryColor(c.category, i),
   }));
+  // Build color map: every category gets a stable color from its sorted position
+  const allCatsSorted = [...rawCats].sort((a: any, b: any) => b.amount - a.amount);
+  const catColorMap: Record<string, string> = {};
+  allCatsSorted.forEach((c: any, i: number) => { catColorMap[c.category] = getCategoryColor(c.category, i); });
 
   return (
     <>
@@ -839,7 +843,7 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
               <tr key={e.id} style={{ borderBottom: '1px solid #1e293b15' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: getCategoryColor(e.category, catGrouped.findIndex((g: any) => g.category === e.category)) }} />
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: catColorMap[e.category] || getCategoryColor(e.category, 0) }} />
                     <span style={{ color: '#e2eaf6', fontWeight: 500 }}>{e.category_label}</span>
                   </div>
                 </td>
