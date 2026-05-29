@@ -826,9 +826,11 @@ async def webhook_greenapi(
     """
     **Входящие сообщения Green API (WhatsApp).**
 
-    Команды клиента в WhatsApp:
-    - «БАЛАНС» — получить текущий бонусный баланс
-    - «ПОМОЩЬ» — список доступных команд
+    AI Chatbot — полноценный бот с 11 командами:
+    баланс, история, акции, купоны, колесо, реферал,
+    долги, уровень, контакты, промокод, помощь.
+
+    Поддержка: русский, узбекский, английский.
     """
     # Rate limit по IP: 30 запросов в минуту (защита от спама)
     from app.core.redis import check_rate_limit
@@ -848,7 +850,7 @@ async def webhook_greenapi(
     if message_data.get("typeMessage") != "textMessage":
         return {"success": True}
 
-    text = message_data.get("textMessageData", {}).get("textMessage", "").strip().upper()
+    text = message_data.get("textMessageData", {}).get("textMessage", "").strip()
     sender = body.get("senderData", {}).get("sender", "")
     phone = "+" + sender.split("@")[0] if "@" in sender else sender
 
@@ -871,42 +873,14 @@ async def webhook_greenapi(
     if not instance_id or not api_token:
         return {"success": True}
 
-    # ── Обработка команд ──────────────────
-    reply = None
+    # ── Обработка команд через AI Chatbot ──────────────────
+    from app.services.wa_chatbot import handle_message
 
-    if "БАЛАНС" in text or "BALANCE" in text:
-        result = await db.execute(
-            select(Customer).options(selectinload(Customer.tier)).where(Customer.phone == phone)
-        )
-        customer = result.scalar_one_or_none()
-
-        if customer:
-            acc = await db.execute(select(BonusAccount).where(BonusAccount.customer_id == customer.id))
-            account = acc.scalar_one_or_none()
-            balance = account.balance if account else 0
-            tier_name = customer.tier.name if customer.tier else "Bronze"
-            reply = (
-                f"💳 *S Bonus — Ваш баланс*\n\n"
-                f"👤 {customer.full_name}\n"
-                f"🏆 Уровень: {tier_name}\n"
-                f"💰 Баланс: *{balance} KGS*\n\n"
-                f"Чтобы узнать историю — обратитесь к кассиру."
-            )
-        else:
-            reply = (
-                f"❌ Номер {phone} не найден в S Bonus.\n"
-                f"Зарегистрируйтесь у кассира магазина Смарт Центр."
-            )
-
-    elif "ПОМОЩЬ" in text or "HELP" in text or "COMMANDS" in text:
-        reply = (
-            "🤖 *S Bonus — Команды WhatsApp*\n\n"
-            "📋 Доступные команды:\n"
-            "• *БАЛАНС* — узнать бонусный баланс\n"
-            "• *ПОМОЩЬ* — список команд\n\n"
-            "📍 Смарт Центр, ул. Ош-3000, 86\n"
-            "📞 +996557100505"
-        )
+    try:
+        reply = await handle_message(phone, text.strip(), db)
+    except Exception as e:
+        logger.error(f"Chatbot error for {phone}: {e}")
+        reply = None
 
     if reply:
         import asyncio

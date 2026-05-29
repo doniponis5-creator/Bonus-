@@ -3,248 +3,265 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { analyticsProAPI } from '@/lib/api';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area,
 } from 'recharts';
 import {
-  Activity, Clock, DollarSign, ShoppingCart, Users, Zap, RefreshCw,
-  TrendingUp, ArrowUpRight, Eye,
+  Activity, DollarSign, ShoppingCart, Users, Clock, TrendingUp,
+  Zap, RefreshCw, Radio, CreditCard, Gift, ArrowUpRight,
+  Pause, Play, Eye,
 } from 'lucide-react';
 
-const card: React.CSSProperties = {
-  background: 'var(--card)', borderRadius: 16, padding: 24,
-  border: '1px solid var(--border)',
-};
-
-function fmt(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-  return n.toLocaleString('ru-RU');
-}
-function fmtCur(n: number): string { return fmt(n) + ' сом'; }
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'только что';
-  if (mins < 60) return `${mins} мин назад`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} ч назад`;
-  return `${Math.floor(hrs / 24)} дн назад`;
-}
-
-const TX_TYPE_LABELS: Record<string, string> = {
-  earn: '💰 Начисление', spend: '🛍 Списание', expire: '⏰ Истечение',
-  refund: '↩ Возврат', birthday: '🎂 День рождения', referral: '👥 Реферал',
-  promo: '🎟 Промокод', campaign: '📢 Кампания',
-};
-const TX_TYPE_COLORS: Record<string, string> = {
-  earn: '#22c55e', spend: '#3b82f6', expire: '#f59e0b',
-  refund: '#ef4444', birthday: '#ec4899', referral: '#8b5cf6',
-  promo: '#06b6d4', campaign: '#f97316',
+const TX_CONFIG: Record<string, { icon: string; color: string; label: string; sign: string }> = {
+  earn: { icon: '💰', color: '#10b981', label: 'Покупка', sign: '+' },
+  spend: { icon: '🛍️', color: '#ef4444', label: 'Списание', sign: '-' },
+  expire: { icon: '⏰', color: '#6b7280', label: 'Истекло', sign: '-' },
+  refund: { icon: '↩️', color: '#f59e0b', label: 'Возврат', sign: '+' },
+  birthday: { icon: '🎂', color: '#ec4899', label: 'ДР', sign: '+' },
+  referral: { icon: '👥', color: '#8b5cf6', label: 'Реферал', sign: '+' },
+  promo: { icon: '🎁', color: '#06b6d4', label: 'Промо', sign: '+' },
+  campaign: { icon: '📢', color: '#6366f1', label: 'Кампания', sign: '+' },
 };
 
 export default function RealtimePage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [pulse, setPulse] = useState(false);
-  const timerRef = useRef<any>(null);
+  const intervalRef = useRef<any>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await analyticsProAPI.realtime();
-      setData(res.data);
+      const { data: d } = await analyticsProAPI.realtime();
+      setData(d);
       setLastUpdate(new Date());
       setPulse(true);
-      setTimeout(() => setPulse(false), 500);
-    } catch (e) { console.error(e); }
-    setLoading(false);
+      setTimeout(() => setPulse(false), 600);
+    } catch {} finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     if (autoRefresh) {
-      timerRef.current = setInterval(load, 30000);
+      intervalRef.current = setInterval(load, 15000); // 15 sec
     }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [autoRefresh, load]);
 
-  if (loading || !data) {
-    return (
-      <div style={{ padding: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    );
-  }
+  const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(Math.round(n));
+  const fmtK = (n: number) => n >= 1000000 ? `${(n/1000000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n/1000)}K` : String(Math.round(n));
+  const timeAgo = (iso: string) => {
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return `${Math.round(diff)}с назад`;
+    if (diff < 3600) return `${Math.round(diff/60)}м назад`;
+    return `${Math.round(diff/3600)}ч назад`;
+  };
 
-  const todayStats = data.today || {};
-  const lastHour = data.last_hour || {};
-  const transactions = data.recent_transactions || [];
-  const hourly = data.hourly_breakdown || [];
+  if (loading || !data) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 60, color: 'var(--text2)' }}>
+      <Activity size={18} className="animate-spin" /> Подключение...
+    </div>
+  );
+
+  const hourlyData = (data.hourly_breakdown || []).map((h: any) => ({
+    ...h, label: `${h.hour}:00`,
+  }));
 
   return (
-    <div style={{ padding: 24, maxWidth: 1400, margin: '0 auto' }}>
-      <style>{`
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}}
-        @keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-      `}</style>
-
-      {/* Header with live indicator */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Real-time мониторинг</h1>
-            <div style={{
-              width: 10, height: 10, borderRadius: '50%',
-              background: autoRefresh ? '#22c55e' : '#666',
-              animation: autoRefresh ? 'pulse-green 2s infinite' : 'none',
-            }} />
+    <div className="page-root">
+      {/* Header */}
+      <div className="page-header" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: pulse ? 'linear-gradient(135deg, #ef4444, #f97316)' : 'linear-gradient(135deg, #10b981, #06b6d4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.3s',
+          }}>
+            <Radio size={20} color="#fff" />
           </div>
-          <p style={{ color: 'var(--text2)', margin: '4px 0 0', fontSize: 14 }}>
-            {lastUpdate && `Обновлено: ${lastUpdate.toLocaleTimeString('ru-RU')} • `}
-            Авто-обновление каждые 30 сек
-          </p>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              Live Dashboard
+              <span style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: autoRefresh ? '#10b981' : '#6b7280',
+                display: 'inline-block',
+                animation: autoRefresh ? 'pulse 2s infinite' : 'none',
+              }} />
+            </h1>
+            <p style={{ fontSize: 11, color: 'var(--text3)' }}>
+              Обновлено: {lastUpdate.toLocaleTimeString('ru')}
+              {autoRefresh && ' • авто-обновление 15с'}
+            </p>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            style={{
-              padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-              background: autoRefresh ? 'rgba(34,197,94,.15)' : 'var(--bg2)',
-              color: autoRefresh ? '#22c55e' : 'var(--text2)',
-            }}
-          >
-            {autoRefresh ? '⏸ Пауза' : '▶ Включить'}
+          <button onClick={() => setAutoRefresh(!autoRefresh)} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)',
+            background: autoRefresh ? '#10b98122' : 'transparent',
+            color: autoRefresh ? '#10b981' : 'var(--text3)', fontSize: 12, cursor: 'pointer',
+          }}>
+            {autoRefresh ? <Pause size={14} /> : <Play size={14} />}
+            {autoRefresh ? 'Пауза' : 'Возобновить'}
           </button>
           <button onClick={load} style={{
-            padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-            background: 'var(--accent)', color: '#000',
+            padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)',
+            background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 4,
           }}>
-            <RefreshCw size={14} style={{ marginRight: 4 }} /> Обновить
+            <RefreshCw size={14} /> Сейчас
           </button>
         </div>
       </div>
 
-      {/* Today stats — big KPI cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
+      {/* Today KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
-          { label: 'Выручка сегодня', value: fmtCur(todayStats.revenue || 0), icon: DollarSign, color: '#22c55e' },
-          { label: 'Транзакций', value: fmt(todayStats.tx_count || 0), icon: ShoppingCart, color: '#3b82f6' },
-          { label: 'Активных клиентов', value: fmt(todayStats.active_customers || 0), icon: Users, color: '#8b5cf6' },
-          { label: 'Средний чек', value: fmtCur(todayStats.avg_check || 0), icon: TrendingUp, color: '#f59e0b' },
-          { label: 'Новые регистрации', value: fmt(todayStats.new_registrations || 0), icon: ArrowUpRight, color: '#06b6d4' },
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{
-              ...card,
-              transition: 'transform .2s',
-              transform: pulse ? 'scale(1.02)' : 'scale(1)',
+          { label: 'Выручка сегодня', value: fmt(data.today.revenue) + ' сом', icon: DollarSign, color: '#6366f1' },
+          { label: 'Транзакций', value: fmt(data.today.tx_count), icon: ShoppingCart, color: '#8b5cf6' },
+          { label: 'Ср. чек', value: fmt(data.today.avg_check) + ' сом', icon: CreditCard, color: '#06b6d4' },
+          { label: 'Клиентов', value: fmt(data.today.active_customers), icon: Users, color: '#10b981' },
+          { label: 'Новых', value: fmt(data.today.new_registrations), icon: TrendingUp, color: '#f59e0b' },
+        ].map((kpi, i) => (
+          <div key={i} style={{
+            background: 'var(--bg2)', borderRadius: 14, padding: 16,
+            border: '1px solid var(--border)',
+          }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 10,
+              background: kpi.color + '22',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8,
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color, opacity: .7 }} />
-              </div>
-              <span style={{ fontSize: 22, fontWeight: 700 }}>{k.value}</span>
+              <kpi.icon size={17} color={kpi.color} />
             </div>
-          );
-        })}
-      </div>
-
-      {/* Last hour mini-stats */}
-      <div style={{ ...card, marginBottom: 32, background: 'linear-gradient(135deg, rgba(255,230,0,.03), rgba(34,197,94,.03))' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Clock size={18} style={{ color: 'var(--accent)' }} />
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>За последний час</h3>
-        </div>
-        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', fontSize: 14 }}>
-          <div><span style={{ color: 'var(--text2)' }}>Транзакций:</span> <strong>{lastHour.tx_count || 0}</strong></div>
-          <div><span style={{ color: 'var(--text2)' }}>Выручка:</span> <strong>{fmtCur(lastHour.revenue || 0)}</strong></div>
-          <div><span style={{ color: 'var(--text2)' }}>Клиентов:</span> <strong>{lastHour.unique_customers || 0}</strong></div>
-          <div><span style={{ color: 'var(--text2)' }}>Бонусов начислено:</span> <strong>{fmtCur(lastHour.bonus_issued || 0)}</strong></div>
-          <div><span style={{ color: 'var(--text2)' }}>Бонусов потрачено:</span> <strong>{fmtCur(lastHour.bonus_spent || 0)}</strong></div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24, marginBottom: 32 }}>
-        {/* Hourly breakdown chart */}
-        <div style={card}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600 }}>Активность по часам (сегодня)</h3>
-          {hourly.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={hourly}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="hour" tick={{ fontSize: 11, fill: 'var(--text2)' }}
-                  tickFormatter={(h: number) => `${h}:00`} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text2)' }} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}
-                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                  labelFormatter={(h: number) => `${h}:00 — ${h + 1}:00`}
-                  formatter={(v: number, name: string) => [
-                    name === 'revenue' ? fmtCur(v) : fmt(v),
-                    name === 'revenue' ? 'Выручка' : 'Транзакции',
-                  ]}
-                />
-                <Bar dataKey="tx_count" fill="#3b82f6" radius={[4, 4, 0, 0]} name="tx_count" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Нет данных</p>
-          )}
-        </div>
-
-        {/* Live transaction feed */}
-        <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Activity size={18} style={{ color: '#22c55e' }} />
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Последние транзакции</h3>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{kpi.value}</div>
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{kpi.label}</div>
           </div>
-          <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {transactions.length > 0 ? transactions.map((tx: any, i: number) => {
-              const typeLabel = TX_TYPE_LABELS[tx.type] || tx.type;
-              const typeColor = TX_TYPE_COLORS[tx.type] || '#888';
-              const isEarn = tx.type === 'earn';
+        ))}
+      </div>
+
+      {/* Last Hour Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05))',
+        borderRadius: 14, padding: 16, marginBottom: 20,
+        border: '1px solid rgba(99,102,241,0.2)',
+        display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Clock size={18} color="#6366f1" />
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Последний час</span>
+        </div>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, color: 'var(--text3)' }}>
+            <b style={{ color: '#6366f1' }}>{fmt(data.last_hour.revenue)}</b> сом
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--text3)' }}>
+            <b style={{ color: '#8b5cf6' }}>{data.last_hour.tx_count}</b> операций
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--text3)' }}>
+            <b style={{ color: '#10b981' }}>{data.last_hour.unique_customers}</b> клиентов
+          </span>
+        </div>
+      </div>
+
+      {/* Chart + Live Feed */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 20 }}>
+        {/* Hourly chart */}
+        <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Activity size={18} color="#6366f1" /> По часам
+          </h3>
+          <div style={{ height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={hourlyData}>
+                <defs>
+                  <linearGradient id="liveGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="label" tick={{ fill: 'var(--text3)', fontSize: 10 }} />
+                <YAxis tick={{ fill: 'var(--text3)', fontSize: 11 }} tickFormatter={(v: number) => fmtK(v)} />
+                <Tooltip
+                  contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                  formatter={(v: number, n: string) => [n === 'revenue' ? fmt(v) + ' сом' : v, n === 'revenue' ? 'Выручка' : 'Операций']}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#liveGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Live feed */}
+        <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Zap size={18} color="#f59e0b" /> Live Feed
+          </h3>
+          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            {(data.recent_transactions || []).map((tx: any, i: number) => {
+              const conf = TX_CONFIG[tx.type] || TX_CONFIG.earn;
+              const isRecent = (Date.now() - new Date(tx.created_at).getTime()) < 300000; // 5 min
 
               return (
                 <div key={i} style={{
-                  padding: '10px 14px', borderRadius: 10, background: 'var(--bg2)',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  animation: `slideIn .3s ease ${i * 0.05}s both`,
-                  borderLeft: `3px solid ${typeColor}`,
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0',
+                  borderBottom: '1px solid var(--border)',
+                  animation: i === 0 && pulse ? 'fadeIn 0.3s ease-in' : 'none',
                 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{typeLabel}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
-                      {tx.customer_name || tx.customer_phone || 'Клиент'}
-                      {tx.purchase_amount > 0 && ` • Покупка: ${fmtCur(tx.purchase_amount)}`}
+                  <span style={{ fontSize: 20, position: 'relative' }}>
+                    {conf.icon}
+                    {isRecent && (
+                      <span style={{
+                        position: 'absolute', top: -2, right: -2, width: 6, height: 6,
+                        borderRadius: '50%', background: '#10b981',
+                      }} />
+                    )}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {tx.customer_name}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                      {conf.label} • {timeAgo(tx.created_at)}
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: isEarn ? '#22c55e' : typeColor }}>
-                      {isEarn ? '+' : ''}{fmt(tx.amount)} бонусов
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: conf.color }}>
+                      {conf.sign}{fmt(tx.amount)}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text2)' }}>{timeAgo(tx.created_at)}</div>
+                    {tx.purchase_amount > 0 && tx.type === 'earn' && (
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>
+                        {fmt(tx.purchase_amount)} сом
+                      </div>
+                    )}
                   </div>
                 </div>
               );
-            }) : (
-              <p style={{ color: 'var(--text2)', textAlign: 'center', padding: 20 }}>Нет транзакций сегодня</p>
+            })}
+            {(!data.recent_transactions || data.recent_transactions.length === 0) && (
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text3)', fontSize: 13 }}>
+                Нет операций
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Pro tip */}
-      <div style={{ ...card, background: 'linear-gradient(135deg, rgba(34,197,94,.05), rgba(59,130,246,.05))' }}>
-        <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600 }}>⚡ Зачем real-time мониторинг?</h3>
-        <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, margin: 0 }}>
-          Следите за бизнесом в реальном времени: видите каждую транзакцию, отслеживайте пиковые часы, реагируйте на аномалии мгновенно.
-          Если видите необычный спад — проверьте кассу. Если резкий рост — подготовьте запасы. Данные обновляются автоматически каждые 30 секунд.
-        </p>
-      </div>
+      {/* Pulse animation */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

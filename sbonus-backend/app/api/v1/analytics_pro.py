@@ -612,3 +612,17 @@ async def daily_trends(
         })
 
     return {"trends": result}
+
+
+# ═══════════════════════════════════════════
+# Smart Notification Stats
+# ═══════════════════════════════════════════
+
+@router.get("/smart-notifications")
+async def get_smart_notification_stats_endpoint(
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+):
+    """Статистика smart уведомлений."""
+    from app.services.smart_notifications import get_smart_notification_stats
+    return await get_smart_notification_stats(db, days)

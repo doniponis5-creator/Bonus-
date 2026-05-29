@@ -7,7 +7,7 @@ import {
   Settings, LogOut, FileSearch, Gift, Tag, Star, BarChart3, Disc3,
   Flame, Send, MessageCircle, Menu, X, ChevronDown,
   FlaskConical, QrCode, Bot, Percent, Activity, PieChart, Crosshair,
-  Package, Wallet, Brain,
+  Package, Wallet, Brain, Scan,
 } from 'lucide-react';
 
 // ─── Navigation structure with groups ───
@@ -28,6 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/', icon: LayoutDashboard, label: 'Дашборд' },
       { href: '/customers', icon: Users, label: 'Клиенты' },
+      { href: '/customer360', icon: Scan, label: 'Customer 360' },
       { href: '/transactions', icon: CreditCard, label: 'Транзакции' },
       { href: '/branches', icon: Store, label: 'Филиалы' },
       { href: '/cashiers', icon: Briefcase, label: 'Кассиры' },
@@ -43,6 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/cashback', icon: Percent, label: 'Кешбэк' },
       { href: '/ab-testing', icon: FlaskConical, label: 'A/B тесты' },
       { href: '/wa-broadcast', icon: MessageCircle, label: 'Рассылки WA' },
+      { href: '/referral-board', icon: Users, label: 'Referral 2.0' },
     ],
   },
   {
@@ -55,6 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/qr-analytics', icon: QrCode, label: 'QR аналитика' },
       { href: '/business-analytics', icon: PieChart, label: 'Бизнес PRO' },
       { href: '/marketing-roi', icon: Crosshair, label: 'Воронка и ROI' },
+      { href: '/forecast', icon: TrendingUp, label: 'AI Прогноз' },
       { href: '/realtime', icon: Activity, label: 'Real-time' },
       { href: '/reviews', icon: Star, label: 'Отзывы' },
       { href: '/audit-logs', icon: FileSearch, label: 'Журнал' },

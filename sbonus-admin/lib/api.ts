@@ -346,3 +346,25 @@ export const biAPI = {
   // RFM Pro
   rfmPro: () => api.get('/api/v1/bi/rfm-pro'),
 };
+
+
+// ─── Customer 360 ───
+export const customer360API = {
+  profile: (customerId: string) => api.get(`/api/v1/admin/customer360/${customerId}`),
+};
+
+// ─── Referral 2.0 Admin ───
+export const referralAPI = {
+  leaderboard: (limit = 50) => api.get(`/api/v1/referral/admin/leaderboard?limit=${limit}`),
+  tree: (customerId: string) => api.get(`/api/v1/referral/admin/tree/${customerId}`),
+  stats: () => api.get('/api/v1/referral/admin/stats'),
+};
+
+// ─── Revenue Forecast ───
+export const forecastAPI = {
+  revenue: (historyDays = 90, forecastDays = 30) =>
+    api.get(`/api/v1/forecast/revenue?history_days=${historyDays}&forecast_days=${forecastDays}`),
+  customers: (historyDays = 90, forecastDays = 30) =>
+    api.get(`/api/v1/forecast/customers?history_days=${historyDays}&forecast_days=${forecastDays}`),
+  summary: () => api.get('/api/v1/forecast/summary'),
+};

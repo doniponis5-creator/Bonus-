@@ -42,6 +42,11 @@ from app.services.customer_telegram_bot import (
     stop_customer_bot,
 )
 from app.services.product_alerts import send_product_daily_digest, check_critical_stock
+from app.services.smart_notifications import (
+    run_churn_prevention,
+    run_birthday_pre_reminder,
+    run_expiry_personal_alert,
+)
 from app.api.v1.business_intelligence import send_pnl_telegram_report
 
 settings = get_settings()
@@ -121,6 +126,30 @@ async def lifespan(app: FastAPI):
         send_balance_reminders,
         CronTrigger(hour=12, minute=0),
         id="comeback_reminder",
+        replace_existing=True,
+    )
+
+    # Cron: Smart Churn Prevention — каждый день 11:00
+    scheduler.add_job(
+        run_churn_prevention,
+        CronTrigger(hour=11, minute=0),
+        id="smart_churn_prevention",
+        replace_existing=True,
+    )
+
+    # Cron: Birthday Pre-reminder (за 3 дня) — каждый день 10:30
+    scheduler.add_job(
+        run_birthday_pre_reminder,
+        CronTrigger(hour=10, minute=30),
+        id="birthday_pre_reminder",
+        replace_existing=True,
+    )
+
+    # Cron: Personal Expiry Alert — каждый день 11:30
+    scheduler.add_job(
+        run_expiry_personal_alert,
+        CronTrigger(hour=11, minute=30),
+        id="expiry_personal_alert",
         replace_existing=True,
     )
 
