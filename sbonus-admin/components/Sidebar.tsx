@@ -228,11 +228,12 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
       {/* Bottom Navigation Bar */}
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000,
-        background: 'var(--bg2)',
+        background: 'rgba(17,24,39,0.95)',
         borderTop: '1px solid var(--border)',
         display: 'flex', justifyContent: 'space-around', alignItems: 'stretch',
-        height: 68,
+        minHeight: 72,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingTop: 4,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
       }}>
@@ -252,11 +253,11 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
               }}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', gap: 4,
+                justifyContent: 'center', gap: 3,
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: active ? 'var(--accent)' : 'var(--text3)',
-                fontSize: 10, fontWeight: active ? 700 : 500,
-                padding: '8px 0', flex: 1,
+                fontSize: 11, fontWeight: active ? 700 : 500,
+                padding: '6px 0', flex: 1,
                 transition: 'color 0.2s',
                 WebkitTapHighlightColor: 'transparent',
                 minWidth: 0,
@@ -265,11 +266,11 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
               <div style={{
                 position: 'relative',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 44, height: 28, borderRadius: 14,
+                width: 48, height: 30, borderRadius: 15,
                 background: active ? 'rgba(255,230,0,0.12)' : 'transparent',
                 transition: 'background 0.2s',
               }}>
-                <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                <Icon size={22} strokeWidth={active ? 2.5 : 2} />
               </div>
               <span style={{ lineHeight: 1 }}>{isMore && moreOpen ? 'Закрыть' : tab.label}</span>
             </button>

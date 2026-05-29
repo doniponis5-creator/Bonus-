@@ -111,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
         @media (max-width: 767px) {
           .main-content {
-            padding: 16px 12px 88px 12px !important;
+            padding: 16px 12px 96px 12px !important;
             min-height: 100vh;
             -webkit-overflow-scrolling: touch;
           }

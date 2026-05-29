@@ -281,7 +281,7 @@ a { text-decoration: none; color: inherit; }
 
   /* Bottom safe area for bottom nav */
   .main-content {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
   }
 }
 
