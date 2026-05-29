@@ -33,6 +33,27 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Страхование': '#06b6d4', 'Связь/Интернет': '#84cc16', 'Ремонт': '#a855f7', 'Прочие': '#64748b',
 };
 
+// Dynamic color palette for free-text categories
+const DYNAMIC_PALETTE = [
+  '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899',
+  '#14b8a6', '#f97316', '#6366f1', '#06b6d4', '#84cc16',
+  '#a855f7', '#e11d48', '#0ea5e9', '#d946ef', '#22c55e',
+  '#fb923c', '#38bdf8', '#c084fc', '#facc15', '#2dd4bf',
+];
+const getCategoryColor = (cat: string, index: number) =>
+  CATEGORY_COLORS[cat] || DYNAMIC_PALETTE[index % DYNAMIC_PALETTE.length];
+
+// Group small categories: top N + "Прочее"
+const MAX_PIE_SLICES = 10;
+const groupExpenseCategories = (cats: any[]) => {
+  if (!cats || cats.length <= MAX_PIE_SLICES) return cats;
+  const sorted = [...cats].sort((a, b) => b.amount - a.amount);
+  const top = sorted.slice(0, MAX_PIE_SLICES - 1);
+  const rest = sorted.slice(MAX_PIE_SLICES - 1);
+  const otherAmount = rest.reduce((s: number, c: any) => s + c.amount, 0);
+  return [...top, { category: 'Прочие', label: `Прочие (${rest.length})`, amount: otherAmount }];
+};
+
 const CATEGORIES = [
   { value: 'rent', label: 'Аренда' }, { value: 'salary', label: 'Зарплата' },
   { value: 'utilities', label: 'Коммунальные' }, { value: 'transport', label: 'Транспорт' },
@@ -542,36 +563,49 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
       )}
 
       {/* Expense Categories Pie */}
-      {(summary.expense_categories || []).length > 0 && (
+      {(summary.expense_categories || []).length > 0 && (() => {
+        const grouped = groupExpenseCategories(summary.expense_categories);
+        const total = grouped.reduce((s: number, c: any) => s + c.amount, 0);
+        return (
         <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20 }}>
-          <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Структура расходов</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600 }}>Структура расходов</h3>
+            <span style={{ color: '#94a3b8', fontSize: 12 }}>{summary.expense_categories.length} категорий • {fmtMoney(total)}</span>
+          </div>
           <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-            <ResponsiveContainer width="50%" height={240}>
+            <ResponsiveContainer width="45%" height={260}>
               <PieChart>
-                <Pie data={summary.expense_categories.map((c: any) => ({
-                  name: c.label, value: c.amount, fill: CATEGORY_COLORS[c.category] || '#64748b',
-                }))} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" paddingAngle={3} strokeWidth={0}>
-                  {summary.expense_categories.map((c: any, i: number) => (
-                    <Cell key={i} fill={CATEGORY_COLORS[c.category] || '#64748b'} />
+                <Pie data={grouped.map((c: any, i: number) => ({
+                  name: c.label, value: c.amount, fill: getCategoryColor(c.category, i),
+                }))} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" paddingAngle={2} strokeWidth={0}>
+                  {grouped.map((c: any, i: number) => (
+                    <Cell key={i} fill={getCategoryColor(c.category, i)} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'transparent' }} />
               </PieChart>
             </ResponsiveContainer>
-            <div style={{ flex: 1 }}>
-              {summary.expense_categories.map((c: any, i: number) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1e293b20' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 3, background: CATEGORY_COLORS[c.category] || '#64748b' }} />
-                    <span style={{ color: '#e2eaf6', fontSize: 13 }}>{c.label}</span>
+            <div style={{ flex: 1, maxHeight: 280, overflowY: 'auto' }}>
+              {grouped.map((c: any, i: number) => {
+                const pct = total > 0 ? ((c.amount / total) * 100).toFixed(1) : '0';
+                return (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid rgba(30,41,59,0.3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, background: getCategoryColor(c.category, i), flexShrink: 0 }} />
+                    <span style={{ color: '#e2eaf6', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
                   </div>
-                  <span style={{ color: '#FFE600', fontSize: 13, fontWeight: 600 }}>{fmtMoney(c.amount)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                    <span style={{ color: '#64748b', fontSize: 11, minWidth: 36, textAlign: 'right' }}>{pct}%</span>
+                    <span style={{ color: '#FFE600', fontSize: 13, fontWeight: 600, minWidth: 80, textAlign: 'right' }}>{fmtMoney(c.amount)}</span>
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </>
   );
 }
@@ -680,7 +714,7 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
         description: form.description || undefined,
         is_recurring: form.is_recurring,
       });
-      setForm({ category: 'rent', amount: '', description: '', is_recurring: false });
+      setForm({ category: '', amount: '', description: '', is_recurring: false });
       setShowForm(false);
       onReload();
     } catch {}
@@ -695,8 +729,10 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
 
   if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
-  const catData = (byCategory?.categories || []).map((c: any) => ({
-    name: c.label, value: c.amount, fill: CATEGORY_COLORS[c.category] || '#64748b',
+  const rawCats = byCategory?.categories || [];
+  const catGrouped = groupExpenseCategories(rawCats);
+  const catData = catGrouped.map((c: any, i: number) => ({
+    name: c.label, value: c.amount, fill: getCategoryColor(c.category, i),
   }));
 
   return (
@@ -803,7 +839,7 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
               <tr key={e.id} style={{ borderBottom: '1px solid #1e293b15' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: CATEGORY_COLORS[e.category] || '#64748b' }} />
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: getCategoryColor(e.category, catGrouped.findIndex((g: any) => g.category === e.category)) }} />
                     <span style={{ color: '#e2eaf6', fontWeight: 500 }}>{e.category_label}</span>
                   </div>
                 </td>
