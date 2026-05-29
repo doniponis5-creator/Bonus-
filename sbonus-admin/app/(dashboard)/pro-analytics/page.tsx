@@ -243,10 +243,27 @@ function BudgetTab({ month }: { month: string }) {
   if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><Loader2 size={28} color="#FFE600" className="animate-spin" /></div>;
 
   const alerts = budgets.filter(b => b.status === 'exceeded' || b.status === 'warning');
-  const allCats = Object.keys(CATEGORY_LABELS);
+  const totalActual = budgets.reduce((s, b) => s + (b.actual || 0), 0);
+  const totalLimit = budgets.reduce((s, b) => s + (b.limit || 0), 0);
 
   return (
     <div>
+      {/* Summary KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 16, textAlign: 'center' }}>
+          <div style={{ color: '#5e6e82', fontSize: 11, marginBottom: 4 }}>ФАКТ РАСХОДОВ</div>
+          <div style={{ color: '#ef4444', fontSize: 20, fontWeight: 700 }}>{fmtMoney(totalActual)}</div>
+        </div>
+        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 16, textAlign: 'center' }}>
+          <div style={{ color: '#5e6e82', fontSize: 11, marginBottom: 4 }}>ОБЩИЙ ЛИМИТ</div>
+          <div style={{ color: totalLimit > 0 ? '#FFE600' : '#3a4a5e', fontSize: 20, fontWeight: 700 }}>{totalLimit > 0 ? fmtMoney(totalLimit) : '—'}</div>
+        </div>
+        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 16, textAlign: 'center' }}>
+          <div style={{ color: '#5e6e82', fontSize: 11, marginBottom: 4 }}>ПРЕВЫШЕНИЯ</div>
+          <div style={{ color: alerts.length > 0 ? '#ef4444' : '#22c55e', fontSize: 20, fontWeight: 700 }}>{alerts.length}</div>
+        </div>
+      </div>
+
       {/* Alerts */}
       {alerts.length > 0 && (
         <div style={{
@@ -270,49 +287,57 @@ function BudgetTab({ month }: { month: string }) {
         </div>
       )}
 
-      {/* Budget table */}
+      {/* Empty state */}
+      {budgets.length === 0 && (
+        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 40, textAlign: 'center' }}>
+          <div style={{ color: '#5e6e82', fontSize: 14, marginBottom: 8 }}>Нет расходов за этот месяц</div>
+          <div style={{ color: '#3a4a5e', fontSize: 12 }}>Добавьте расходы в разделе P&L Финансы</div>
+        </div>
+      )}
+
+      {/* Budget table — uses REAL categories from API */}
+      {budgets.length > 0 && (
       <div style={{
         background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden',
       }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 100px 100px 80px 50px',
+          display: 'grid', gridTemplateColumns: '1fr 110px 110px 100px 50px',
           padding: '12px 16px', background: '#141c2b', gap: 8,
           fontSize: 11, color: '#5e6e82', fontWeight: 600, textTransform: 'uppercase',
         }}>
           <div>Категория</div><div style={{ textAlign: 'right' }}>Лимит</div>
-          <div style={{ textAlign: 'right' }}>Факт</div><div style={{ textAlign: 'center' }}>%</div><div></div>
+          <div style={{ textAlign: 'right' }}>Факт</div><div style={{ textAlign: 'center' }}>Использовано</div><div></div>
         </div>
-        {allCats.map(cat => {
-          const b = budgets.find(x => x.category === cat) || { limit: 0, actual: 0, percent: 0, status: 'ok' };
-          const isEdit = editCat === cat;
+        {budgets.map(b => {
+          const isEdit = editCat === b.category;
           return (
-            <div key={cat} style={{
-              display: 'grid', gridTemplateColumns: '1fr 100px 100px 80px 50px',
+            <div key={b.category} style={{
+              display: 'grid', gridTemplateColumns: '1fr 110px 110px 100px 50px',
               padding: '10px 16px', borderTop: '1px solid #1e293b22', gap: 8, alignItems: 'center',
             }}>
-              <div style={{ color: '#e2eaf6', fontSize: 13 }}>{CATEGORY_LABELS[cat]}</div>
+              <div style={{ color: '#e2eaf6', fontSize: 13, fontWeight: 500 }}>{b.label}</div>
               <div style={{ textAlign: 'right' }}>
                 {isEdit ? (
                   <input value={editAmount} onChange={e => setEditAmount(e.target.value)}
                     type="number" placeholder="0" autoFocus
-                    onKeyDown={e => e.key === 'Enter' && handleSave(cat)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSave(b.category); if (e.key === 'Escape') { setEditCat(''); setEditAmount(''); } }}
                     style={{
-                      width: 80, background: '#1a2332', border: '1px solid #FFE600', borderRadius: 6,
+                      width: 90, background: '#1a2332', border: '1px solid #FFE600', borderRadius: 6,
                       color: '#e2eaf6', padding: '4px 6px', fontSize: 12, textAlign: 'right',
                     }} />
                 ) : (
-                  <span style={{ color: b.limit > 0 ? '#e2eaf6' : '#3a4a5e', fontSize: 13 }}>
-                    {b.limit > 0 ? fmtShort(b.limit) : '—'}
+                  <span style={{ color: b.limit > 0 ? '#FFE600' : '#3a4a5e', fontSize: 13, fontWeight: b.limit > 0 ? 600 : 400 }}>
+                    {b.limit > 0 ? fmtMoney(b.limit) : '—'}
                   </span>
                 )}
               </div>
-              <div style={{ textAlign: 'right', color: '#e2eaf6', fontSize: 13 }}>
-                {b.actual > 0 ? fmtShort(b.actual) : '—'}
+              <div style={{ textAlign: 'right', color: b.actual > 0 ? '#ef4444' : '#3a4a5e', fontSize: 13, fontWeight: b.actual > 0 ? 600 : 400 }}>
+                {b.actual > 0 ? fmtMoney(b.actual) : '—'}
               </div>
               <div style={{ textAlign: 'center' }}>
-                {b.limit > 0 && (
+                {b.limit > 0 ? (
                   <div style={{
-                    background: '#1a2332', borderRadius: 20, height: 20, overflow: 'hidden', position: 'relative',
+                    background: '#1a2332', borderRadius: 20, height: 22, overflow: 'hidden', position: 'relative',
                   }}>
                     <div style={{
                       height: '100%', borderRadius: 20,
@@ -322,28 +347,31 @@ function BudgetTab({ month }: { month: string }) {
                     }} />
                     <span style={{
                       position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center',
-                      fontSize: 10, lineHeight: '20px', color: '#fff', fontWeight: 600,
+                      fontSize: 10, lineHeight: '22px', color: '#fff', fontWeight: 600,
                     }}>{b.percent}%</span>
                   </div>
+                ) : (
+                  <span style={{ color: '#3a4a5e', fontSize: 11 }}>Нет лимита</span>
                 )}
               </div>
               <div style={{ textAlign: 'center' }}>
                 {isEdit ? (
-                  <button onClick={() => handleSave(cat)} disabled={saving} style={{
+                  <button onClick={() => handleSave(b.category)} disabled={saving} style={{
                     background: '#22c55e', border: 'none', borderRadius: 6, color: '#fff',
                     padding: '4px 8px', fontSize: 11, cursor: 'pointer',
-                  }}>✓</button>
+                  }}>OK</button>
                 ) : (
-                  <button onClick={() => { setEditCat(cat); setEditAmount(b.limit > 0 ? String(b.limit) : ''); }}
+                  <button onClick={() => { setEditCat(b.category); setEditAmount(b.limit > 0 ? String(b.limit) : ''); }}
                     style={{
                       background: 'transparent', border: 'none', color: '#5e6e82', cursor: 'pointer', fontSize: 14,
-                    }}>✎</button>
+                    }}>&#9998;</button>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+      )}
     </div>
   );
 }
