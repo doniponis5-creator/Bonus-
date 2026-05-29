@@ -574,7 +574,7 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
   if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const chartData = allSellers.slice(0, 10).map((s: any) => ({
-    name: s.name.length > 20 ? s.name.slice(0, 20) + '...' : s.name,
+    name: s.name.length > 30 ? s.name.slice(0, 28) + '…' : s.name,
     revenue: Math.round(s.total_revenue),
     sold: Math.round(s.total_sold),
   })) || [];
@@ -598,13 +598,15 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
       {chartData.length > 0 && (
         <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20, marginBottom: 20 }}>
           <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Топ-10 по выручке</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 100 }}>
+          <ResponsiveContainer width="100%" height={380}>
+            <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
               <XAxis type="number" stroke="#5e6e82" tickFormatter={(v: number) => fmt(v)} />
-              <YAxis type="category" dataKey="name" stroke="#8899aa" width={100} tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="name" stroke="#94a3b8" width={160} tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-              <Bar dataKey="revenue" fill="#FFE600" radius={[0, 6, 6, 0]} name="Выручка" />
+              <Bar dataKey="revenue" radius={[0, 6, 6, 0]} name="Выручка" label={{ position: 'right', fill: '#FFE600', fontSize: 11, formatter: (v: number) => fmt(v) }}>
+                {chartData.map((_: any, i: number) => <Cell key={i} fill={`hsl(${50 - i * 3}, 100%, ${55 - i * 2}%)`} />)}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -891,8 +893,8 @@ function MarginsTab({ data }: { data: any }) {
 
   const visible = filtered.slice(0, visibleCount);
 
-  const chartData = (data.items || []).slice(0, 15).map((m: any) => ({
-    name: m.name.length > 18 ? m.name.slice(0, 18) + '...' : m.name,
+  const chartData = (data.items || []).slice(0, 10).map((m: any) => ({
+    name: m.name.length > 30 ? m.name.slice(0, 28) + '…' : m.name,
     margin: m.margin_percent,
     profit: Math.round(m.total_profit),
   }));
@@ -908,13 +910,15 @@ function MarginsTab({ data }: { data: any }) {
       {chartData.length > 0 && (
         <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20, marginBottom: 20 }}>
           <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Маржа по товарам, %</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 100 }}>
+          <ResponsiveContainer width="100%" height={380}>
+            <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 60 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
               <XAxis type="number" stroke="#5e6e82" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
-              <YAxis type="category" dataKey="name" stroke="#8899aa" width={100} tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="name" stroke="#94a3b8" width={160} tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number, name: string) => name === 'margin' ? `${v}%` : fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-              <Bar dataKey="margin" fill="#22c55e" radius={[0, 6, 6, 0]} name="Маржа %" />
+              <Bar dataKey="margin" radius={[0, 6, 6, 0]} name="Маржа %" label={{ position: 'right', fill: '#22c55e', fontSize: 11, formatter: (v: number) => `${v}%` }}>
+                {chartData.map((_: any, i: number) => <Cell key={i} fill={`hsl(${150 - i * 4}, ${70 - i * 2}%, ${50 - i * 2}%)`} />)}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
