@@ -819,7 +819,7 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
                   {catData.map((d: any, i: number) => <Cell key={i} fill={d.fill} />)}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'transparent' }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+
               </PieChart>
             </ResponsiveContainer>
           </div>
