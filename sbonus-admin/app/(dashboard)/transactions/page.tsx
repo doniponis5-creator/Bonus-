@@ -81,7 +81,7 @@ export default function TransactionsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800 }}><CreditCard size={24} /> Транзакции</h1>
           <p style={{ color: 'var(--text2)', fontSize: 13, marginTop: 4 }}>Всего: {total.toLocaleString('ru-RU')}</p>

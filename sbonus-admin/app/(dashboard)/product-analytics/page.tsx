@@ -276,9 +276,9 @@ export default function ProductAnalyticsPage() {
   }
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="page-root" style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Package size={28} color="#FFE600" />
           <h1 style={{ color: '#e2eaf6', fontSize: 24, fontWeight: 700, margin: 0 }}>
@@ -295,7 +295,7 @@ export default function ProductAnalyticsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{
+      <div className="mobile-tab-bar" style={{
         display: 'flex', gap: 4, marginBottom: 24, overflowX: 'auto',
         background: '#0a101e', borderRadius: 12, padding: 4,
         border: '1px solid #1e293b',

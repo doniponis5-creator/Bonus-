@@ -70,20 +70,53 @@ a { text-decoration: none; color: inherit; }
   /* Hide desktop sidebar */
   aside { display: none !important; }
 
+  /* Root page padding */
+  .page-root {
+    padding: 16px 12px !important;
+  }
+
+  /* Stack side-by-side layouts (donut + legend, etc.) */
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .mobile-stack .recharts-responsive-container {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
   /* Cards: compact */
   .card { padding: 14px; border-radius: 12px; }
 
-  /* Tables: horizontal scroll wrapper */
+  /* Tables: scrollable wrapper */
+  .table-scroll-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+  }
   .table-wrap,
   .table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .table { white-space: nowrap; min-width: 600px; }
   .table th, .table td { padding: 10px 12px; font-size: 12px; }
 
+  /* All raw tables — horizontal scroll */
+  table:not(.no-scroll) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table:not(.no-scroll) thead,
+  table:not(.no-scroll) tbody { display: table; width: 100%; table-layout: auto; }
+  table:not(.no-scroll) { min-width: 500px; }
+  table th, table td { padding: 10px 12px !important; font-size: 12px !important; }
+
   /* Inputs: prevent iOS zoom */
   input, textarea, select { font-size: 16px !important; }
 
-  /* Page headers */
-  .page-header {
+  /* Page headers — all pages use inline flex */
+  .page-header,
+  [class*="page-header"] {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 12px !important;
@@ -111,7 +144,25 @@ a { text-decoration: none; color: inherit; }
     font-size: 11px !important;
   }
 
-  /* Buttons: full width where needed */
+  /* Tab bar — inline flex tabs that need horizontal scroll */
+  .tab-row,
+  .mobile-tab-bar {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 4px !important;
+    padding-bottom: 4px;
+    flex-wrap: nowrap !important;
+  }
+  .tab-row button,
+  .mobile-tab-bar button {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* Buttons */
   .btn { padding: 10px 14px; font-size: 13px; }
   .btn-row {
     display: flex !important;
@@ -121,7 +172,7 @@ a { text-decoration: none; color: inherit; }
   .btn-row .btn,
   .btn-row button { flex: 1; min-width: 0; }
 
-  /* Modal overlay: full screen on mobile */
+  /* Modal overlay: bottom sheet on mobile */
   .modal-overlay {
     align-items: flex-end !important;
     padding: 0 !important;
@@ -148,7 +199,7 @@ a { text-decoration: none; color: inherit; }
   /* Stats value smaller */
   .stat-value { font-size: 22px !important; }
 
-  /* Charts: reduce height */
+  /* Charts: reduce height on small screens */
   .recharts-responsive-container { max-height: 220px !important; }
 
   /* Form grid */
@@ -169,17 +220,68 @@ a { text-decoration: none; color: inherit; }
     font-size: 12px;
   }
 
-  /* Tab buttons — horizontal scroll */
-  .tab-row {
-    display: flex !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    gap: 4px !important;
-    padding-bottom: 4px;
+  /* ── Inline style overrides ── */
+
+  /* ALL inline grids → single column */
+  [style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
   }
-  .tab-row button {
-    white-space: nowrap;
-    flex-shrink: 0;
+
+  /* Exception: auto-fit grids → 2 columns (KPI cards) */
+  [style*="minmax(1"][style*="auto-fit"],
+  [style*="minmax(2"][style*="auto-fit"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Force flex wrapping everywhere */
+  [style*="display: flex"][style*="gap"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Donut chart + legend side-by-side → stack */
+  [style*="display: flex"][style*="gap: 24"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* ResponsiveContainer width percentage → full */
+  .recharts-responsive-container {
+    width: 100% !important;
+  }
+
+  /* Charts: constrain */
+  .recharts-wrapper {
+    max-height: 250px !important;
+  }
+
+  /* Inline flex rows: space-between → wrap */
+  [style*="display: flex"][style*="justify-content: space-between"] {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  /* Page titles */
+  h1 { font-size: 20px !important; }
+  h2 { font-size: 17px !important; }
+  h3 { font-size: 14px !important; }
+
+  /* Chart font size */
+  .recharts-wrapper svg { font-size: 10px; }
+
+  /* Touch-friendly tap targets */
+  button, a, [role="button"] {
+    min-height: 36px;
+  }
+
+  /* iOS bounce prevention */
+  html { overscroll-behavior: none; }
+
+  /* Smooth scrolling */
+  * { -webkit-overflow-scrolling: touch; }
+
+  /* Bottom safe area for bottom nav */
+  .main-content {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
   }
 }
 
@@ -192,4 +294,33 @@ a { text-decoration: none; color: inherit; }
 /* Safe area for iOS notch + bottom nav */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   body { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Tablet tweaks */
+@media (min-width: 768px) and (max-width: 1024px) {
+  [style*="gridTemplateColumns"][style*="repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  [style*="gridTemplateColumns"][style*="repeat(3"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  h1 { font-size: 22px !important; }
+}
+
+/* PWA standalone mode tweaks */
+@media all and (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  /* Allow text selection in inputs and content */
+  input, textarea, [contenteditable], td, .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  /* Status bar area */
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
 }

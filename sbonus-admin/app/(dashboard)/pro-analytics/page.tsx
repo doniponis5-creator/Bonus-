@@ -993,7 +993,7 @@ export default function ProAnalyticsPage() {
   ];
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div className="page-root" style={{ maxWidth: 1100, margin: '0 auto' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1022,7 +1022,7 @@ export default function ProAnalyticsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{
+      <div className="mobile-tab-bar" style={{
         display: 'flex', gap: 4, overflowX: 'auto', marginBottom: 20,
         background: '#0d1526', borderRadius: 12, padding: 4, border: '1px solid #1e293b',
       }}>

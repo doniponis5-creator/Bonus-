@@ -456,9 +456,9 @@ export default function FinancialsPage() {
   }
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="page-root" style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Wallet size={28} color="#FFE600" />
           <h1 style={{ color: '#e2eaf6', fontSize: 24, fontWeight: 700, margin: 0 }}>P&L Финансы</h1>
@@ -479,7 +479,7 @@ export default function FinancialsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{
+      <div className="mobile-tab-bar" style={{
         display: 'flex', gap: 4, marginBottom: 24, background: '#0a101e',
         borderRadius: 12, padding: 4, border: '1px solid #1e293b',
       }}>
@@ -572,7 +572,7 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
             <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600 }}>Структура расходов</h3>
             <span style={{ color: '#94a3b8', fontSize: 12 }}>{summary.expense_categories.length} категорий • {fmtMoney(total)}</span>
           </div>
-          <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+          <div className="mobile-stack" style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
             <ResponsiveContainer width="45%" height={260}>
               <PieChart>
                 <Pie data={grouped.map((c: any, i: number) => ({
@@ -761,7 +761,7 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
           background: '#0d1526', border: '1px solid #22c55e30', borderRadius: 14,
           padding: 20, marginBottom: 16,
         }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 12, marginBottom: 12 }}>
+          <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 12, marginBottom: 12 }}>
             <div>
               <label style={{ color: '#8899aa', fontSize: 11, display: 'block', marginBottom: 4 }}>Категория</label>
               <input list="cat-list" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
