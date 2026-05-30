@@ -32,6 +32,11 @@ from app.api.v1.financials import router as financials_router
 from app.api.v1.business_intelligence import router as bi_router
 from app.api.v1.customer360 import router as customer360_router
 from app.api.v1.forecast import router as forecast_router
+from app.api.v1.gamification import router as gamification_router
+from app.api.v1.branch_analytics import router as branch_analytics_router
+from app.api.v1.feedback import router as feedback_router
+from app.api.v1.smart_campaigns import router as smart_campaigns_router
+from app.api.v1.reports import router as reports_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -63,3 +68,8 @@ api_router.include_router(financials_router)
 api_router.include_router(bi_router)
 api_router.include_router(customer360_router)
 api_router.include_router(forecast_router)
+api_router.include_router(gamification_router)
+api_router.include_router(branch_analytics_router)
+api_router.include_router(feedback_router)
+api_router.include_router(smart_campaigns_router)
+api_router.include_router(reports_router)

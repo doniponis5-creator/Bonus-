@@ -368,3 +368,42 @@ export const forecastAPI = {
     api.get(`/api/v1/forecast/customers?history_days=${historyDays}&forecast_days=${forecastDays}`),
   summary: () => api.get('/api/v1/forecast/summary'),
 };
+
+
+// ─── Gamification ───
+export const gamificationAPI = {
+  adminStats: () => api.get('/api/v1/gamification/admin/stats'),
+  profile: (customerId: string) => api.get(\`/api/v1/gamification/profile/\${customerId}\`),
+};
+
+// ─── Branch Analytics ───
+export const branchAPI = {
+  comparison: (days = 30) => api.get(\`/api/v1/branch-analytics/comparison?days=\${days}\`),
+  trends: (days = 30) => api.get(\`/api/v1/branch-analytics/trends?days=\${days}\`),
+  heatmap: (days = 30) => api.get(\`/api/v1/branch-analytics/heatmap?days=\${days}\`),
+  cashierPerformance: (days = 30) => api.get(\`/api/v1/branch-analytics/cashier-performance?days=\${days}\`),
+};
+
+// ─── Feedback & NPS ───
+export const feedbackAPI = {
+  dashboard: (days = 90) => api.get(\`/api/v1/feedback/admin/dashboard?days=\${days}\`),
+  submit: (data: { customer_id: string; score: number; comment?: string; source?: string }) =>
+    api.post('/api/v1/feedback/submit', data),
+  remove: (id: string) => api.delete(\`/api/v1/feedback/admin/\${id}\`),
+};
+
+// ─── Smart Campaigns ───
+export const smartCampaignAPI = {
+  segments: (days = 365) => api.get(\`/api/v1/smart-campaigns/segments?days=\${days}\`),
+  segmentCustomers: (segmentId: string, days = 365) =>
+    api.get(\`/api/v1/smart-campaigns/segments/\${segmentId}/customers?days=\${days}\`),
+  suggest: (data: { segment_id: string; bonus_amount?: number }) =>
+    api.post('/api/v1/smart-campaigns/suggest', data),
+  templates: () => api.get('/api/v1/smart-campaigns/templates'),
+};
+
+// ─── Reports ───
+export const reportsAPI = {
+  daily: (date?: string) => api.get('/api/v1/reports/daily' + (date ? \`?date=\${date}\` : ''), { responseType: 'blob' }),
+  monthly: (month?: string) => api.get('/api/v1/reports/monthly' + (month ? \`?month=\${month}\` : ''), { responseType: 'blob' }),
+};

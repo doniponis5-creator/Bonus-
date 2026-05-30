@@ -23,7 +23,7 @@ from sqlalchemy.orm import selectinload
 from app.models import (
     BonusAccount, Customer, Coupon, CustomerDebt,
     Setting, Tier, Transaction, TransactionType,
-    BonusCampaign, PromoCode,
+    BonusCampaign, PromoCode, Product,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,8 @@ COMMANDS = {
     "help": ["ПОМОЩЬ", "HELP", "КОМАНДЫ", "МЕНЮ", "MENU", "YORDAM", "СТАРТ", "START", "ПРИВЕТ", "HI", "САЛОМ"],
     "contact": ["КОНТАКТ", "АДРЕС", "ТЕЛЕФОН", "ALOQA", "CONTACT", "МАНЗИЛ"],
     "tier": ["УРОВЕНЬ", "TIER", "СТАТУС", "STATUS", "DARAJA"],
+    "products": ["ТОВАР", "ТОВАРЫ", "КАТАЛОГ", "ЦЕНА", "ЦЕНЫ", "PRODUCT", "CATALOG", "MAHSULOT", "NARX", "PRICE"],
+    "search_product": ["НАЙТИ", "ПОИСК", "SEARCH", "QIDIRUV", "IZLASH"],
 }
 
 
@@ -89,6 +91,8 @@ async def handle_message(
         "contact": _handle_contact,
         "tier": _handle_tier,
         "promo_code_check": _handle_promo_code_check,
+        "products": _handle_products,
+        "search_product": _handle_search_product,
     }
 
     handler = handlers.get(command, _handle_help)
@@ -485,10 +489,105 @@ async def _handle_help(phone: str, text: str, customer: Customer | None, db: Asy
         f"🎡 *КОЛЕСО* — крутить колесо удачи\n"
         f"👥 *РЕФЕРАЛ* — пригласить друга\n"
         f"💳 *ДОЛГ* — рассрочки и задолженности\n"
+        f"🛍️ *ТОВАРЫ* — каталог и цены\n"
+        f"🔍 *НАЙТИ [название]* — поиск товара\n"
         f"📍 *КОНТАКТ* — адрес и телефон магазина\n\n"
         f"Просто напишите одно из слов выше! ☝️"
     )
 
+
+
+
+# ═══════════════════════════════════════════
+# PRODUCT CATALOG HANDLERS
+# ═══════════════════════════════════════════
+
+async def _handle_products(phone: str, text: str, customer: Customer | None, db: AsyncSession) -> str:
+    """Каталог товаров — топ товары по категориям."""
+    from sqlalchemy import select, func, desc
+
+    # Get categories with product count
+    cats = await db.execute(
+        select(
+            Product.category,
+            func.count().label("cnt"),
+        ).where(
+            Product.is_active == True,
+            Product.current_stock > 0,
+        ).group_by(Product.category).order_by(desc("cnt")).limit(10)
+    )
+    categories = cats.all()
+
+    if not categories:
+        return "🛍️ Каталог товаров пока пуст. Загляните в магазин!"
+
+    msg = "🛍️ *Каталог Смарт Центр*\n\n"
+    msg += "📦 *Категории товаров:*\n"
+    for i, cat in enumerate(categories, 1):
+        name = cat.category or "Другое"
+        msg += f"{i}. {name} ({cat.cnt} шт)\n"
+
+    # Top 5 popular products
+    top = await db.execute(
+        select(Product.name, Product.price, Product.category)
+        .where(Product.is_active == True, Product.current_stock > 0)
+        .order_by(desc(Product.last_sold_at))
+        .limit(5)
+    )
+    top_products = top.all()
+
+    if top_products:
+        msg += "\n🔥 *Популярные товары:*\n"
+        for p in top_products:
+            msg += f"• {p.name} — *{int(p.price)} сом*\n"
+
+    msg += "\n🔍 Чтобы найти товар, напишите:\n*НАЙТИ [название]*\n"
+    msg += "Например: *НАЙТИ iPhone* или *НАЙТИ наушники*"
+    return msg
+
+
+async def _handle_search_product(phone: str, text: str, customer: Customer | None, db: AsyncSession) -> str:
+    """Поиск товара по названию."""
+    # Extract search query
+    query = text.strip()
+    for prefix in ["НАЙТИ ", "ПОИСК ", "SEARCH ", "QIDIRUV ", "IZLASH "]:
+        if query.upper().startswith(prefix):
+            query = query[len(prefix):].strip()
+            break
+
+    if len(query) < 2:
+        return "🔍 Напишите название товара после команды НАЙТИ.\nПример: *НАЙТИ iPhone*"
+
+    # Search products
+    search_pattern = f"%{query}%"
+    results = await db.execute(
+        select(Product)
+        .where(
+            Product.is_active == True,
+            Product.name.ilike(search_pattern),
+        )
+        .order_by(desc(Product.current_stock))
+        .limit(10)
+    )
+    products = results.scalars().all()
+
+    if not products:
+        return f"🔍 По запросу \"{query}\" ничего не найдено.\n\nПопробуйте другое название или загляните в магазин!"
+
+    msg = f"🔍 *Результаты поиска: \"{query}\"*\n\n"
+    for i, p in enumerate(products, 1):
+        stock_icon = "✅" if p.current_stock > 5 else ("⚠️" if p.current_stock > 0 else "❌")
+        stock_text = f"В наличии: {int(p.current_stock)}" if p.current_stock > 0 else "Нет в наличии"
+        msg += f"{i}. *{p.name}*\n"
+        msg += f"   💰 Цена: *{int(p.price)} сом*\n"
+        msg += f"   {stock_icon} {stock_text}\n"
+        if p.category:
+            msg += f"   📦 Категория: {p.category}\n"
+        msg += "\n"
+
+    msg += f"Найдено: {len(products)} товар(ов)\n"
+    msg += "📍 Подробнее — в магазине Смарт Центр!"
+    return msg
 
 # ═══════════════════════════════════════════
 # UTILS

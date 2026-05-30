@@ -5,9 +5,9 @@ import { useEffect, useState, useRef } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Store, Briefcase, Trophy, Ticket,
   Settings, LogOut, FileSearch, Gift, Tag, Star, BarChart3, Disc3,
-  Flame, Send, MessageCircle, Menu, X, ChevronDown,
+  Flame, Send, MessageCircle, Menu, X, ChevronDown, Gamepad2, GitBranch, MessageSquarePlus, FileBarChart,
   FlaskConical, QrCode, Bot, Percent, Activity, PieChart, Crosshair,
-  Package, Wallet, Brain, Scan,
+  Package, Wallet, Brain, Scan, TrendingUp,
 } from 'lucide-react';
 
 // ─── Navigation structure with groups ───
@@ -45,6 +45,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/ab-testing', icon: FlaskConical, label: 'A/B тесты' },
       { href: '/wa-broadcast', icon: MessageCircle, label: 'Рассылки WA' },
       { href: '/referral-board', icon: Users, label: 'Referral 2.0' },
+      { href: '/smart-campaigns', icon: Brain, label: 'Smart Кампании' },
     ],
   },
   {
@@ -58,6 +59,10 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/business-analytics', icon: PieChart, label: 'Бизнес PRO' },
       { href: '/marketing-roi', icon: Crosshair, label: 'Воронка и ROI' },
       { href: '/forecast', icon: TrendingUp, label: 'AI Прогноз' },
+      { href: '/branch-compare', icon: GitBranch, label: 'Филиалы PRO' },
+      { href: '/feedback', icon: MessageSquarePlus, label: 'NPS & Отзывы' },
+      { href: '/gamification', icon: Gamepad2, label: 'Геймификация' },
+      { href: '/reports', icon: FileBarChart, label: 'PDF Отчёты' },
       { href: '/realtime', icon: Activity, label: 'Real-time' },
       { href: '/reviews', icon: Star, label: 'Отзывы' },
       { href: '/audit-logs', icon: FileSearch, label: 'Журнал' },

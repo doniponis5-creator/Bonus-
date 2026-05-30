@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S Bonus+ — Бонусная программа Смарт Центр</title>
+<meta name="description" content="S Bonus+ — бонусная программа магазина Смарт Центр. Копите бонусы, получайте кешбэк, крутите колесо удачи!">
+<meta name="theme-color" content="#1a1a2e">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#f59e0b;--dark:#1a1a2e;--darker:#0f0f1e;--light:#f1f5f9;--gray:#94a3b8;--accent:#6366f1;--green:#10b981;--radius:12px}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--darker);color:var(--light);overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+.container{max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* Hero */
+.hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;right:-30%;width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,0.15),transparent 70%);border-radius:50%}
+.hero::after{content:'';position:absolute;bottom:-40%;left:-20%;width:500px;height:500px;background:radial-gradient(circle,rgba(245,158,11,0.1),transparent 70%);border-radius:50%}
+.hero-content{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,0.15);color:#a5b4fc;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:20px}
+.hero h1{font-size:48px;font-weight:800;line-height:1.1;margin-bottom:16px}
+.hero h1 span{background:linear-gradient(135deg,var(--primary),#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:18px;color:var(--gray);line-height:1.6;margin-bottom:30px}
+.hero-buttons{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:var(--radius);font-size:16px;font-weight:600;cursor:pointer;border:none;transition:transform .2s}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{background:linear-gradient(135deg,var(--primary),#d97706);color:var(--dark)}
+.btn-outline{background:transparent;border:2px solid #334155;color:var(--light)}
+.hero-visual{position:relative}
+.phone-mockup{width:280px;height:560px;background:var(--dark);border-radius:36px;border:3px solid #334155;margin:0 auto;padding:12px;box-shadow:0 30px 60px rgba(0,0,0,0.4)}
+.phone-screen{width:100%;height:100%;background:linear-gradient(180deg,#1e293b,#0f172a);border-radius:24px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.phone-logo{width:64px;height:64px;background:linear-gradient(135deg,var(--primary),#ef4444);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:white;margin-bottom:16px}
+.phone-balance{font-size:14px;color:var(--gray);margin-bottom:4px}
+.phone-amount{font-size:36px;font-weight:800;color:var(--light);margin-bottom:4px}
+.phone-currency{font-size:14px;color:var(--primary)}
+.phone-tier{margin-top:16px;padding:6px 20px;background:rgba(245,158,11,0.15);border-radius:20px;color:var(--primary);font-size:13px;font-weight:600}
+
+/* Features */
+.features{padding:100px 0}
+.section-label{text-align:center;font-size:13px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+.section-title{text-align:center;font-size:36px;font-weight:800;margin-bottom:50px}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feature-card{background:var(--dark);border:1px solid #1e293b;border-radius:var(--radius);padding:28px;transition:border-color .3s,transform .3s}
+.feature-card:hover{border-color:var(--accent);transform:translateY(-4px)}
+.feature-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px}
+.feature-card h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.feature-card p{font-size:14px;color:var(--gray);line-height:1.6}
+
+/* How it works */
+.how{padding:100px 0;background:var(--dark)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:50px}
+.step{text-align:center;position:relative}
+.step-num{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:white;margin:0 auto 16px}
+.step h4{font-size:16px;font-weight:700;margin-bottom:6px}
+.step p{font-size:13px;color:var(--gray)}
+
+/* Tiers */
+.tiers{padding:100px 0}
+.tiers-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:50px}
+.tier-card{background:var(--dark);border:1px solid #1e293b;border-radius:var(--radius);padding:24px;text-align:center;transition:transform .3s}
+.tier-card:hover{transform:scale(1.03)}
+.tier-card.gold{border-color:var(--primary)}
+.tier-emoji{font-size:40px;margin-bottom:12px}
+.tier-name{font-size:18px;font-weight:700;margin-bottom:4px}
+.tier-bonus{font-size:28px;font-weight:800;color:var(--primary);margin-bottom:4px}
+.tier-req{font-size:13px;color:var(--gray)}
+
+/* CTA */
+.cta{padding:80px 0;text-align:center}
+.cta-box{background:linear-gradient(135deg,var(--accent),#8b5cf6);border-radius:20px;padding:60px 40px}
+.cta-box h2{font-size:32px;font-weight:800;margin-bottom:12px}
+.cta-box p{font-size:16px;opacity:0.9;margin-bottom:30px}
+
+/* Footer */
+.footer{border-top:1px solid #1e293b;padding:40px 0;text-align:center}
+.footer-brand{font-size:20px;font-weight:800;margin-bottom:8px}
+.footer-info{font-size:13px;color:var(--gray);line-height:1.8}
+
+@media(max-width:768px){
+  .hero-content{grid-template-columns:1fr;text-align:center}
+  .hero h1{font-size:32px}
+  .hero-buttons{justify-content:center}
+  .hero-visual{display:none}
+  .features-grid{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr 1fr}
+  .tiers-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<section class="hero">
+<div class="container">
+<div class="hero-content">
+<div>
+  <div class="hero-badge">🎉 Бонусная программа</div>
+  <h1>Копите <span>бонусы</span> с каждой покупкой!</h1>
+  <p>S Bonus+ — программа лояльности магазина Смарт Центр. Получайте до 7% кешбэк, крутите колесо удачи и приглашайте друзей!</p>
+  <div class="hero-buttons">
+    <a href="https://cabinet.smartcentr.store" class="btn btn-primary">Личный кабинет</a>
+    <a href="tel:+996557100505" class="btn btn-outline">📞 Позвонить</a>
+  </div>
+</div>
+<div class="hero-visual">
+  <div class="phone-mockup">
+    <div class="phone-screen">
+      <div class="phone-logo">S</div>
+      <div class="phone-balance">Ваш баланс</div>
+      <div class="phone-amount">2 450</div>
+      <div class="phone-currency">бонусных сом</div>
+      <div class="phone-tier">🥇 Gold — 5%</div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="features">
+<div class="container">
+<div class="section-label">Возможности</div>
+<h2 class="section-title">Что даёт S Bonus+?</h2>
+<div class="features-grid">
+  <div class="feature-card"><div class="feature-icon" style="background:#f59e0b22">💰</div><h3>Кешбэк до 7%</h3><p>Получайте бонусы за каждую покупку. Чем больше покупаете — тем выше процент!</p></div>
+  <div class="feature-card"><div class="feature-icon" style="background:#6366f122">🎡</div><h3>Колесо удачи</h3><p>Крутите колесо и выигрывайте бонусы, скидки и подарки!</p></div>
+  <div class="feature-card"><div class="feature-icon" style="background:#10b98122">👥</div><h3>Приглашай друзей</h3><p>Получите 100 бонусов за каждого приглашённого друга!</p></div>
+  <div class="feature-card"><div class="feature-icon" style="background:#ec489922">🎂</div><h3>Подарок на ДР</h3><p>200 бонусов в день рождения — наш подарок вам!</p></div>
+  <div class="feature-card"><div class="feature-icon" style="background:#06b6d422">🎫</div><h3>Купоны и акции</h3><p>Персональные купоны и эксклюзивные предложения.</p></div>
+  <div class="feature-card"><div class="feature-icon" style="background:#8b5cf622">📱</div><h3>Личный кабинет</h3><p>Управляйте бонусами, смотрите историю и достижения онлайн.</p></div>
+</div>
+</div>
+</section>
+
+<section class="how">
+<div class="container">
+<div class="section-label">Как это работает</div>
+<h2 class="section-title">4 простых шага</h2>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><h4>Регистрация</h4><p>Назовите номер телефона кассиру при покупке</p></div>
+  <div class="step"><div class="step-num">2</div><h4>Покупайте</h4><p>Совершайте покупки и получайте бонусы</p></div>
+  <div class="step"><div class="step-num">3</div><h4>Копите</h4><p>Бонусы накапливаются на вашем счёте</p></div>
+  <div class="step"><div class="step-num">4</div><h4>Тратьте</h4><p>Оплачивайте бонусами до 30% покупки</p></div>
+</div>
+</div>
+</section>
+
+<section class="tiers">
+<div class="container">
+<div class="section-label">Уровни</div>
+<h2 class="section-title">Растите вместе с нами</h2>
+<div class="tiers-grid">
+  <div class="tier-card"><div class="tier-emoji">🥉</div><div class="tier-name">Bronze</div><div class="tier-bonus">2%</div><div class="tier-req">от 0 сом</div></div>
+  <div class="tier-card"><div class="tier-emoji">🥈</div><div class="tier-name">Silver</div><div class="tier-bonus">3%</div><div class="tier-req">от 10 000 сом</div></div>
+  <div class="tier-card gold"><div class="tier-emoji">🥇</div><div class="tier-name">Gold</div><div class="tier-bonus">5%</div><div class="tier-req">от 50 000 сом</div></div>
+  <div class="tier-card"><div class="tier-emoji">💎</div><div class="tier-name">Platinum</div><div class="tier-bonus">7%</div><div class="tier-req">от 100 000 сом</div></div>
+</div>
+</div>
+</section>
+
+<section class="cta">
+<div class="container">
+<div class="cta-box">
+  <h2>Присоединяйтесь к S Bonus+!</h2>
+  <p>Уже более 1 000 клиентов копят бонусы с нами</p>
+  <a href="https://cabinet.smartcentr.store/register" class="btn btn-primary" style="font-size:18px;padding:16px 36px">Зарегистрироваться</a>
+</div>
+</div>
+</section>
+
+<footer class="footer">
+<div class="container">
+<div class="footer-brand">S Bonus+ — Смарт Центр</div>
+<div class="footer-info">
+  📍 Ош обл., Араван р-н, ул. Ош-3000, 86<br>
+  📞 0557 100 505 • 0505 000 100<br>
+  © 2024—2026 Смарт Центр. Все права защищены.
+</div>
+</div>
+</footer>
+
+</body>
+</html>
