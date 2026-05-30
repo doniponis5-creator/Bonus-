@@ -56,7 +56,7 @@ export default function Customer360Page() {
     if (q.length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const { data } = await customersAPI.search(q);
+      const { data } = await customersAPI.list({ search: q, limit: 20 });
       setSearchResults(data.customers || data || []);
     } catch { setSearchResults([]); }
     setSearching(false);
