@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Trophy, Flame, Target, Crown, Medal, Star, Users, TrendingUp, Award, Zap, ShoppingCart, Coins, Handshake } from 'lucide-react';
+import { Trophy, Flame, Target, Crown, Medal, Star, Users, TrendingUp, Award, Zap, ShoppingCart, Coins, Handshake, RefreshCw, Gem, Landmark, Banknote, Rocket, Sparkles, UserPlus, Globe, Megaphone, CircleDot } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { gamificationAPI } from '@/lib/api';
 
@@ -12,6 +12,39 @@ const CATEGORY_ICONS: Record<string, any> = {
   tiers: { Icon: Trophy, color: '#8b5cf6' },
   streaks: { Icon: Flame, color: '#ef4444' },
 };
+
+const ACHIEVEMENT_ICONS: Record<string, { Icon: any; color: string }> = {
+  first_purchase: { Icon: ShoppingCart, color: '#6366f1' },
+  regular_10: { Icon: RefreshCw, color: '#6366f1' },
+  loyal_50: { Icon: Gem, color: '#8b5cf6' },
+  legend_100: { Icon: Crown, color: '#f59e0b' },
+  mega_200: { Icon: Trophy, color: '#f59e0b' },
+  saver_1k: { Icon: Coins, color: '#f59e0b' },
+  saver_5k: { Icon: Landmark, color: '#10b981' },
+  saver_10k: { Icon: Banknote, color: '#10b981' },
+  big_spender: { Icon: Target, color: '#ef4444' },
+  ltv_10k: { Icon: TrendingUp, color: '#10b981' },
+  ltv_50k: { Icon: Rocket, color: '#ec4899' },
+  ltv_100k: { Icon: Star, color: '#f59e0b' },
+  ltv_500k: { Icon: Sparkles, color: '#f59e0b' },
+  referrer_1: { Icon: UserPlus, color: '#ec4899' },
+  referrer_5: { Icon: Globe, color: '#6366f1' },
+  referrer_10: { Icon: Megaphone, color: '#ef4444' },
+  wheel_winner: { Icon: CircleDot, color: '#f59e0b' },
+  tier_silver: { Icon: Medal, color: '#94a3b8' },
+  tier_gold: { Icon: Medal, color: '#f59e0b' },
+  tier_platinum: { Icon: Gem, color: '#06b6d4' },
+};
+
+function AchievementIcon({ achievement }: { achievement: any }) {
+  const byId = ACHIEVEMENT_ICONS[achievement.id];
+  if (byId) {
+    const { Icon, color } = byId;
+    return <div style={{ width: 32, height: 32, borderRadius: 8, background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon size={18} color={color} /></div>;
+  }
+  const cat = CATEGORY_ICONS[achievement.category] || { Icon: Medal, color: '#6b7280' };
+  return <div style={{ width: 32, height: 32, borderRadius: 8, background: `${cat.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><cat.Icon size={18} color={cat.color} /></div>;
+}
 
 const STREAK_COLORS = ['#374151', '#6366f1', '#8b5cf6', '#f59e0b', '#ef4444', '#dc2626'];
 
@@ -88,7 +121,7 @@ export default function GamificationPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {achievementData.map((a: any, i: number) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#0f172a', borderRadius: 8 }}>
-                <span style={{ fontSize: 20 }}>{a.icon}</span>
+                <AchievementIcon achievement={a} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>{a.name}</div>
                   <div style={{ fontSize: 11, color: '#9ca3af' }}>{a.desc}</div>
@@ -170,7 +203,7 @@ export default function GamificationPage() {
             const cat = CATEGORY_ICONS[a.category] || { Icon: Medal, color: '#6b7280' };
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#0f172a', borderRadius: 10, borderLeft: `3px solid ${cat.color}` }}>
-                <span style={{ fontSize: 22 }}>{a.icon}</span>
+                <AchievementIcon achievement={a} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>{a.name}</div>
                   <div style={{ fontSize: 11, color: '#9ca3af' }}>{a.desc}</div>

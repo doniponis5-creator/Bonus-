@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Brain, Target, Users, Zap, TrendingUp, Send, MessageCircle, DollarSign, Clock, Calendar } from 'lucide-react';
+import { Brain, Target, Users, Zap, TrendingUp, Send, MessageCircle, DollarSign, Clock, Calendar, Crown, Gem, Sprout, UserPlus, AlertTriangle, Eye, Moon, BedDouble, PartyPopper, Heart, Gift, Cake, CircleDot } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { smartCampaignAPI } from '@/lib/api';
 
@@ -9,6 +9,37 @@ const SEG_COLORS: Record<string, string> = {
   new_customers: '#3b82f6', at_risk: '#f59e0b', need_attention: '#f97316',
   hibernating: '#ef4444', lost: '#dc2626',
 };
+
+const SEG_ICONS: Record<string, any> = {
+  champions: Crown,
+  loyal: Gem,
+  potential_loyalists: Sprout,
+  new_customers: UserPlus,
+  at_risk: AlertTriangle,
+  need_attention: Eye,
+  hibernating: Moon,
+  lost: BedDouble,
+};
+
+const TEMPLATE_ICONS: Record<string, any> = {
+  welcome: PartyPopper,
+  comeback: Heart,
+  vip: Crown,
+  weekend: Gift,
+  birthday: Cake,
+  flash_sale: Zap,
+};
+
+function SegIcon({ id, size = 20 }: { id: string; size?: number }) {
+  const Icon = SEG_ICONS[id] || CircleDot;
+  const color = SEG_COLORS[id] || '#6b7280';
+  return <div style={{ width: size + 10, height: size + 10, borderRadius: 8, background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon size={size} color={color} /></div>;
+}
+
+function TplIcon({ id }: { id: string }) {
+  const Icon = TEMPLATE_ICONS[id] || Gift;
+  return <div style={{ width: 30, height: 30, borderRadius: 8, background: '#6366f120', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon size={16} color="#6366f1" /></div>;
+}
 
 export default function SmartCampaignsPage() {
   const [data, setData] = useState<any>(null);
@@ -75,7 +106,7 @@ export default function SmartCampaignsPage() {
               <div key={s.id} onClick={() => handleSelectSegment(s.id)}
                 style={{ background: selectedSeg === s.id ? '#312e81' : '#1e293b', borderRadius: 12, padding: '14px 16px', border: selectedSeg === s.id ? '2px solid #6366f1' : '1px solid #334155', cursor: 'pointer', transition: 'all .2s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 22 }}>{s.icon}</span>
+                  <SegIcon id={s.id} />
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{s.name}</div>
                     <div style={{ fontSize: 11, color: '#9ca3af' }}>{s.desc}</div>
@@ -112,7 +143,7 @@ export default function SmartCampaignsPage() {
         <div style={{ background: 'linear-gradient(135deg, #1e1b4b, #312e81)', borderRadius: 12, padding: 24, border: '1px solid #6366f1', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <Zap size={20} color="#f59e0b" />
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>AI-рекомендация для {suggestion.segment?.icon} {suggestion.segment?.name}</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>AI-рекомендация для <SegIcon id={suggestion.segment?.id} size={16} /> {suggestion.segment?.name}</h3>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
@@ -162,7 +193,7 @@ export default function SmartCampaignsPage() {
           {templates.map((t: any, i: number) => (
             <div key={i} style={{ background: '#0f172a', borderRadius: 10, padding: '14px 16px', border: '1px solid #1e293b' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 20 }}>{t.icon}</span>
+                <TplIcon id={t.id} />
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{t.name}</div>
               </div>
               <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8, lineHeight: 1.5 }}>{t.template}</div>
