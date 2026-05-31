@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart,
-  Target, RefreshCw, ArrowUpRight, ArrowDownRight, Info,
+  Target, RefreshCw, ArrowUpRight, ArrowDownRight, Info, BarChart3,
 } from 'lucide-react';
 
 /* ── Стили ── */
@@ -301,7 +301,7 @@ export default function BusinessAnalyticsPage() {
 
       {/* Summary info */}
       <div style={{ ...card, background: 'linear-gradient(135deg, rgba(255,230,0,.05), rgba(34,197,94,.05))' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>📊 Что значат эти метрики?</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><BarChart3 size={18} style={{ color: '#6366f1' }} /> Что значат эти метрики?</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
           <div>
             <strong style={{ color: 'var(--text)' }}>LTV (Lifetime Value)</strong> — сколько в среднем один клиент принёс за всё время. Чем выше — тем лучше работает удержание.

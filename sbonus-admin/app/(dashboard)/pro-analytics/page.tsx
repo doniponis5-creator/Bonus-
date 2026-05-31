@@ -119,7 +119,7 @@ function TelegramTab({ month }: { month: string }) {
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-            {sent ? '✅ Отправлено!' : (sending ? 'Отправка...' : 'Отправить сейчас')}
+            {sent ? 'Отправлено!' : (sending ? 'Отправка...' : 'Отправить сейчас')}
           </button>
         </div>
 

@@ -1,16 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Trophy, Flame, Target, Crown, Medal, Star, Users, TrendingUp, Award, Zap } from 'lucide-react';
+import { Trophy, Flame, Target, Crown, Medal, Star, Users, TrendingUp, Award, Zap, ShoppingCart, Coins, Handshake } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { gamificationAPI } from '@/lib/api';
 
 const CATEGORY_ICONS: Record<string, any> = {
-  purchases: { icon: '🛒', color: '#6366f1' },
-  bonuses: { icon: '💰', color: '#f59e0b' },
-  spending: { icon: '📈', color: '#10b981' },
-  social: { icon: '🤝', color: '#ec4899' },
-  tiers: { icon: '🏆', color: '#8b5cf6' },
-  streaks: { icon: '🔥', color: '#ef4444' },
+  purchases: { Icon: ShoppingCart, color: '#6366f1' },
+  bonuses: { Icon: Coins, color: '#f59e0b' },
+  spending: { Icon: TrendingUp, color: '#10b981' },
+  social: { Icon: Handshake, color: '#ec4899' },
+  tiers: { Icon: Trophy, color: '#8b5cf6' },
+  streaks: { Icon: Flame, color: '#ef4444' },
 };
 
 const STREAK_COLORS = ['#374151', '#6366f1', '#8b5cf6', '#f59e0b', '#ef4444', '#dc2626'];
@@ -167,7 +167,7 @@ export default function GamificationPage() {
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
           {(data.achievements_config || []).map((a: any, i: number) => {
-            const cat = CATEGORY_ICONS[a.category] || { icon: '🏅', color: '#6b7280' };
+            const cat = CATEGORY_ICONS[a.category] || { Icon: Medal, color: '#6b7280' };
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#0f172a', borderRadius: 10, borderLeft: `3px solid ${cat.color}` }}>
                 <span style={{ fontSize: 22 }}>{a.icon}</span>

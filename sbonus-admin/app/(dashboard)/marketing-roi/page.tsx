@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   RefreshCw, Users, UserCheck, Repeat, Heart, Share2, Info,
-  TrendingUp, Megaphone, Ticket, UserPlus, ArrowRight,
+  TrendingUp, Megaphone, Ticket, UserPlus, ArrowRight, AlertTriangle,
 } from 'lucide-react';
 
 const card: React.CSSProperties = {
@@ -160,7 +160,7 @@ export default function MarketingROIPage() {
                 padding: '8px 12px', borderRadius: 8, background: isLow ? 'rgba(239,68,68,.08)' : 'var(--bg2)',
                 fontSize: 12, color: 'var(--text2)', borderLeft: `3px solid ${isLow ? '#ef4444' : FUNNEL_COLORS[i]}`,
               }}>
-                {isLow && <span style={{ color: '#ef4444', fontWeight: 600 }}>⚠ Низкая конверсия! </span>}
+                {isLow && <span style={{ color: '#ef4444', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={14} /> Низкая конверсия! </span>}
                 {FUNNEL_TIPS[step.key] || ''}
               </div>
             );
@@ -263,7 +263,7 @@ export default function MarketingROIPage() {
 
       {/* Marketing tips */}
       <div style={{ ...card, background: 'linear-gradient(135deg, rgba(59,130,246,.05), rgba(139,92,246,.05))' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>📈 Как улучшить маркетинг?</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><TrendingUp size={18} style={{ color: '#10b981' }} /> Как улучшить маркетинг?</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
           <div>
             <strong style={{ color: 'var(--text)' }}>Воронка</strong> — ищите этап с наибольшим «провалом». Если мало первых покупок — улучшите welcome-бонус. Мало повторных — добавьте push после 7 дней.

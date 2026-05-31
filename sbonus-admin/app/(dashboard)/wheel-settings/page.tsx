@@ -258,8 +258,8 @@ export default function WheelSettingsPage() {
                       : colors.textMuted,
                   }}
                 >
-                  <option value="bonus">💰 Бонус</option>
-                  <option value="physical">🎁 Приз</option>
+                  <option value="bonus">Бонус</option>
+                  <option value="physical">Приз</option>
                   <option value="none">— Пусто</option>
                 </select>
 
@@ -356,7 +356,7 @@ export default function WheelSettingsPage() {
                   <div style={{ width: 12, height: 12, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
                   <span style={{ flex: 1, color: colors.text }}>{seg.label}</span>
                   <span style={{ color: seg.prize_type === "physical" ? "#a855f7" : colors.textMuted, fontWeight: 600 }}>
-                    {seg.prize_type === "physical" ? "🎁" : seg.value > 0 ? `+${seg.value}` : "—"}
+                    {seg.prize_type === "physical" ? "Приз" : seg.value > 0 ? `+${seg.value}` : "—"}
                   </span>
                   <span style={{ color: colors.accent, fontWeight: 700, width: 45, textAlign: "right" }}>
                     {(seg.probability * 100).toFixed(1)}%

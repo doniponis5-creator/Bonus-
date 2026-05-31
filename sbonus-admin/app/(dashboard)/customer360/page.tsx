@@ -7,6 +7,7 @@ import {
   Search, ArrowLeft, CreditCard, Users, Zap, BarChart3,
   Target, Award, Package, Percent, History, Heart,
   Shield, RefreshCw, DollarSign, Activity,
+  Coins, Megaphone, RotateCcw, Cake, Handshake,
 } from 'lucide-react';
 import { customer360API, customersAPI } from '@/lib/api';
 import {
@@ -25,15 +26,15 @@ const RFM_COLORS: Record<string, string> = {
   Regular: '#f59e0b', 'At Risk': '#f97316', Lost: '#ef4444',
 };
 
-const TX_ICONS: Record<string, { icon: string; color: string; label: string }> = {
-  earn: { icon: '💰', color: '#10b981', label: 'Бонус' },
-  spend: { icon: '🛍️', color: '#ef4444', label: 'Списание' },
-  expire: { icon: '⏰', color: '#6b7280', label: 'Истекло' },
-  refund: { icon: '↩️', color: '#f59e0b', label: 'Возврат' },
-  birthday: { icon: '🎂', color: '#ec4899', label: 'ДР' },
-  referral: { icon: '👥', color: '#8b5cf6', label: 'Реферал' },
-  promo: { icon: '🎁', color: '#06b6d4', label: 'Промо' },
-  campaign: { icon: '📢', color: '#6366f1', label: 'Кампания' },
+const TX_ICONS: Record<string, { Icon: any; color: string; label: string }> = {
+  earn: { Icon: Coins, color: '#10b981', label: 'Бонус' },
+  spend: { Icon: ShoppingCart, color: '#ef4444', label: 'Списание' },
+  expire: { Icon: Clock, color: '#6b7280', label: 'Истекло' },
+  refund: { Icon: RotateCcw, color: '#f59e0b', label: 'Возврат' },
+  birthday: { Icon: Cake, color: '#ec4899', label: 'ДР' },
+  referral: { Icon: Users, color: '#8b5cf6', label: 'Реферал' },
+  promo: { Icon: Gift, color: '#06b6d4', label: 'Промо' },
+  campaign: { Icon: Megaphone, color: '#6366f1', label: 'Кампания' },
 };
 
 const CHURN_COLORS: Record<string, string> = {
@@ -498,7 +499,7 @@ export default function Customer360Page() {
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0',
                   borderBottom: '1px solid var(--border)',
                 }}>
-                  <span style={{ fontSize: 20 }}>{tx.icon}</span>
+                  <tx.Icon size={20} style={{ color: tx.color }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{tx.label}</div>
                     <div style={{ fontSize: 11, color: 'var(--text3)' }}>

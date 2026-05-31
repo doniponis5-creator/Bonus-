@@ -9,17 +9,18 @@ import {
   Activity, DollarSign, ShoppingCart, Users, Clock, TrendingUp,
   Zap, RefreshCw, Radio, CreditCard, Gift, ArrowUpRight,
   Pause, Play, Eye,
+  Coins, Megaphone, RotateCcw, Cake,
 } from 'lucide-react';
 
-const TX_CONFIG: Record<string, { icon: string; color: string; label: string; sign: string }> = {
-  earn: { icon: '💰', color: '#10b981', label: 'Покупка', sign: '+' },
-  spend: { icon: '🛍️', color: '#ef4444', label: 'Списание', sign: '-' },
-  expire: { icon: '⏰', color: '#6b7280', label: 'Истекло', sign: '-' },
-  refund: { icon: '↩️', color: '#f59e0b', label: 'Возврат', sign: '+' },
-  birthday: { icon: '🎂', color: '#ec4899', label: 'ДР', sign: '+' },
-  referral: { icon: '👥', color: '#8b5cf6', label: 'Реферал', sign: '+' },
-  promo: { icon: '🎁', color: '#06b6d4', label: 'Промо', sign: '+' },
-  campaign: { icon: '📢', color: '#6366f1', label: 'Кампания', sign: '+' },
+const TX_CONFIG: Record<string, { Icon: any; color: string; label: string; sign: string }> = {
+  earn: { Icon: Coins, color: '#10b981', label: 'Покупка', sign: '+' },
+  spend: { Icon: ShoppingCart, color: '#ef4444', label: 'Списание', sign: '-' },
+  expire: { Icon: Clock, color: '#6b7280', label: 'Истекло', sign: '-' },
+  refund: { Icon: RotateCcw, color: '#f59e0b', label: 'Возврат', sign: '+' },
+  birthday: { Icon: Cake, color: '#ec4899', label: 'ДР', sign: '+' },
+  referral: { Icon: Users, color: '#8b5cf6', label: 'Реферал', sign: '+' },
+  promo: { Icon: Gift, color: '#06b6d4', label: 'Промо', sign: '+' },
+  campaign: { Icon: Megaphone, color: '#6366f1', label: 'Кампания', sign: '+' },
 };
 
 export default function RealtimePage() {
@@ -212,8 +213,8 @@ export default function RealtimePage() {
                   borderBottom: '1px solid var(--border)',
                   animation: i === 0 && pulse ? 'fadeIn 0.3s ease-in' : 'none',
                 }}>
-                  <span style={{ fontSize: 20, position: 'relative' }}>
-                    {conf.icon}
+                  <span style={{ position: 'relative', display: 'inline-flex' }}>
+                    <conf.Icon size={20} style={{ color: conf.color }} />
                     {isRecent && (
                       <span style={{
                         position: 'absolute', top: -2, right: -2, width: 6, height: 6,
