@@ -30,7 +30,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models import BonusAccount, Customer, CustomerDebt, Product, PurchaseItem, Setting, Tier, Transaction, TransactionType
+from app.models import BonusAccount, Customer, CustomerDebt, Product, PurchaseItem, Setting, Tier, Transaction, TransactionType, User
 from app.schemas import (
     Webhook1CPurchaseRequest,
     Webhook1CSpendRequest,
@@ -135,6 +135,49 @@ async def _get_customer_or_404(phone: str, db: AsyncSession) -> Customer:
     return customer
 
 
+async def _resolve_cashier_id(
+    db: AsyncSession,
+    cashier_id: uuid.UUID | None,
+    cashier_phone: str | None,
+    cashier_name: str | None,
+) -> uuid.UUID | None:
+    """
+    Определить cashier_id по приоритету:
+    1. cashier_id (UUID) — если передан напрямую
+    2. cashier_phone — поиск по телефону в таблице users
+    3. cashier_name — поиск по имени в таблице users (CASHIER only)
+    """
+    if cashier_id:
+        return cashier_id
+
+    if cashier_phone:
+        clean = cashier_phone.replace("+", "").replace(" ", "").replace("-", "")
+        if not clean.startswith("996"):
+            clean = "996" + clean.lstrip("0")
+        phone_formatted = f"+{clean}"
+        result = await db.execute(
+            select(User.id).where(
+                User.phone == phone_formatted,
+                User.is_active == True,
+            )
+        )
+        user = result.scalar_one_or_none()
+        if user:
+            return user
+
+    if cashier_name:
+        result = await db.execute(
+            select(User.id).where(
+                User.full_name.ilike(f"%{cashier_name.strip()}%"),
+                User.is_active == True,
+            ).limit(1)
+        )
+        user = result.scalar_one_or_none()
+        if user:
+            return user
+
+    return None
+
 
 # ═══════════════════════════════════════════
 # 1. PURCHASE — начисление бонуса
@@ -160,12 +203,19 @@ async def webhook_1c_purchase(
     phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
 
+    # Resolve cashier: UUID → phone → name
+    resolved_cashier = await _resolve_cashier_id(
+        db, body.cashier_id,
+        getattr(body, "cashier_phone", None),
+        getattr(body, "cashier_name", None),
+    )
+
     svc = BonusService(db)
     result = await svc.earn(
         customer_id=customer.id,
         purchase_amount=body.purchase_amount,
         branch_id=body.branch_id,
-        cashier_id=body.cashier_id,
+        cashier_id=resolved_cashier,
         receipt_number=body.receipt_number,
         note=f"1С: чек #{body.receipt_number}",
     )
@@ -236,13 +286,20 @@ async def webhook_1c_spend(
     phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
 
+    # Resolve cashier: UUID → phone → name
+    resolved_cashier = await _resolve_cashier_id(
+        db, body.cashier_id,
+        getattr(body, "cashier_phone", None),
+        getattr(body, "cashier_name", None),
+    )
+
     svc = BonusService(db)
     result = await svc.spend(
         customer_id=customer.id,
         spend_amount=body.spend_amount,
         purchase_amount=body.purchase_amount,
         branch_id=body.branch_id,
-        cashier_id=body.cashier_id,
+        cashier_id=resolved_cashier,
         note=f"1С: оплата бонусами, чек #{body.receipt_number}",
     )
     await db.commit()
@@ -284,6 +341,13 @@ async def webhook_1c_refund(
 
     phone = normalize_phone(body.customer_phone)
     customer = await _get_customer_or_404(phone, db)
+
+    # Resolve cashier: UUID → phone → name
+    resolved_cashier = await _resolve_cashier_id(
+        db, body.cashier_id,
+        getattr(body, "cashier_phone", None),
+        getattr(body, "cashier_name", None),
+    )
 
     # Находим оригинальную earn транзакцию
     orig_result = await db.execute(
@@ -329,7 +393,7 @@ async def webhook_1c_refund(
         amount=actual_deduct,
         purchase_amount=body.refund_amount,
         branch_id=body.branch_id,
-        cashier_id=body.cashier_id,
+        cashier_id=resolved_cashier,
         receipt_number=f"REFUND-{body.original_receipt_number}",
         note=body.note or f"1С: возврат чека #{body.original_receipt_number}",
     )

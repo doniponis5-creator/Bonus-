@@ -265,7 +265,9 @@ class Webhook1CPurchaseRequest(BaseModel):
     customer_phone: str = Field(..., description="Телефон покупателя")
     purchase_amount: Decimal = Field(..., gt=0, description="Сумма покупки в KGS")
     branch_id: uuid.UUID = Field(..., description="UUID филиала")
-    cashier_id: Optional[uuid.UUID] = Field(None, description="UUID кассира")
+    cashier_id: Optional[uuid.UUID] = Field(None, description="UUID кассира (приоритет)")
+    cashier_phone: Optional[str] = Field(None, description="Телефон кассира (если нет cashier_id)")
+    cashier_name: Optional[str] = Field(None, description="ФИО кассира (если нет cashier_id и cashier_phone)")
     receipt_number: str = Field(..., max_length=50, description="Номер чека из 1С")
     items: Optional[list["PurchaseItemInput"]] = Field(None, description="Позиции чека (товары)")
 
@@ -276,7 +278,9 @@ class Webhook1CSpendRequest(BaseModel):
     spend_amount: Decimal = Field(..., gt=0, description="Сумма списания в KGS")
     purchase_amount: Decimal = Field(..., gt=0, description="Сумма покупки в KGS")
     branch_id: uuid.UUID = Field(..., description="UUID филиала")
-    cashier_id: Optional[uuid.UUID] = Field(None, description="UUID кассира")
+    cashier_id: Optional[uuid.UUID] = Field(None, description="UUID кассира (приоритет)")
+    cashier_phone: Optional[str] = Field(None, description="Телефон кассира (если нет cashier_id)")
+    cashier_name: Optional[str] = Field(None, description="ФИО кассира (если нет cashier_id и cashier_phone)")
     receipt_number: str = Field(..., max_length=50, description="Номер чека из 1С")
 
 
@@ -286,7 +290,9 @@ class Webhook1CRefundRequest(BaseModel):
     refund_amount: Decimal = Field(..., gt=0, description="Сумма возврата в KGS")
     original_receipt_number: str = Field(..., max_length=50, description="Номер оригинального чека")
     branch_id: uuid.UUID = Field(..., description="UUID филиала")
-    cashier_id: Optional[uuid.UUID] = Field(None, description="UUID кассира")
+    cashier_id: Optional[uuid.UUID] = Field(None, description="UUID кассира (приоритет)")
+    cashier_phone: Optional[str] = Field(None, description="Телефон кассира (если нет cashier_id)")
+    cashier_name: Optional[str] = Field(None, description="ФИО кассира (если нет cashier_id и cashier_phone)")
     note: Optional[str] = Field(None, max_length=255)
 
 
