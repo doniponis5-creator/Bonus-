@@ -557,7 +557,23 @@ IMMUTABLE_TRANSACTIONS_TRIGGER = """
 CREATE OR REPLACE FUNCTION prevent_transaction_modification()
 RETURNS TRIGGER AS $$
 BEGIN
-    RAISE EXCEPTION 'Таблица transactions иммутабельна: UPDATE и DELETE запрещены';
+    -- Allow cashier_id updates (admin reassignment)
+    IF TG_OP = 'UPDATE' THEN
+        IF OLD.id = NEW.id
+           AND OLD.customer_id IS NOT DISTINCT FROM NEW.customer_id
+           AND OLD.type = NEW.type
+           AND OLD.amount = NEW.amount
+           AND OLD.purchase_amount IS NOT DISTINCT FROM NEW.purchase_amount
+           AND OLD.branch_id IS NOT DISTINCT FROM NEW.branch_id
+           AND OLD.receipt_number IS NOT DISTINCT FROM NEW.receipt_number
+           AND OLD.note IS NOT DISTINCT FROM NEW.note
+           AND OLD.created_at = NEW.created_at
+        THEN
+            -- Only cashier_id changed — allow
+            RETURN NEW;
+        END IF;
+    END IF;
+    RAISE EXCEPTION 'Таблица transactions иммутабельна: разрешено только изменение cashier_id';
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;

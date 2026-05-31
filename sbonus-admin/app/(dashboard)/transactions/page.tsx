@@ -1,5 +1,5 @@
 'use client';
-import { Users, CreditCard, Ticket, Loader2, PlusCircle, MinusCircle, Gift, Clock, RefreshCcw, Undo2, Megaphone, AlertTriangle } from 'lucide-react';
+import { Users, CreditCard, Ticket, Loader2, PlusCircle, MinusCircle, Gift, Clock, RefreshCcw, Undo2, Megaphone, AlertTriangle, UserCog, Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ExportButton from '@/components/ExportButton';
 import { adminAPI } from '@/lib/api';
@@ -33,6 +33,13 @@ export default function TransactionsPage() {
   const [reverseTxn, setReverseTxn] = useState<any>(null);
   const [reverseReason, setReverseReason] = useState('');
   const [reversing, setReversing] = useState(false);
+
+  // Cashier edit modal
+  const [cashierModal, setCashierModal] = useState(false);
+  const [cashierTxn, setCashierTxn] = useState<any>(null);
+  const [cashiers, setCashiers] = useState<any[]>([]);
+  const [selectedCashier, setSelectedCashier] = useState('');
+  const [savingCashier, setSavingCashier] = useState(false);
 
   const perPage = 50;
 
@@ -78,6 +85,31 @@ export default function TransactionsPage() {
   };
 
   const canReverse = (type: string) => !['refund', 'expire'].includes(type);
+
+  const openCashierEdit = async (txn: any) => {
+    setCashierTxn(txn);
+    setSelectedCashier('');
+    setCashierModal(true);
+    try {
+      const { data } = await adminAPI.cashiers();
+      setCashiers(data || []);
+    } catch { setCashiers([]); }
+  };
+
+  const handleCashierSave = async () => {
+    if (!selectedCashier) { toast('warning', 'Выберите кассира'); return; }
+    setSavingCashier(true);
+    try {
+      const { data } = await adminAPI.updateTransactionCashier(cashierTxn.id, selectedCashier);
+      toast('success', data.message);
+      setCashierModal(false);
+      load(page, txType);
+    } catch (err: any) {
+      toast('error', err?.response?.data?.detail || 'Ошибка');
+    } finally {
+      setSavingCashier(false);
+    }
+  };
 
   return (
     <div>
@@ -136,7 +168,18 @@ export default function TransactionsPage() {
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
                     {t.purchase_amount ? `${Number(t.purchase_amount).toLocaleString('ru-RU')} KGS` : '—'}
                   </td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{t.cashier_name}</td>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
+                    <span
+                      onClick={() => openCashierEdit(t)}
+                      title="Изменить кассира"
+                      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 6, transition: 'background 0.15s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#1c2a3a')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      {t.cashier_name}
+                      <UserCog size={12} style={{ color: '#6366f1', opacity: 0.6 }} />
+                    </span>
+                  </td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{t.branch_name}</td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa', whiteSpace: 'nowrap' }}>
                     {new Date(t.created_at).toLocaleString('ru-RU')}
@@ -215,6 +258,52 @@ export default function TransactionsPage() {
                 disabled={reversing || !reverseReason.trim()}
               >
                 {reversing ? 'Обработка...' : 'Подтвердить отмену'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Cashier Edit Modal */}
+      {cashierModal && cashierTxn && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '420px' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UserCog size={18} style={{ color: '#6366f1' }} /> Изменить кассира
+            </h2>
+
+            <div style={{ background: '#1c2a3a', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Клиент:</span><div style={{ fontSize: 13, fontWeight: 600 }}>{cashierTxn.customer_name}</div></div>
+                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Сумма:</span><div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{Number(cashierTxn.amount).toLocaleString('ru-RU')} сом</div></div>
+                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Текущий кассир:</span><div style={{ fontSize: 13 }}>{cashierTxn.cashier_name}</div></div>
+                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Дата:</span><div style={{ fontSize: 12 }}>{new Date(cashierTxn.created_at).toLocaleString('ru-RU')}</div></div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Новый кассир *</label>
+              <select
+                className="input"
+                style={{ width: '100%' }}
+                value={selectedCashier}
+                onChange={e => setSelectedCashier(e.target.value)}
+              >
+                <option value="">Выберите кассира...</option>
+                {cashiers.filter(c => c.is_active).map(c => (
+                  <option key={c.id} value={c.id}>{c.full_name} — {c.branch_name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setCashierModal(false)}>Отмена</button>
+              <button
+                className="btn"
+                style={{ flex: 1, background: '#6366f1', color: '#fff', fontWeight: 700 }}
+                onClick={handleCashierSave}
+                disabled={savingCashier || !selectedCashier}
+              >
+                {savingCashier ? 'Сохранение...' : 'Сохранить'}
               </button>
             </div>
           </div>

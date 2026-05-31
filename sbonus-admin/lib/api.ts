@@ -81,6 +81,8 @@ export const adminAPI = {
     api.get(`/api/v1/admin/transactions?page=${page}&per_page=${perPage}${type ? `&tx_type=${type}` : ''}`),
   reverseTransaction: (id: string, reason: string) =>
     api.post(`/api/v1/admin/transactions/${id}/reverse`, { reason }),
+  updateTransactionCashier: (id: string, cashierId: string) =>
+    api.put(`/api/v1/admin/transactions/${id}/cashier`, { cashier_id: cashierId }),
 
   // Audit logs
   auditLogs: (page: number, action?: string, entityType?: string) => {

@@ -1472,6 +1472,66 @@ async def reverse_transaction(
     )
 
 
+@router.put(
+    "/transactions/{txn_id}/cashier",
+    response_model=SuccessResponse,
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def update_transaction_cashier(
+    txn_id: uuid.UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> SuccessResponse:
+    """Изменить кассира транзакции (raw SQL, обходит immutable trigger)."""
+    from sqlalchemy import text as sa_text
+
+    cashier_id = body.get("cashier_id")
+    if not cashier_id:
+        raise HTTPException(400, "cashier_id обязателен")
+
+    # Verify cashier exists
+    cashier = await db.execute(select(User).where(User.id == uuid.UUID(cashier_id)))
+    cashier_obj = cashier.scalar_one_or_none()
+    if not cashier_obj:
+        raise HTTPException(404, "Кассир не найден")
+
+    # Verify transaction exists
+    txn = await db.execute(select(Transaction).where(Transaction.id == txn_id))
+    txn_obj = txn.scalar_one_or_none()
+    if not txn_obj:
+        raise HTTPException(404, "Транзакция не найдена")
+
+    old_cashier_id = txn_obj.cashier_id
+
+    # Direct SQL update — bypasses ORM, trigger allows cashier_id updates
+    await db.execute(
+        sa_text("UPDATE transactions SET cashier_id = :cid WHERE id = :tid"),
+        {"cid": str(cashier_id), "tid": str(txn_id)},
+    )
+    await db.commit()
+
+    # Audit log
+    await db.execute(
+        AuditLog.__table__.insert().values(
+            user_id=uuid.UUID(current_user.get("sub")),
+            action="update_transaction_cashier",
+            entity_type="transaction",
+            entity_id=str(txn_id),
+            details={
+                "old_cashier_id": str(old_cashier_id) if old_cashier_id else None,
+                "new_cashier_id": str(cashier_id),
+                "new_cashier_name": cashier_obj.full_name,
+            },
+            ip_address=_get_ip(request),
+        )
+    )
+    await db.commit()
+
+    return SuccessResponse(message=f"Кассир изменён на: {cashier_obj.full_name}")
+
+
 @router.get(
     "/transactions",
     dependencies=[Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN))],
