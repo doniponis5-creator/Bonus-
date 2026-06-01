@@ -20,7 +20,7 @@ import SearchScreen from './(main)/search';
 import RegisterScreen from './(main)/register';
 import CustomerScreen from './(main)/customer/[id]';
 import EarnScreen from './(main)/earn';
-import SpendScreen from './(main)/spend';
+// import SpendScreen from './(main)/spend'; // DISABLED: spend removed
 import HistoryScreen from './(main)/history';
 import MotivationScreen from './(main)/motivation';
 import ProductsScreen from './(main)/products';
@@ -63,7 +63,7 @@ export default function RootLayout() {
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: true, title: 'Новый клиент' }} />
           <Stack.Screen name="Customer" component={CustomerScreen} options={{ headerShown: true, title: 'Карточка клиента' }} />
           <Stack.Screen name="Earn" component={EarnScreen} options={{ headerShown: true, title: 'Начислить бонусы' }} />
-          <Stack.Screen name="Spend" component={SpendScreen} options={{ headerShown: true, title: 'Списать бонусы' }} />
+          {/* <Stack.Screen name="Spend" component={SpendScreen} options={{ headerShown: true, title: 'Списать бонусы' }} /> */}
           <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: true, title: 'История' }} />
           <Stack.Screen name="Products" component={ProductsScreen} options={{ headerShown: false, title: 'Товары' }} />
           <Stack.Screen name="Motivation" component={MotivationScreen} options={{ headerShown: true, title: 'Моя мотивация' }} />

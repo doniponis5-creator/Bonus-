@@ -196,9 +196,10 @@ export default function CustomerScreen() {
           onEarn={() => navigation.navigate('Earn', {
             customerId: id, customerName: balance.full_name, tierPercent: balance.tier_percent
           })}
-          onSpend={() => navigation.navigate('Spend', {
-            customerId: id, customerName: balance.full_name, balance: balance.balance
-          })}
+          // DISABLED: spend removed from cashier
+          // onSpend={() => navigation.navigate('Spend', {
+            // customerId: id, customerName: balance.full_name, balance: balance.balance
+          // })}
         />
 
         {/* Быстрые действия */}
