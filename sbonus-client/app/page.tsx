@@ -377,10 +377,6 @@ function DashboardPage() {
                 <input className="input" style={{ width: '100%' }} value={editName} onChange={e => setEditName(e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>Дата рождения</label>
-                <input className="input" type="date" style={{ width: '100%' }} value={editBirth} onChange={e => setEditBirth(e.target.value)} />
-              </div>
-              <div>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>Телефон</label>
                 <input className="input" style={{ width: '100%', opacity: 0.5 }} value={data.phone} disabled />
                 <span style={{ fontSize: 11, color: 'var(--text3)' }}>Телефон нельзя изменить</span>
