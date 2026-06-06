@@ -37,9 +37,9 @@ interface TriggerConfig {
 const DEFAULT_TRIGGERS: TriggerConfig = {
   sleeping_enabled: false,
   sleeping_days: 30,
-  sleeping_template: 'Привет, {name}! Давно не виделись! У вас {balance} KGS бонусов. Ждём вас! {link}',
+  sleeping_template: 'Привет, {name}! Давно не виделись! У вас {balance} сом бонусов. Ждём вас! {link}',
   birthday_enabled: false,
-  birthday_template: 'С днём рождения, {name}! Ваш баланс: {balance} KGS. Приходите за подарком! {link}',
+  birthday_template: 'С днём рождения, {name}! Ваш баланс: {balance} сом. Приходите за подарком! {link}',
 };
 
 const SEGMENT_ICONS: Record<string, any> = {
@@ -326,7 +326,7 @@ export default function WABroadcastPage() {
               padding: 24, marginBottom: 20,
             }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#8899aa', marginBottom: 8, display: 'block' }}>
-                Порог баланса (KGS)
+                Порог баланса (сом)
               </label>
               <input
                 type="number"
@@ -370,7 +370,7 @@ export default function WABroadcastPage() {
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Привет, {name}! У вас {balance} KGS бонусов. Ждём вас! {link}"
+              placeholder="Привет, {name}! У вас {balance} сом бонусов. Ждём вас! {link}"
               rows={5}
               maxLength={2000}
               style={{
@@ -460,7 +460,7 @@ export default function WABroadcastPage() {
                           <span style={{ fontSize: 12, color: '#556677', marginLeft: 8 }}>{c.phone}</span>
                         </div>
                         <span style={{ fontSize: 13, color: '#ffd60a', fontWeight: 600 }}>
-                          {c.balance?.toLocaleString()} KGS
+                          {c.balance?.toLocaleString()} сом
                         </span>
                       </div>
                     ))}

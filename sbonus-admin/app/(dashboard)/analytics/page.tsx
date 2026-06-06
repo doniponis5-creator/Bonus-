@@ -25,7 +25,7 @@ const PERIOD_OPTIONS = [
   { label: '365 дней', value: 365 },
 ];
 
-const fmt = (v: number) => Number(v).toLocaleString('ru-RU') + ' KGS';
+const fmt = (v: number) => Number(v).toLocaleString('ru-RU') + ' сом';
 
 const tooltipStyle = {
   background: '#141c2b',
@@ -264,7 +264,7 @@ export default function AnalyticsPage() {
                   <span style={{ fontSize: 22, fontWeight: 800, color: BUCKET_COLORS[key] || '#8899aa' }}>{bucket.count}</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
-                  Бонусов на счетах: <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{bucket.total_balance.toLocaleString('ru-RU')} KGS</span>
+                  Бонусов на счетах: <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{bucket.total_balance.toLocaleString('ru-RU')} сом</span>
                 </div>
                 {bucket.customers.length > 0 && (
                   <div style={{ borderTop: '1px solid #1c2a3a', paddingTop: 10 }}>
@@ -274,7 +274,7 @@ export default function AnalyticsPage() {
                           <span style={{ fontWeight: 600 }}>{c.name}</span>
                           <span style={{ color: 'var(--text3)', marginLeft: 8 }}>{c.phone}</span>
                         </div>
-                        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{c.balance.toLocaleString('ru-RU')} KGS</span>
+                        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{c.balance.toLocaleString('ru-RU')} сом</span>
                       </div>
                     ))}
                   </div>

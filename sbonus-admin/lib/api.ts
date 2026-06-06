@@ -376,6 +376,18 @@ export const forecastAPI = {
 export const gamificationAPI = {
   adminStats: () => api.get('/api/v1/gamification/admin/stats'),
   profile: (customerId: string) => api.get(`/api/v1/gamification/profile/${customerId}`),
+  // ─── Gamification 2.0 (persistent) ───
+  overview: () => api.get('/api/v1/gamification/admin/overview'),
+  // Quests
+  listQuests: () => api.get('/api/v1/gamification/admin/quests'),
+  createQuest: (data: any) => api.post('/api/v1/gamification/admin/quests', data),
+  updateQuest: (id: string, data: any) => api.patch(`/api/v1/gamification/admin/quests/${id}`, data),
+  deleteQuest: (id: string) => api.delete(`/api/v1/gamification/admin/quests/${id}`),
+  // Achievements
+  listAchievements: () => api.get('/api/v1/gamification/admin/achievements'),
+  createAchievement: (data: any) => api.post('/api/v1/gamification/admin/achievements', data),
+  updateAchievement: (id: string, data: any) => api.patch(`/api/v1/gamification/admin/achievements/${id}`, data),
+  deleteAchievement: (id: string) => api.delete(`/api/v1/gamification/admin/achievements/${id}`),
 };
 
 // ─── Branch Analytics ───

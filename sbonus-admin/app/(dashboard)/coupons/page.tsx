@@ -105,10 +105,10 @@ export default function CouponsPage() {
                     {c.customer_name}
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#22c55e' }}>
-                    +{Number(c.bonus_amount).toLocaleString('ru-RU')} KGS
+                    +{Number(c.bonus_amount).toLocaleString('ru-RU')} сом
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
-                    {Number(c.min_purchase) > 0 ? `${Number(c.min_purchase).toLocaleString('ru-RU')} KGS` : '—'}
+                    {Number(c.min_purchase) > 0 ? `${Number(c.min_purchase).toLocaleString('ru-RU')} сом` : '—'}
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
                     <span style={{
@@ -186,16 +186,16 @@ export default function CouponsPage() {
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Описание (необязательно)</label>
-            <input className="input" name="description" placeholder="Действует при покупке от 1000 KGS" />
+            <input className="input" name="description" placeholder="Действует при покупке от 1000 сом" />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Бонус (KGS) *</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Бонус (сом) *</label>
               <input className="input" name="bonus_amount" type="number" min="1" step="1" placeholder="500" required />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Мин. покупка (KGS)</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Мин. покупка (сом)</label>
               <input className="input" name="min_purchase" type="number" min="0" step="1" placeholder="0" />
             </div>
           </div>

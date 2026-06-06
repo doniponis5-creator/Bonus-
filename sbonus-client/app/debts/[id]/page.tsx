@@ -1,14 +1,32 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, FileText, Receipt } from 'lucide-react';
+import {
+  ArrowLeft, CheckCircle2, AlertTriangle, Circle, Wallet,
+  Calendar, Receipt, CreditCard, ChevronDown, ChevronUp,
+} from 'lucide-react';
 import { debtAPI, type DebtDetail } from '@/lib/api';
+
+const fmt = (n: number) => Number(n || 0).toLocaleString('ru-RU');
+const MS_DAY = 86400000;
+
+function dayLabel(n: number): string {
+  const a = Math.abs(n), n10 = a % 10, n100 = a % 100;
+  if (n10 === 1 && n100 !== 11) return 'день';
+  if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return 'дня';
+  return 'дней';
+}
+const fmtDate = (d: string, withYear = true) =>
+  new Date(d).toLocaleDateString('ru-RU', withYear
+    ? { day: 'numeric', month: 'long', year: 'numeric' }
+    : { day: 'numeric', month: 'long' });
 
 export default function DebtDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [debt, setDebt] = useState<DebtDetail | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -23,167 +41,127 @@ export default function DebtDetailPage() {
   if (!debt) return null;
 
   const isOverdue = debt.overdue_days > 0;
-  const refShort = debt.reference.includes('00ЦБ-')
-    ? debt.reference.match(/00ЦБ-\d+/)?.[0] || debt.reference.slice(0, 20)
-    : debt.reference.slice(0, 30);
-  const dateStr = debt.created_at
-    ? new Date(debt.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : '';
+  const isPaid = debt.status === 'paid' || debt.amount <= 0;
+  const title = (debt.note && debt.note.trim()) || (debt.reference.match(/00ЦБ-\d+/)?.[0] || debt.reference.slice(0, 30));
+  const pct = Math.min(100, Math.round(debt.percent_paid));
+  const accent = isPaid ? 'var(--success)' : isOverdue ? 'var(--danger)' : 'var(--accent)';
 
-  // Big circular progress
-  const size = 120;
-  const stroke = 8;
-  const radius = (size - stroke) / 2;
-  const circ = 2 * Math.PI * radius;
-  const offset = circ - (debt.percent_paid / 100) * circ;
-  const progressColor = isOverdue ? '#F09595' : '#FFE600';
+  const schedule = debt.schedule || [];
+  const history = debt.payments_history || [];
+
+  // Next payment day diff
+  let nextInfo: { label: string; color: string } | null = null;
+  if (debt.next_payment && !isPaid) {
+    const days = Math.ceil((new Date(debt.next_payment.date).getTime() - Date.now()) / MS_DAY);
+    if (isOverdue) nextInfo = { label: `Просрочен на ${debt.overdue_days} ${dayLabel(debt.overdue_days)}`, color: 'var(--danger)' };
+    else if (days <= 0) nextInfo = { label: 'Оплатить сегодня', color: 'var(--warn)' };
+    else nextInfo = { label: `Через ${days} ${dayLabel(days)}`, color: 'var(--text-2)' };
+  }
 
   return (
-    <div style={{ padding: '0 0 32px', maxWidth: 480, margin: '0 auto' }}>
+    <div style={{ padding: '0 0 40px', maxWidth: 480, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text2)', cursor: 'pointer', padding: 0 }}>
+      <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={() => router.back()} aria-label="Назад" style={{ background: 'var(--card-strong)', border: 'none', color: 'var(--text)', cursor: 'pointer', width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <ArrowLeft size={20} />
         </button>
-        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text1)' }}>Детали рассрочки</span>
+        <span style={{ fontSize: 16, fontWeight: 700 }}>Рассрочка</span>
       </div>
 
-      {/* Hero section */}
-      <div style={{ textAlign: 'center', padding: '20px 20px 16px' }}>
-        <p style={{ fontSize: 13, color: 'var(--text3)', margin: '0 0 2px' }}>{refShort}</p>
-        <p style={{ fontSize: 11, color: 'var(--text3)', margin: '0 0 16px' }}>{dateStr}</p>
-
-        {/* Circular progress */}
-        <div style={{ position: 'relative', display: 'inline-block', margin: '0 auto 16px' }}>
-          <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-            <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="var(--bg2)" strokeWidth={stroke} />
-            <circle cx={size/2} cy={size/2} r={radius} fill="none"
-              stroke={progressColor} strokeWidth={stroke}
-              strokeDasharray={circ} strokeDashoffset={offset}
-              strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.8s ease' }}
-            />
-          </svg>
-          <div style={{
-            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            textAlign: 'center',
-          }}>
-            <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--text1)', margin: 0 }}>{Math.round(debt.percent_paid)}%</p>
-            <p style={{ fontSize: 9, color: 'var(--text3)', margin: 0 }}>оплачено</p>
+      {/* ── HERO: остаток + прогресс ── */}
+      <div className="card" style={{ margin: '0 16px 12px', padding: 20, border: `1px solid ${isPaid ? 'rgba(52,211,153,0.25)' : isOverdue ? 'rgba(248,113,113,0.25)' : 'var(--border)'}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <CreditCard size={18} color={accent} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Открыта {fmtDate(debt.created_at || '', false)}</div>
           </div>
         </div>
 
-        {/* Amount stats */}
-        <div style={{ display: 'flex', gap: 8, margin: '0 0 12px' }}>
-          <div style={{ flex: 1, background: 'var(--card)', borderRadius: 12, padding: '10px 8px', border: '1px solid var(--border)' }}>
-            <p style={{ fontSize: 9, color: 'var(--text3)', margin: 0, textTransform: 'uppercase' }}>Сумма</p>
-            <p style={{ fontSize: 16, fontWeight: 700, margin: '2px 0 0', color: 'var(--text1)' }}>
-              {debt.total_amount.toLocaleString('ru-RU')}
-            </p>
-          </div>
-          <div style={{ flex: 1, background: 'var(--card)', borderRadius: 12, padding: '10px 8px', border: '1px solid var(--border)' }}>
-            <p style={{ fontSize: 9, color: 'var(--text3)', margin: 0, textTransform: 'uppercase' }}>Оплачено</p>
-            <p style={{ fontSize: 16, fontWeight: 700, margin: '2px 0 0', color: 'var(--accent)' }}>
-              {debt.paid_amount.toLocaleString('ru-RU')}
-            </p>
-          </div>
-          <div style={{ flex: 1, background: 'var(--card)', borderRadius: 12, padding: '10px 8px', border: '1px solid var(--border)' }}>
-            <p style={{ fontSize: 9, color: 'var(--text3)', margin: 0, textTransform: 'uppercase' }}>Остаток</p>
-            <p style={{ fontSize: 16, fontWeight: 700, margin: '2px 0 0', color: isOverdue ? 'var(--danger)' : 'var(--text1)' }}>
-              {debt.amount.toLocaleString('ru-RU')}
-            </p>
-          </div>
+        {/* Главное число */}
+        <div style={{ textAlign: 'center', marginBottom: 14 }}>
+          {isPaid ? (
+            <>
+              <CheckCircle2 size={40} color="var(--success)" style={{ marginBottom: 4 }} />
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--success)' }}>Полностью оплачено</div>
+            </>
+          ) : (
+            <>
+              <div className="label" style={{ marginBottom: 4 }}>Остаток к оплате</div>
+              <div style={{ fontSize: 38, fontWeight: 800, color: accent, lineHeight: 1.1 }}>
+                {fmt(debt.amount)} <span style={{ fontSize: 18, color: 'var(--text-3)' }}>сом</span>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Overdue badge */}
-        {isOverdue && (
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'rgba(240,100,100,0.12)', padding: '6px 16px', borderRadius: 20,
-          }}>
-            <AlertTriangle size={14} color="#F09595" />
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#F09595' }}>
-              Просрочка: {debt.overdue_days} дн.!
-            </span>
-          </div>
-        )}
+        {/* Прогресс */}
+        <div className="progress" style={{ height: 8 }}>
+          <div className="progress-bar" style={{ width: `${pct}%`, background: isPaid ? 'var(--success)' : undefined }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+          <Mini label="Всего" value={fmt(debt.total_amount)} />
+          <Mini label="Оплачено" value={fmt(debt.paid_amount)} color="var(--success)" />
+          <Mini label="Осталось" value={fmt(debt.amount)} color={isPaid ? 'var(--text-2)' : accent} />
+        </div>
       </div>
 
-      {/* Next payment highlight */}
-      {debt.next_payment && (
-        <div style={{
-          margin: '0 16px 16px', padding: '14px 16px',
-          background: 'var(--card)', borderRadius: 14,
-          border: '1.5px solid #FFE600',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      {/* ── NEXT PAYMENT ── */}
+      {debt.next_payment && !isPaid && (
+        <div className="card" style={{
+          margin: '0 16px 12px', padding: '16px 18px',
+          border: `1.5px solid ${isOverdue ? 'var(--danger)' : 'var(--accent)'}`,
+          background: isOverdue ? 'rgba(248,113,113,0.06)' : 'linear-gradient(135deg, rgba(255,230,0,0.06), rgba(255,230,0,0))',
         }}>
-          <div>
-            <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0 }}>Следующий платёж</p>
-            <p style={{ fontSize: 17, fontWeight: 700, color: '#FFE600', margin: '2px 0 0' }}>
-              {new Date(debt.next_payment.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                <Calendar size={13} /> Следующий платёж
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{fmtDate(debt.next_payment.date)}</div>
+              {nextInfo && <div style={{ fontSize: 12, fontWeight: 600, color: nextInfo.color, marginTop: 2 }}>{nextInfo.label}</div>}
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: isOverdue ? 'var(--danger)' : 'var(--accent)', whiteSpace: 'nowrap' }}>
+              {fmt(debt.next_payment.amount)} <span style={{ fontSize: 13, color: 'var(--text-3)' }}>сом</span>
+            </div>
           </div>
-          <p style={{ fontSize: 20, fontWeight: 800, color: 'var(--text1)', margin: 0 }}>
-            {debt.next_payment.amount.toLocaleString('ru-RU')}
-          </p>
         </div>
       )}
 
-      {/* Payment schedule */}
-      {debt.schedule && debt.schedule.length > 0 && (
-        <div style={{ margin: '0 16px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <FileText size={15} color="var(--text3)" />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              График платежей
-            </span>
-          </div>
-          <div style={{ background: 'var(--card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
-            {debt.schedule.map((item, i) => {
-              const isPaid = item.status === 'paid';
-              const isItemOverdue = item.status === 'overdue';
-              const dateFormatted = new Date(item.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
+      {/* ── ГРАФИК (timeline) ── */}
+      {schedule.length > 0 && (
+        <div style={{ margin: '0 16px 12px' }}>
+          <SectionTitle icon={<Calendar size={15} />} text="График платежей" />
+          <div className="card" style={{ padding: '6px 16px' }}>
+            {schedule.map((item, i) => {
+              const paid = item.status === 'paid';
+              const overdue = item.status === 'overdue';
+              const last = i === schedule.length - 1;
+              let Icon = Circle, color = 'var(--text-3)', label = 'Ожидает оплаты';
+              if (paid) { Icon = CheckCircle2; color = 'var(--success)'; label = 'Оплачен'; }
+              else if (overdue) {
+                Icon = AlertTriangle; color = 'var(--danger)';
+                const d = Math.max(1, Math.round((Date.now() - new Date(item.date).getTime()) / MS_DAY));
+                label = `Просрочен на ${d} ${dayLabel(d)}`;
+              }
               return (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', padding: '12px 14px', gap: 10,
-                  borderBottom: i < debt.schedule.length - 1 ? '1px solid var(--border)' : 'none',
-                  background: isItemOverdue ? 'rgba(240,100,100,0.05)' : 'transparent',
-                }}>
-                  {/* Status dot */}
-                  <div style={{
-                    width: 24, height: 24, borderRadius: 12, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isPaid ? 'var(--accent)' : isItemOverdue ? '#F09595' : 'var(--bg2)',
-                  }}>
-                    {isPaid && <CheckCircle2 size={14} color="#000" />}
-                    {isItemOverdue && !isPaid && <AlertTriangle size={12} color="#fff" />}
-                    {!isPaid && !isItemOverdue && <Clock size={12} color="var(--text3)" />}
+                <div key={i} style={{ display: 'flex', gap: 12, position: 'relative' }}>
+                  {/* timeline column */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                    <Icon size={22} color={color} fill={paid ? color : 'none'} strokeWidth={paid ? 0 : 2} />
+                    {!last && <div style={{ width: 2, flex: 1, background: 'var(--border)', minHeight: 18, margin: '2px 0' }} />}
                   </div>
-
-                  {/* Date + plan */}
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: 'var(--text1)' }}>{dateFormatted}</p>
-                    {isPaid && (
-                      <p style={{ fontSize: 10, color: 'var(--accent)', margin: '1px 0 0' }}>Оплачено ✓</p>
-                    )}
-                    {isItemOverdue && (
-                      <p style={{ fontSize: 10, color: '#F09595', margin: '1px 0 0' }}>
-                        Просрочка {Math.max(1, Math.round((Date.now() - new Date(item.date).getTime()) / 86400000))} дн.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Amount + status */}
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>
-                      {item.amount.toLocaleString('ru-RU')}
-                    </span>
-                    <p style={{
-                      fontSize: 10, fontWeight: 600, margin: '1px 0 0',
-                      color: isPaid ? 'var(--accent)' : isItemOverdue ? '#F09595' : 'var(--text3)',
-                    }}>
-                      {isPaid ? '✅ Оплачен' : isItemOverdue ? '⚠️ Просрочен' : '○ Ожидает'}
-                    </p>
+                  {/* content */}
+                  <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '2px 0 16px' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{fmtDate(item.date)}</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 600, color, marginTop: 1 }}>{label}</div>
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: paid ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', textDecoration: paid ? 'line-through' : 'none' }}>
+                      {fmt(item.amount)} <span style={{ fontSize: 11, color: 'var(--text-3)' }}>сом</span>
+                    </div>
                   </div>
                 </div>
               );
@@ -192,54 +170,58 @@ export default function DebtDetailPage() {
         </div>
       )}
 
-      {/* Payment history */}
-      {debt.payments_history && debt.payments_history.length > 0 && (
+      {/* ── ИСТОРИЯ ОПЛАТ (collapsible) ── */}
+      {history.length > 0 && (
         <div style={{ margin: '0 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Receipt size={15} color="var(--text3)" />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              История оплат
+          <button onClick={() => setShowHistory(v => !v)} style={{
+            width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px 10px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2)',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Receipt size={15} /> История оплат ({history.length})
             </span>
-          </div>
-          <div style={{ background: 'var(--card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
-            {debt.payments_history.map((p, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', padding: '12px 14px', gap: 10,
-                borderBottom: i < debt.payments_history.length - 1 ? '1px solid var(--border)' : 'none',
-              }}>
-                <div style={{
-                  width: 24, height: 24, borderRadius: 12, flexShrink: 0,
-                  background: (p as any).overdue_days > 0 ? '#F09595' : 'var(--accent)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+            {showHistory ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </button>
+          {showHistory && (
+            <div className="card fade-in" style={{ padding: '4px 16px' }}>
+              {history.map((p, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
+                  borderBottom: i < history.length - 1 ? '1px solid var(--border)' : 'none',
                 }}>
-                  {(p as any).overdue_days > 0
-                    ? <AlertTriangle size={12} color="#fff" />
-                    : <CheckCircle2 size={14} color="#000" />
-                  }
+                  <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: 'rgba(52,211,153,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Wallet size={16} color="var(--success)" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>{fmtDate(p.date)}</div>
+                    {p.document && <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.document}</div>}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--success)', whiteSpace: 'nowrap' }}>
+                    +{fmt(p.amount)} <span style={{ fontSize: 11, color: 'var(--text-3)' }}>сом</span>
+                  </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: 'var(--text1)' }}>
-                    {new Date(p.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                  </p>
-                  {p.document && (
-                    <p style={{ fontSize: 10, color: 'var(--text3)', margin: '1px 0 0' }}>
-                      {p.document.length > 35 ? p.document.slice(0, 35) + '...' : p.document}
-                    </p>
-                  )}
-                  {(p as any).overdue_days > 0 && (
-                    <p style={{ fontSize: 10, color: '#F09595', margin: '1px 0 0', display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <AlertTriangle size={10} /> Просрочка: {(p as any).overdue_days} дн.
-                    </p>
-                  )}
-                </div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>
-                  {p.amount.toLocaleString('ru-RU')} сом
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function Mini({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ textAlign: 'center', flex: 1 }}>
+      <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2, color: color || 'var(--text)' }}>{value}</div>
+    </div>
+  );
+}
+
+function SectionTitle({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '4px 2px 8px', color: 'var(--text-2)', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      {icon} {text}
     </div>
   );
 }

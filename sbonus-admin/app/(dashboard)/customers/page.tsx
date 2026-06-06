@@ -179,7 +179,7 @@ export default function CustomersPage() {
     if (!amt || amt <= 0) { toast('warning', 'Введите сумму'); return; }
     if (!bulkNote || bulkNote.trim().length < 2) { toast('warning', 'Причина обязательна'); return; }
     if (selected.size === 0) { toast('warning', 'Выберите клиентов'); return; }
-    if (!await confirm(`${bulkType === 'earn' ? 'Начислить' : 'Списать'} ${amt} KGS для ${selected.size} клиентов?`)) return;
+    if (!await confirm(`${bulkType === 'earn' ? 'Начислить' : 'Списать'} ${amt} сом для ${selected.size} клиентов?`)) return;
     try {
       const { data } = await customersAPI.bulkBonus(Array.from(selected), bulkType, amt, bulkNote.trim());
       toast('success', data.message);
@@ -394,7 +394,7 @@ export default function CustomersPage() {
                   </span>
                 </td>
                 <td style={{ padding: '16px', color: '#FFE600', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700 }}>
-                  {Number(c.balance).toLocaleString('ru-RU')} KGS
+                  {Number(c.balance).toLocaleString('ru-RU')} сом
                   {c.is_active === false && (
                     <span style={{ display: 'block', fontSize: 10, color: '#ff4d4d', fontWeight: 600, marginTop: 2 }}>Заблокирован</span>
                   )}
@@ -458,7 +458,7 @@ export default function CustomersPage() {
                     <div style={{ fontSize: 12, color: '#8899aa' }}>Клиент:</div>
                     <div style={{ fontWeight: 700, color: '#e2eaf6' }}>{selectedCustomer.full_name}</div>
                   </div>
-                  <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Сумма (KGS)</label><input className="input" style={{ width: '100%', fontSize: 20, color: '#FFE600', fontWeight: 700 }} type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} placeholder="0" /></div>
+                  <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Сумма (сом)</label><input className="input" style={{ width: '100%', fontSize: 20, color: '#FFE600', fontWeight: 700 }} type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} placeholder="0" /></div>
                   <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Причина *</label><textarea className="input" style={{ width: '100%', minHeight: 80 }} value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="Причина корректировки" /></div>
                 </>
               )}
@@ -483,7 +483,7 @@ export default function CustomersPage() {
               <div style={{ fontWeight: 700, color: 'var(--accent)', fontSize: 20 }}>{selected.size}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Сумма (KGS) каждому</label><input className="input" style={{ width: '100%', fontSize: 20, color: '#FFE600', fontWeight: 700 }} type="number" value={bulkAmount} onChange={e => setBulkAmount(e.target.value)} placeholder="0" /></div>
+              <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Сумма (сом) каждому</label><input className="input" style={{ width: '100%', fontSize: 20, color: '#FFE600', fontWeight: 700 }} type="number" value={bulkAmount} onChange={e => setBulkAmount(e.target.value)} placeholder="0" /></div>
               <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Причина *</label><textarea className="input" style={{ width: '100%', minHeight: 80 }} value={bulkNote} onChange={e => setBulkNote(e.target.value)} placeholder="Причина массовой операции" /></div>
               <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
                 <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setBulkModal(false)}>Отмена</button>

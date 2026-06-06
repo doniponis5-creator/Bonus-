@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Disc3, Ticket, ShoppingCart, Gift, Meh, Package, Wallet, ArrowUpRight, ArrowDownRight, X, ChevronDown } from 'lucide-react';
+import { Disc3, Ticket, ShoppingCart, Gift, Meh, Package, Wallet, ArrowUpRight, ArrowDownRight, X, ChevronDown, Loader2 } from 'lucide-react';
 import { wheelAPI, customerAPI, CabinetTransaction } from '@/lib/api';
 
 interface Segment {
@@ -336,8 +336,9 @@ export default function BonusWheel() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>
-        Загрузка колеса...
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '60px 0', color: 'var(--text-2)' }}>
+        <Loader2 size={22} className="spinner" />
+        <span style={{ fontSize: 14 }}>Загрузка колеса...</span>
       </div>
     );
   }
@@ -380,7 +381,7 @@ export default function BonusWheel() {
             <div style={{ fontSize: 28, fontWeight: 800, color: '#64748b' }}>...</div>
           ) : (
             <div style={{ fontSize: 32, fontWeight: 800, color: GOLD }}>
-              {balance !== null ? `${balance.toLocaleString('ru-RU')} KGS` : '—'}
+              {balance !== null ? `${balance.toLocaleString('ru-RU')} сом` : '—'}
             </div>
           )}
         </div>
@@ -398,7 +399,7 @@ export default function BonusWheel() {
             {isPhysical ? <Package size={24} color="#a855f7" /> : <Gift size={24} color="#22c55e" />}
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: isPhysical ? '#a855f7' : '#22c55e' }}>
-                {isPhysical ? `Приз: ${result.label}` : `+${result.value} KGS`}
+                {isPhysical ? `Приз: ${result.label}` : `+${result.value} сом`}
               </div>
               <div style={{ fontSize: 11, color: '#8899aa' }}>Только что выиграно</div>
             </div>
@@ -458,7 +459,7 @@ export default function BonusWheel() {
                       fontSize: 14, fontWeight: 700,
                       color: isEarn ? '#22c55e' : '#ef4444',
                     }}>
-                      {isEarn ? '+' : '-'}{Math.abs(amt).toLocaleString('ru-RU')} KGS
+                      {isEarn ? '+' : '-'}{Math.abs(amt).toLocaleString('ru-RU')} сом
                     </div>
                   </div>
                 );
@@ -721,14 +722,14 @@ export default function BonusWheel() {
                   +{result.value}
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,230,0,0.7)', marginTop: 2 }}>
-                  KGS
+                  сом
                 </div>
                 <div style={{
                   fontSize: 13, color: '#8899aa', marginTop: 12,
                   background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '6px 12px',
                   display: 'inline-block',
                 }}>
-                  Баланс: <b style={{ color: GOLD }}>{result.new_balance.toLocaleString('ru-RU')} KGS</b>
+                  Баланс: <b style={{ color: GOLD }}>{result.new_balance.toLocaleString('ru-RU')} сом</b>
                 </div>
               </>
             ) : (

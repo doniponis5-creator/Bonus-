@@ -274,8 +274,8 @@ function ProgressTab({
       {/* Summary cards */}
       <div className="grid-4" style={{ marginBottom: 24 }}>
         <SummaryCard icon={<Zap size={20} />} label="Продажи сегодня" value={totalSalesToday} color="#22c55e" />
-        <SummaryCard icon={<TrendingUp size={20} />} label="Выручка сегодня" value={`${totalRevenueToday.toLocaleString()} KGS`} color="#3b82f6" />
-        <SummaryCard icon={<Award size={20} />} label="Бонусы выданы" value={`${totalEarnedToday.toLocaleString()} KGS`} color="#f97316" />
+        <SummaryCard icon={<TrendingUp size={20} />} label="Выручка сегодня" value={`${totalRevenueToday.toLocaleString()} сом`} color="#3b82f6" />
+        <SummaryCard icon={<Award size={20} />} label="Бонусы выданы" value={`${totalEarnedToday.toLocaleString()} сом`} color="#f97316" />
         <SummaryCard icon={<Flame size={20} />} label="Макс. стрик" value={`${topStreak} дней`} color="#ef4444" />
       </div>
 
@@ -389,7 +389,7 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                   <ProgressBar current={c.daily.sales} target={dailyNext.sales} color="#22c55e" />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
                     <span>Цель: {dailyNext.sales} продаж</span>
-                    <span>+{dailyNext.bonus} KGS</span>
+                    <span>+{dailyNext.bonus} сом</span>
                   </div>
                 </>
               )}
@@ -399,10 +399,10 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 </div>
               )}
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 10 }}>
-                Выручка: <b style={{ color: 'var(--text)' }}>{c.daily.revenue.toLocaleString()} KGS</b>
+                Выручка: <b style={{ color: 'var(--text)' }}>{c.daily.revenue.toLocaleString()} сом</b>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-                Заработано: <b style={{ color: '#22c55e' }}>+{c.daily.earned_today.toLocaleString()} KGS</b>
+                Заработано: <b style={{ color: '#22c55e' }}>+{c.daily.earned_today.toLocaleString()} сом</b>
               </div>
             </div>
 
@@ -420,7 +420,7 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                   <ProgressBar current={c.monthly.sales} target={monthlyNext.sales} color="#3b82f6" />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
                     <span>Цель: {monthlyNext.sales} продаж</span>
-                    <span>+{monthlyNext.bonus} KGS</span>
+                    <span>+{monthlyNext.bonus} сом</span>
                   </div>
                 </>
               )}
@@ -430,10 +430,10 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 </div>
               )}
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 10 }}>
-                Выручка: <b style={{ color: 'var(--text)' }}>{c.monthly.revenue.toLocaleString()} KGS</b>
+                Выручка: <b style={{ color: 'var(--text)' }}>{c.monthly.revenue.toLocaleString()} сом</b>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-                Заработано: <b style={{ color: '#3b82f6' }}>+{c.monthly.earned_month.toLocaleString()} KGS</b>
+                Заработано: <b style={{ color: '#3b82f6' }}>+{c.monthly.earned_month.toLocaleString()} сом</b>
               </div>
             </div>
 
@@ -451,7 +451,7 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                   <ProgressBar current={c.streak.days} target={streakNext.days} color="#f97316" />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
                     <span>Цель: {streakNext.days} дней</span>
-                    <span>+{streakNext.bonus} KGS</span>
+                    <span>+{streakNext.bonus} сом</span>
                   </div>
                 </>
               )}
@@ -464,7 +464,7 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 Мин. продаж/день: <b style={{ color: 'var(--text)' }}>{c.streak.min_sales}</b>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-                Всего за стрик: <b style={{ color: '#f97316' }}>+{c.streak.earned_total.toLocaleString()} KGS</b>
+                Всего за стрик: <b style={{ color: '#f97316' }}>+{c.streak.earned_total.toLocaleString()} сом</b>
               </div>
             </div>
           </div>
@@ -533,7 +533,7 @@ function SettingsTab({
         items={config.daily_milestones}
         field1Label="Продаж"
         field1Key="sales"
-        field2Label="Бонус (KGS)"
+        field2Label="Бонус (сом)"
         field2Key="bonus"
         onAdd={addDaily}
         onRemove={removeDaily}
@@ -549,7 +549,7 @@ function SettingsTab({
         items={config.monthly_milestones}
         field1Label="Продаж"
         field1Key="sales"
-        field2Label="Бонус (KGS)"
+        field2Label="Бонус (сом)"
         field2Key="bonus"
         onAdd={addMonthly}
         onRemove={removeMonthly}
@@ -565,7 +565,7 @@ function SettingsTab({
         items={config.streak_milestones.map(s => ({ sales: s.days, bonus: s.bonus }))}
         field1Label="Дней подряд"
         field1Key="days"
-        field2Label="Бонус (KGS)"
+        field2Label="Бонус (сом)"
         field2Key="bonus"
         onAdd={addStreak}
         onRemove={removeStreak}

@@ -64,7 +64,7 @@ export default function CampaignDetailPage() {
         </div>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8899aa', fontSize: 12, marginBottom: 8 }}><Coins size={14} /> Сумма</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#FFE600' }}>+{Number(c.amount).toLocaleString('ru-RU')} KGS</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#FFE600' }}>+{Number(c.amount).toLocaleString('ru-RU')} сом</div>
         </div>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8899aa', fontSize: 12, marginBottom: 8 }}><Target size={14} /> Цель</div>

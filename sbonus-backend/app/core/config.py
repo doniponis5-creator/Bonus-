@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     min_purchase_for_bonus: Decimal = Decimal("500")
     max_spend_percent: Decimal = Decimal("30")
     birthday_bonus: Decimal = Decimal("200")
-    referral_bonus_inviter: Decimal = Decimal("100")
-    referral_bonus_invitee: Decimal = Decimal("50")
+    referral_bonus_inviter: Decimal = Decimal("50")
+    referral_bonus_invitee: Decimal = Decimal("25")
     bonus_expiration_days: int = 365
     bonus_expiration_warning_days: int = 30
 

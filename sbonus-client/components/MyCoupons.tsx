@@ -146,7 +146,7 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
                   <div style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>
                     +{c.bonus_amount.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: 11, color: '#8899aa' }}>KGS</div>
+                  <div style={{ fontSize: 11, color: '#8899aa' }}>сом</div>
                 </div>
               </div>
 
@@ -156,7 +156,7 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
               }}>
                 {c.min_purchase > 0 && (
                   <span style={{ fontSize: 11, color: '#64748b' }}>
-                    от {c.min_purchase.toLocaleString()} KGS
+                    от {c.min_purchase.toLocaleString()} сом
                   </span>
                 )}
                 {c.expires_at && (

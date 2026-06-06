@@ -8,7 +8,7 @@ Sbonus+ — Bonus Wheel (Fortune Wheel) API.
 
 import random
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -48,6 +48,8 @@ class WheelSegment(BaseModel):
     color: str
     probability: float  # 0.0 - 1.0
     prize_type: str = "bonus"  # "bonus" | "physical" | "none"
+    stock: int | None = None  # None = безлимит; иначе макс. число выигрышей за период
+    stock_period: str = "total"  # "day" | "week" | "month" | "total" — окно квоты
 
 
 class WheelConfigResponse(BaseModel):
@@ -67,14 +69,14 @@ class SpinResultResponse(BaseModel):
 
 # ─── Default segments ───
 DEFAULT_SEGMENTS = [
-    {"id": 1, "label": "+50 KGS",     "value": 50,   "color": "#FFE600", "probability": 0.25, "prize_type": "bonus"},
-    {"id": 2, "label": "+100 KGS",    "value": 100,  "color": "#22c55e", "probability": 0.15, "prize_type": "bonus"},
-    {"id": 3, "label": "+200 KGS",    "value": 200,  "color": "#3b82f6", "probability": 0.08, "prize_type": "bonus"},
-    {"id": 4, "label": "+500 KGS",    "value": 500,  "color": "#a855f7", "probability": 0.02, "prize_type": "bonus"},
+    {"id": 1, "label": "+50 сом",     "value": 50,   "color": "#FFE600", "probability": 0.25, "prize_type": "bonus"},
+    {"id": 2, "label": "+100 сом",    "value": 100,  "color": "#22c55e", "probability": 0.15, "prize_type": "bonus"},
+    {"id": 3, "label": "+200 сом",    "value": 200,  "color": "#3b82f6", "probability": 0.08, "prize_type": "bonus"},
+    {"id": 4, "label": "+500 сом",    "value": 500,  "color": "#a855f7", "probability": 0.02, "prize_type": "bonus"},
     {"id": 5, "label": "Пылесос",     "value": 0,    "color": "#f97316", "probability": 0.01, "prize_type": "physical"},
     {"id": 6, "label": "Удача!",      "value": 25,   "color": "#06b6d4", "probability": 0.29, "prize_type": "bonus"},
     {"id": 7, "label": "Попробуйте!", "value": 0,    "color": "#64748b", "probability": 0.15, "prize_type": "none"},
-    {"id": 8, "label": "+150 KGS",    "value": 150,  "color": "#ec4899", "probability": 0.05, "prize_type": "bonus"},
+    {"id": 8, "label": "+150 сом",    "value": 150,  "color": "#ec4899", "probability": 0.05, "prize_type": "bonus"},
 ]
 
 
@@ -82,6 +84,48 @@ def _pick_segment(segments: list[dict]) -> dict:
     """Weighted random pick."""
     weights = [s["probability"] for s in segments]
     return random.choices(segments, weights=weights, k=1)[0]
+
+
+# Asia/Bishkek
+_WHEEL_TZ = timezone(timedelta(hours=6))
+
+
+def _stock_period_key(period: str) -> str:
+    """Ключ окна квоты: day/week/month/total."""
+    period = (period or "total").lower()
+    now = datetime.now(_WHEEL_TZ)
+    if period == "day":
+        return now.strftime("%Y-%m-%d")
+    if period == "week":
+        iso = now.isocalendar()
+        return f"{iso[0]}-W{iso[1]:02d}"
+    if period == "month":
+        return now.strftime("%Y-%m")
+    return "all"
+
+
+def _stock_setting_key(seg: dict) -> str:
+    """Ключ счётчика выигрышей сегмента с учётом периода квоты."""
+    return f"WHEEL_WON_{seg['id']}_{_stock_period_key(seg.get('stock_period', 'total'))}"
+
+
+async def _available_segments(db: AsyncSession, segments: list[dict]) -> list[dict]:
+    """
+    Исключить сегменты с исчерпанным запасом (stock) в рамках их окна квоты.
+    Напр. "миксер: 1/месяц" перестаёт выпадать после 1 выигрыша в текущем месяце.
+    """
+    limited = [s for s in segments if s.get("stock") is not None]
+    if not limited:
+        return segments
+    keys = [_stock_setting_key(s) for s in limited]
+    rows = await db.execute(select(Setting).where(Setting.key.in_(keys)))
+    won = {r.key: int(r.value or 0) for r in rows.scalars().all()}
+    available = []
+    for s in segments:
+        stock = s.get("stock")
+        if stock is None or won.get(_stock_setting_key(s), 0) < int(stock):
+            available.append(s)
+    return available
 
 
 # ─── Endpoints ───
@@ -173,10 +217,26 @@ async def _do_spin(db: AsyncSession, customer_id: uuid.UUID) -> SpinResultRespon
     else:
         db.add(Setting(key=spin_key, value="1"))
 
-    # Выбрать сегмент
+    # Выбрать сегмент (с учётом запаса призов)
     segments = await _get_segments(db)
-    winner = _pick_segment(segments)
+    available = await _available_segments(db, segments)
+    if not available:
+        # Все призы с лимитом исчерпаны → запасной "пустой" сегмент
+        available = [s for s in segments if s.get("prize_type") == "none"] or [
+            {"id": 0, "label": "Попробуйте!", "value": 0, "color": "#64748b", "probability": 1.0, "prize_type": "none"}
+        ]
+    winner = _pick_segment(available)
     prize_type = winner.get("prize_type", "bonus")
+
+    # Уменьшить запас приза (если задан stock) — атомарно внутри блокировки
+    if winner.get("stock") is not None and winner.get("id"):
+        won_key = _stock_setting_key(winner)
+        won_res = await db.execute(select(Setting).where(Setting.key == won_key).with_for_update())
+        won_rec = won_res.scalar_one_or_none()
+        if won_rec:
+            won_rec.value = str(int(won_rec.value or 0) + 1)
+        else:
+            db.add(Setting(key=won_key, value="1"))
 
     # Получить аккаунт (locked)
     result = await db.execute(
@@ -227,6 +287,23 @@ async def _do_spin(db: AsyncSession, customer_id: uuid.UUID) -> SpinResultRespon
     customer_phone = customer.phone if customer else ""
 
     import asyncio
+
+    # ── Gamification 2.0: событие спина (прогресс квеста wheel_spin) ──
+    try:
+        from app.core.events import event_bus, Event, EventType
+        asyncio.create_task(event_bus.emit(Event(
+            type=EventType.WHEEL_WON,
+            customer_id=str(customer_id),
+            data={
+                "prize_label": winner["label"],
+                "prize_type": prize_type,
+                "amount": float(bonus_amount),
+                "new_balance": float(account.balance),
+            },
+        )))
+    except Exception:
+        pass
+
     asyncio.create_task(_notify_wheel_telegram(
         customer_name=customer_name,
         prize_label=winner["label"],
@@ -355,7 +432,7 @@ async def _notify_wheel_telegram(
                     "🎰 <b>Колесо удачи — выигрыш!</b>\n"
                     f"👤 {customer_name}\n"
                     f"🏆 Выигрыш: <b>+{bonus_amount:,.0f} KGS</b>\n"
-                    f"💰 Баланс: {new_balance:,.0f} KGS"
+                    f"💰 Баланс: {new_balance:,.0f} сом"
                 )
             else:
                 return  # Не уведомляем о пустых спинах

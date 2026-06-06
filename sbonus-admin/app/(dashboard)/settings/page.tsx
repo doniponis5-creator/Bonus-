@@ -1,5 +1,5 @@
 "use client";
-import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift, Timer, Lock, Eye, EyeOff, CheckCircle2, Users } from 'lucide-react';
+import { Settings, AlertTriangle, BarChart3, MessageSquare, FileText, FlaskConical, Save, Bell, Clock, Gift, Timer, Lock, Eye, EyeOff, CheckCircle2, Users, Plus, Trash2 } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -48,11 +48,11 @@ export default function SettingsPage() {
     ENABLE_WHATSAPP_NOTIFICATIONS: "false",
     GREENAPI_INSTANCE_ID: "",
     GREENAPI_API_TOKEN: "",
-    WHATSAPP_TEMPLATE_EARN: "✅ {name}, начислено +{amount} KGS бонусов!\nБаланс: {balance} KGS\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
-    WHATSAPP_TEMPLATE_SPEND: "💳 {name}, списано {amount} KGS бонусов.\nОстаток: {balance} KGS\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
-    WHATSAPP_TEMPLATE_EXPIRE: "⏰ {name}, у вас истекли {amount} KGS бонусов.\nОстаток: {balance} KGS.\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
-    WHATSAPP_TEMPLATE_EXPIRE_WARNING: "⚠️ {name}, через {days} дней истечёт {amount} KGS бонусов!\nБаланс: {balance} KGS.\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
-    WHATSAPP_TEMPLATE_BALANCE_REMINDER: "👋 {name}, у вас {balance} KGS бонусов!\nНе забудьте использовать 🛍\n\n📱 Проверить баланс: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_EARN: "✅ {name}, начислено +{amount} сом бонусов!\nБаланс: {balance} сом\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_SPEND: "💳 {name}, списано {amount} сом бонусов.\nОстаток: {balance} сом\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_EXPIRE: "⏰ {name}, у вас истекли {amount} сом бонусов.\nОстаток: {balance} сом.\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_EXPIRE_WARNING: "⚠️ {name}, через {days} дней истечёт {amount} сом бонусов!\nБаланс: {balance} сом.\n\n📱 Личный кабинет: {link}\n🛒 Смарт Центр",
+    WHATSAPP_TEMPLATE_BALANCE_REMINDER: "👋 {name}, у вас {balance} сом бонусов!\nНе забудьте использовать 🛍\n\n📱 Проверить баланс: {link}\n🛒 Смарт Центр",
     BALANCE_REMINDER_INACTIVE_DAYS: "14",
     BALANCE_REMINDER_MIN_BALANCE: "100",
     WA_MESSAGE_INTERVAL: "3",
@@ -61,12 +61,24 @@ export default function SettingsPage() {
     WHEEL_FREE_SPINS_ON_REGISTER: "1",
     BONUS_EXPIRATION_DAYS: "365",
     BONUS_EXPIRATION_WARNING_DAYS: "14",
-    REFERRAL_BONUS_INVITER: "100",
-    REFERRAL_BONUS_INVITEE: "50",
+    REFERRAL_BONUS_INVITER: "50",
+    REFERRAL_BONUS_INVITEE: "25",
     REFERRAL_DAILY_LIMIT: "5",
+    REFERRAL_MILESTONES: "",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
+  const [milestones, setMilestones] = useState<{ referrals_needed: number; reward_amount: number; title?: string }[]>([
+    { referrals_needed: 5, reward_amount: 100 },
+    { referrals_needed: 10, reward_amount: 250 },
+    { referrals_needed: 20, reward_amount: 600 },
+    { referrals_needed: 50, reward_amount: 1500 },
+  ]);
+
+  const updateMilestones = (arr: { referrals_needed: number; reward_amount: number; title?: string }[]) => {
+    setMilestones(arr);
+    setSettings((prev) => ({ ...prev, REFERRAL_MILESTONES: JSON.stringify(arr) }));
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -76,6 +88,12 @@ export default function SettingsPage() {
     try {
       const { data } = await api.get("/api/v1/admin/settings");
       setSettings((prev) => ({ ...prev, ...data }));
+      if (data.REFERRAL_MILESTONES) {
+        try {
+          const m = JSON.parse(data.REFERRAL_MILESTONES);
+          if (Array.isArray(m) && m.length) setMilestones(m);
+        } catch { /* keep defaults */ }
+      }
     } catch (err) {
       // error handled by toast
     } finally {
@@ -564,7 +582,7 @@ export default function SettingsPage() {
             </p>
           </div>
           <div>
-            <label style={styles.inputLabel}>Минимальный баланс (KGS)</label>
+            <label style={styles.inputLabel}>Минимальный баланс (сом)</label>
             <input
               style={styles.input}
               type="number"
@@ -625,7 +643,7 @@ export default function SettingsPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
             <div>
-              <label style={styles.inputLabel}>Бонус пригласившему (KGS)</label>
+              <label style={styles.inputLabel}>Бонус пригласившему (сом)</label>
               <input
                 style={styles.input}
                 type="number"
@@ -636,7 +654,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label style={styles.inputLabel}>Бонус приглашённому (KGS)</label>
+              <label style={styles.inputLabel}>Бонус приглашённому (сом)</label>
               <input
                 style={styles.input}
                 type="number"
@@ -670,6 +688,45 @@ export default function SettingsPage() {
           }}>
             <strong style={{ color: colors.accent }}>Как работает:</strong> Клиент делится ссылкой с другом →
             друг регистрируется → оба получают бонус автоматически. Ссылка: <code>cabinet.smartcentr.store/register?ref=REF-XXX</code>
+          </div>
+
+          {/* ── MILESTONES EDITOR ── */}
+          <div>
+            <label style={styles.inputLabel}>Награды за приглашённых друзей (milestones)</label>
+            <p style={{ fontSize: 12, color: colors.textMuted, margin: "4px 0 10px" }}>
+              Дополнительный бонус, когда клиент пригласит N друзей. Удалите всё, чтобы отключить.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {milestones.map((m, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    style={{ ...styles.input, width: 90 }}
+                    type="number" min={1} value={m.referrals_needed}
+                    onChange={(e) => { const a = [...milestones]; a[i] = { ...a[i], referrals_needed: Number(e.target.value) }; updateMilestones(a); }}
+                  />
+                  <span style={{ color: colors.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>друзей →</span>
+                  <input
+                    style={{ ...styles.input, flex: 1 }}
+                    type="number" min={0} value={m.reward_amount}
+                    onChange={(e) => { const a = [...milestones]; a[i] = { ...a[i], reward_amount: Number(e.target.value) }; updateMilestones(a); }}
+                  />
+                  <span style={{ color: colors.textMuted, fontSize: 13 }}>сом</span>
+                  <button
+                    onClick={() => updateMilestones(milestones.filter((_, j) => j !== i))}
+                    title="Удалить"
+                    style={{ background: "rgba(239,68,68,0.12)", border: "none", borderRadius: 8, padding: 9, cursor: "pointer", display: "flex" }}
+                  >
+                    <Trash2 size={16} color="#ef4444" />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => updateMilestones([...milestones, { referrals_needed: (milestones[milestones.length - 1]?.referrals_needed || 0) + 10, reward_amount: 0 }])}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: `1px dashed ${colors.accent}`, color: colors.accent, borderRadius: 10, padding: 11, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+              >
+                <Plus size={16} /> Добавить уровень
+              </button>
+            </div>
           </div>
         </div>
       </div>

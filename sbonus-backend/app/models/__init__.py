@@ -507,6 +507,10 @@ class Product(Base):
     current_stock: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
     min_stock_level: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
     supplier: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # E-commerce fields
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=False)  # Показывать в интернет-магазине
     abc_class: Mapped[str | None] = mapped_column(String(1), nullable=True)  # A/B/C classification
     last_sold_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -661,3 +665,278 @@ class Expense(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+# ═══════════════════════════════════════════
+# E-COMMERCE — Интернет-магазин
+# ═══════════════════════════════════════════
+
+class OrderStatus(str, enum.Enum):
+    """Статусы заказа."""
+    PENDING = "pending"           # Новый заказ
+    CONFIRMED = "confirmed"       # Подтверждён
+    PREPARING = "preparing"       # Собирается
+    READY = "ready"               # Готов к выдаче / отправке
+    DELIVERING = "delivering"     # В доставке
+    COMPLETED = "completed"       # Завершён
+    CANCELLED = "cancelled"       # Отменён
+
+
+class PaymentMethod(str, enum.Enum):
+    """Способы оплаты."""
+    BONUS = "bonus"               # Только бонусами
+    CASH = "cash"                 # Наличные при получении
+    CARD = "card"                 # Карта при получении (Элкарт/Visa)
+    BONUS_CASH = "bonus_cash"     # Бонусы + наличные
+    BONUS_CARD = "bonus_card"     # Бонусы + карта
+
+
+class DeliveryType(str, enum.Enum):
+    """Тип доставки."""
+    PICKUP = "pickup"             # Самовывоз
+    DELIVERY = "delivery"         # Доставка
+
+
+class Order(Base):
+    """Заказ клиента в интернет-магазине."""
+    __tablename__ = "orders"
+    __table_args__ = (
+        Index("ix_orders_customer_id", "customer_id"),
+        Index("ix_orders_status", "status"),
+        Index("ix_orders_created_at", "created_at"),
+        Index("ix_orders_order_number", "order_number", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    order_number: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
+
+    # Суммы
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)          # Сумма товаров
+    bonus_used: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    delivery_fee: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)             # Итого к оплате (после бонуса)
+
+    # Оплата
+    payment_method: Mapped[str] = mapped_column(String(20), nullable=False, default="cash")
+    is_paid: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Доставка
+    delivery_type: Mapped[str] = mapped_column(String(20), nullable=False, default="pickup")
+    delivery_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    delivery_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    delivery_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Статус
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    status_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Мета
+    confirmed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancel_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    customer: Mapped["Customer"] = relationship()
+    items: Mapped[list["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    confirmer: Mapped["User | None"] = relationship(foreign_keys=[confirmed_by])
+
+
+class OrderItem(Base):
+    """Позиция в заказе."""
+    __tablename__ = "order_items"
+    __table_args__ = (
+        Index("ix_order_items_order_id", "order_id"),
+        Index("ix_order_items_product_id", "product_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    order_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    product_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
+    product_name: Mapped[str] = mapped_column(String(200), nullable=False)       # Snapshot
+    product_sku: Mapped[str] = mapped_column(String(50), nullable=False)          # Snapshot
+    quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)        # Цена на момент заказа
+    total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    order: Mapped["Order"] = relationship(back_populates="items")
+    product: Mapped["Product"] = relationship()
+
+
+# ═══════════════════════════════════════════
+# GAMIFICATION 2.0 — Квесты, Достижения, Серии, XP/Уровни
+# ═══════════════════════════════════════════
+
+class QuestType(str, enum.Enum):
+    """Тип квеста — какое действие отслеживаем."""
+    PURCHASE_COUNT = "purchase_count"      # N покупок за период
+    PURCHASE_AMOUNT = "purchase_amount"    # единичная покупка на сумму X
+    SPEND_SUM = "spend_sum"                # сумма покупок за период
+    SPEND_BONUS = "spend_bonus"            # списать бонусы
+    REFERRAL = "referral"                  # пригласить друга
+    REVIEW = "review"                      # оставить отзыв
+    WHEEL_SPIN = "wheel_spin"              # крутить колесо
+    STREAK = "streak"                      # серия дней подряд
+    VISIT = "visit"                        # покупка сегодня (заход)
+
+
+class QuestPeriod(str, enum.Enum):
+    """Период повторения квеста."""
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    ONCE = "once"
+
+
+class RewardType(str, enum.Enum):
+    """Тип награды за квест."""
+    BONUS = "bonus"      # бонусы на счёт
+    XP = "xp"            # только опыт
+    SPIN = "spin"        # бесплатный спин колеса
+    COUPON = "coupon"    # купон
+
+
+class QuestStatus(str, enum.Enum):
+    """Статус прогресса квеста у клиента."""
+    ACTIVE = "active"
+    COMPLETED = "completed"   # цель достигнута, награда не получена
+    CLAIMED = "claimed"       # награда получена
+
+
+class Quest(Base):
+    """Квест/миссия — конфигурация задания (управляется админом)."""
+    __tablename__ = "quests"
+    __table_args__ = (
+        Index("ix_quests_is_active", "is_active"),
+        Index("ix_quests_period", "period"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    icon: Mapped[str] = mapped_column(String(40), nullable=False, default="Target")  # Lucide icon name
+    type: Mapped[str] = mapped_column(String(30), nullable=False, default="purchase_count")
+    target_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("1"))
+    reward_type: Mapped[str] = mapped_column(String(20), nullable=False, default="bonus")
+    reward_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    xp_reward: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    period: Mapped[str] = mapped_column(String(20), nullable=False, default="daily")
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    progress: Mapped[list["QuestProgress"]] = relationship(back_populates="quest", cascade="all, delete-orphan")
+
+
+class QuestProgress(Base):
+    """Прогресс клиента по квесту за конкретный период."""
+    __tablename__ = "quest_progress"
+    __table_args__ = (
+        Index("ix_quest_progress_customer_id", "customer_id"),
+        Index("ix_quest_progress_quest_id", "quest_id"),
+        Index("ix_quest_progress_status", "status"),
+        UniqueConstraint("customer_id", "quest_id", "period_key", name="uq_quest_progress_period"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False
+    )
+    quest_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("quests.id", ondelete="CASCADE"), nullable=False
+    )
+    period_key: Mapped[str] = mapped_column(String(20), nullable=False, default="once")  # "2026-06-05" / "2026-W23" / "2026-06" / "once"
+    current_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    target_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("1"))  # snapshot
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    quest: Mapped["Quest"] = relationship(back_populates="progress")
+    customer: Mapped["Customer"] = relationship()
+
+
+class CustomerGameStats(Base):
+    """Игровая статистика клиента: XP, уровень, серия дней."""
+    __tablename__ = "customer_game_stats"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customers.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    xp: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    current_streak: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    longest_streak: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_activity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    freeze_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_quests_completed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_achievements: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    customer: Mapped["Customer"] = relationship()
+
+
+class Achievement(Base):
+    """Достижение/бейдж — конфигурация (управляется админом)."""
+    __tablename__ = "achievements"
+    __table_args__ = (
+        Index("ix_achievements_is_active", "is_active"),
+        Index("ix_achievements_category", "category"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    icon: Mapped[str] = mapped_column(String(40), nullable=False, default="Award")  # Lucide icon name
+    category: Mapped[str] = mapped_column(String(30), nullable=False, default="purchases")
+    grade: Mapped[str] = mapped_column(String(20), nullable=False, default="bronze")  # bronze/silver/gold/platinum (visual)
+    metric: Mapped[str] = mapped_column(String(30), nullable=False, default="purchases")  # purchases/total_earned/ltv/referrals/streak/...
+    threshold: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("1"))
+    xp_reward: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    bonus_reward: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    unlocks: Mapped[list["CustomerAchievement"]] = relationship(back_populates="achievement", cascade="all, delete-orphan")
+
+
+class CustomerAchievement(Base):
+    """Разблокированное достижение клиента."""
+    __tablename__ = "customer_achievements"
+    __table_args__ = (
+        Index("ix_customer_achievements_customer_id", "customer_id"),
+        UniqueConstraint("customer_id", "achievement_id", name="uq_customer_achievement"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False
+    )
+    achievement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("achievements.id", ondelete="CASCADE"), nullable=False
+    )
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    notified: Mapped[bool] = mapped_column(Boolean, default=False)  # отправлено ли WA-уведомление
+
+    # Relationships
+    achievement: Mapped["Achievement"] = relationship(back_populates="unlocks")
+    customer: Mapped["Customer"] = relationship()

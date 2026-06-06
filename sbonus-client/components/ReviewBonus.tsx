@@ -221,7 +221,7 @@ export default function ReviewBonus({ onBalanceChange }: { onBalanceChange?: () 
                     </span>
                     {r.status === 'approved' && (
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#22c55e', marginTop: 4 }}>
-                        +{r.bonus_amount} KGS
+                        +{r.bonus_amount} сом
                       </div>
                     )}
                   </div>

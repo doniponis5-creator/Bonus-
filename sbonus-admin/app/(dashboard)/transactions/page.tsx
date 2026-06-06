@@ -69,7 +69,7 @@ export default function TransactionsPage() {
 
   const handleReverse = async () => {
     if (!reverseReason.trim()) { toast('warning', 'Укажите причину отмены'); return; }
-    if (!await confirm(`Отменить транзакцию на ${Number(reverseTxn.amount).toLocaleString('ru-RU')} KGS для ${reverseTxn.customer_name}?`)) return;
+    if (!await confirm(`Отменить транзакцию на ${Number(reverseTxn.amount).toLocaleString('ru-RU')} сом для ${reverseTxn.customer_name}?`)) return;
     setReversing(true);
     try {
       const { data } = await adminAPI.reverseTransaction(reverseTxn.id, reverseReason.trim());
@@ -163,10 +163,10 @@ export default function TransactionsPage() {
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, fontWeight: 600, color: '#e2eaf6' }}>{t.customer_name}</td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{t.customer_phone}</td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, fontWeight: 700, color }}>
-                    {['spend', 'expire', 'refund'].includes(t.type) ? '−' : '+'}{Number(t.amount).toLocaleString('ru-RU')} KGS
+                    {['spend', 'expire', 'refund'].includes(t.type) ? '−' : '+'}{Number(t.amount).toLocaleString('ru-RU')} сом
                   </td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
-                    {t.purchase_amount ? `${Number(t.purchase_amount).toLocaleString('ru-RU')} KGS` : '—'}
+                    {t.purchase_amount ? `${Number(t.purchase_amount).toLocaleString('ru-RU')} сом` : '—'}
                   </td>
                   <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
                     <span
@@ -226,7 +226,7 @@ export default function TransactionsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div><span style={{ fontSize: 11, color: '#8899aa' }}>Клиент:</span><div style={{ fontSize: 13, fontWeight: 600 }}>{reverseTxn.customer_name}</div></div>
                 <div><span style={{ fontSize: 11, color: '#8899aa' }}>Тип:</span><div style={{ fontSize: 13 }}>{TYPE_LABELS[reverseTxn.type]?.label || reverseTxn.type}</div></div>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Сумма:</span><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>{Number(reverseTxn.amount).toLocaleString('ru-RU')} KGS</div></div>
+                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Сумма:</span><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>{Number(reverseTxn.amount).toLocaleString('ru-RU')} сом</div></div>
                 <div><span style={{ fontSize: 11, color: '#8899aa' }}>Дата:</span><div style={{ fontSize: 12 }}>{new Date(reverseTxn.created_at).toLocaleString('ru-RU')}</div></div>
               </div>
             </div>
@@ -244,8 +244,8 @@ export default function TransactionsPage() {
 
             <div style={{ background: 'rgba(251,146,60,0.1)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: '#fb923c' }}>
               <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> {reverseTxn.type === 'spend'
-                ? `Бонусы (${Number(reverseTxn.amount).toLocaleString('ru-RU')} KGS) будут возвращены на счёт клиента`
-                : `С бонусного счёта клиента будет списано ${Number(reverseTxn.amount).toLocaleString('ru-RU')} KGS`
+                ? `Бонусы (${Number(reverseTxn.amount).toLocaleString('ru-RU')} сом) будут возвращены на счёт клиента`
+                : `С бонусного счёта клиента будет списано ${Number(reverseTxn.amount).toLocaleString('ru-RU')} сом`
               }
             </div>
 

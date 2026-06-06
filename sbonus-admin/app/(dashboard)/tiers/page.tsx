@@ -55,7 +55,7 @@ export default function TiersPage() {
                   {t.bonus_percent}%
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 4 }}>
-                  от {Number(t.min_total_kgs).toLocaleString('ru-RU')} KGS
+                  от {Number(t.min_total_kgs).toLocaleString('ru-RU')} сом
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text3)' }}>
                   Макс. списание: {t.max_spend_pct}%
@@ -101,7 +101,7 @@ export default function TiersPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Мин. сумма (KGS) *</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Мин. сумма (сом) *</label>
               <input className="input" name="min" type="number" min="0" placeholder="0" required />
             </div>
             <div>

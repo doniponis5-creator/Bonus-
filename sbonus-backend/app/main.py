@@ -22,6 +22,8 @@ from app.core.logging import setup_logging, get_logger
 from app.core.database import Base, engine
 from app.seeds.defaults import seed_default_data
 from app.seeds.tiers import seed_tiers
+from app.seeds.gamification import seed_gamification
+from app.services.gamification import register_handlers as register_gamification_handlers
 from app.tasks.campaigns import process_due_campaigns
 from app.tasks.expiration import expire_old_bonuses, warn_expiring_bonuses
 from app.tasks.notification_retry import retry_failed_notifications
@@ -79,6 +81,10 @@ async def lifespan(app: FastAPI):
     async with async_session() as db:
         await seed_tiers(db)
         await seed_default_data(db)
+        await seed_gamification(db)
+
+    # Gamification 2.0: подключить обработчики к event_bus
+    register_gamification_handlers()
 
     # Cron: обработка бонусных кампаний — каждый день 09:00
     scheduler.add_job(

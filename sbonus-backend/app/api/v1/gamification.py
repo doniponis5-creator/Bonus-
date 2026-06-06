@@ -9,15 +9,18 @@ from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func, case, and_, or_, literal_column, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_role, UserRole
+from app.core.security import get_current_user, require_role, UserRole, get_current_customer
 from app.models import (
     Customer, BonusAccount, Transaction, TransactionType,
     Setting, Tier,
+    Quest, QuestProgress, CustomerGameStats, Achievement, CustomerAchievement,
 )
+from app.services import gamification as game
 
 router = APIRouter(prefix="/gamification", tags=["Gamification"])
 
@@ -452,4 +455,444 @@ async def gamification_admin_stats(
         "achievement_leaders": achievement_leaders,
         "popular_achievements": popular_list,
         "achievements_config": ACHIEVEMENTS,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+# GAMIFICATION 2.0 — PERSISTENT API (квесты, достижения, XP, серии)
+# ═══════════════════════════════════════════════════════════════
+
+def _grade_color(grade: str) -> str:
+    return {
+        "bronze": "#cd7f32", "silver": "#c0c0c0",
+        "gold": "#FFE600", "platinum": "#e5e4e2",
+    }.get(grade, "#cd7f32")
+
+
+# ── CLIENT: полный игровой профиль ──
+@router.get("/me")
+async def gamification_me(
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+):
+    """Игровой профиль клиента: уровень/XP, серия, активные миссии, достижения."""
+    customer_id = uuid.UUID(current["sub"])
+    stats = await game.get_or_create_stats(db, customer_id)
+
+    lvl = game.level_from_xp(stats.xp or 0)
+
+    # ── Активные квесты с прогрессом текущего периода ──
+    q_res = await db.execute(
+        select(Quest).where(Quest.is_active == True).order_by(Quest.period, Quest.sort_order)
+    )
+    quests = q_res.scalars().all()
+
+    # Прогресс этого клиента по текущим периодам
+    quest_ids = [q.id for q in quests]
+    prog_map: dict = {}
+    if quest_ids:
+        pkeys = {q.id: game.period_key(q.period) for q in quests}
+        p_res = await db.execute(
+            select(QuestProgress).where(
+                QuestProgress.customer_id == customer_id,
+                QuestProgress.quest_id.in_(quest_ids),
+            )
+        )
+        for p in p_res.scalars().all():
+            if pkeys.get(p.quest_id) == p.period_key:
+                prog_map[p.quest_id] = p
+
+    quests_out = []
+    for q in quests:
+        now = datetime.now(game.TZ)
+        if q.starts_at and now < q.starts_at:
+            continue
+        if q.ends_at and now > q.ends_at:
+            continue
+        p = prog_map.get(q.id)
+        current_val = float(p.current_value) if p else 0.0
+        target = float(q.target_value)
+        status = p.status if p else "active"
+        quests_out.append({
+            "progress_id": str(p.id) if p else None,
+            "code": q.code,
+            "title": q.title,
+            "description": q.description,
+            "icon": q.icon,
+            "type": q.type,
+            "period": q.period,
+            "current": current_val,
+            "target": target,
+            "progress": round(min(1.0, current_val / target), 3) if target else 1.0,
+            "status": status,
+            "reward_type": q.reward_type,
+            "reward_amount": float(q.reward_amount or 0),
+            "xp_reward": q.xp_reward,
+        })
+
+    # ── Достижения ──
+    a_res = await db.execute(
+        select(Achievement).where(Achievement.is_active == True).order_by(Achievement.sort_order)
+    )
+    achievements = a_res.scalars().all()
+    unlocked_res = await db.execute(
+        select(CustomerAchievement).where(CustomerAchievement.customer_id == customer_id)
+    )
+    unlocked_map = {ua.achievement_id: ua for ua in unlocked_res.scalars().all()}
+
+    # Метрики для прогресса к заблокированным
+    metrics = await game._compute_metrics(db, customer_id, stats)
+
+    ach_out = []
+    new_unlocks = []
+    for a in achievements:
+        ua = unlocked_map.get(a.id)
+        is_unlocked = ua is not None
+        metric_val = metrics.get(a.metric, 0)
+        thr = float(a.threshold) or 1
+        item = {
+            "code": a.code,
+            "title": a.title,
+            "description": a.description,
+            "icon": a.icon,
+            "category": a.category,
+            "grade": a.grade,
+            "grade_color": _grade_color(a.grade),
+            "xp_reward": a.xp_reward,
+            "bonus_reward": float(a.bonus_reward or 0),
+            "unlocked": is_unlocked,
+            "unlocked_at": ua.unlocked_at.isoformat() if ua and ua.unlocked_at else None,
+            "progress": round(min(1.0, metric_val / thr), 3),
+        }
+        ach_out.append(item)
+        # Новые (ещё не показанные) разблокировки — для celebration
+        if ua is not None and not ua.notified:
+            new_unlocks.append({"code": a.code, "title": a.title, "icon": a.icon, "grade": a.grade})
+            ua.notified = True
+
+    completed_quests = sum(1 for q in quests_out if q["status"] == "completed")
+
+    return {
+        "level": lvl["level"],
+        "xp": lvl["xp"],
+        "xp_in_level": lvl["xp_in_level"],
+        "xp_for_next": lvl["xp_for_next"],
+        "streak": stats.current_streak or 0,
+        "longest_streak": stats.longest_streak or 0,
+        "freeze_count": stats.freeze_count or 0,
+        "total_quests_completed": stats.total_quests_completed or 0,
+        "achievements_unlocked": len(unlocked_map),
+        "achievements_total": len(achievements),
+        "claimable_count": completed_quests,
+        "quests": quests_out,
+        "achievements": ach_out,
+        "new_unlocks": new_unlocks,
+    }
+
+
+# ── CLIENT: получить награду за миссию ──
+@router.post("/quest/{progress_id}/claim")
+async def claim_quest_reward(
+    progress_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+):
+    """Забрать награду за выполненную миссию."""
+    customer_id = uuid.UUID(current["sub"])
+    result = await game.claim_quest(db, customer_id, progress_id)
+    if not result.get("ok"):
+        msg = {
+            "not_found": "Миссия не найдена",
+            "already_claimed": "Награда уже получена",
+            "not_completed": "Миссия ещё не выполнена",
+            "quest_gone": "Миссия больше недоступна",
+        }.get(result.get("error"), "Ошибка")
+        raise HTTPException(status_code=400, detail=msg)
+    return result
+
+
+# ═══════════════════════════════════════════
+# ADMIN — Quests CRUD
+# ═══════════════════════════════════════════
+
+class QuestIn(BaseModel):
+    code: str = Field(..., max_length=50)
+    title: str = Field(..., max_length=150)
+    description: Optional[str] = None
+    icon: str = "Target"
+    type: str = "purchase_count"
+    target_value: Decimal = Decimal("1")
+    reward_type: str = "bonus"
+    reward_amount: Decimal = Decimal("0")
+    xp_reward: int = 10
+    period: str = "daily"
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class QuestUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    type: Optional[str] = None
+    target_value: Optional[Decimal] = None
+    reward_type: Optional[str] = None
+    reward_amount: Optional[Decimal] = None
+    xp_reward: Optional[int] = None
+    period: Optional[str] = None
+    sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+@router.get("/admin/quests")
+async def admin_list_quests(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    res = await db.execute(select(Quest).order_by(Quest.period, Quest.sort_order))
+    quests = res.scalars().all()
+    out = []
+    for q in quests:
+        cnt_res = await db.execute(
+            select(
+                func.count().label("total"),
+                func.coalesce(func.sum(case((QuestProgress.status == "claimed", 1), else_=0)), 0).label("claimed"),
+            ).where(QuestProgress.quest_id == q.id)
+        )
+        c = cnt_res.one()
+        out.append({
+            "id": str(q.id), "code": q.code, "title": q.title, "description": q.description,
+            "icon": q.icon, "type": q.type, "target_value": float(q.target_value),
+            "reward_type": q.reward_type, "reward_amount": float(q.reward_amount or 0),
+            "xp_reward": q.xp_reward, "period": q.period, "sort_order": q.sort_order,
+            "is_active": q.is_active,
+            "stats": {"participants": int(c.total or 0), "claimed": int(c.claimed or 0)},
+        })
+    return {"quests": out}
+
+
+@router.post("/admin/quests", status_code=201)
+async def admin_create_quest(
+    body: QuestIn,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    exists = await db.execute(select(Quest).where(Quest.code == body.code))
+    if exists.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Квест с таким кодом уже существует")
+    q = Quest(**body.model_dump())
+    db.add(q)
+    await db.flush()
+    return {"id": str(q.id), "ok": True}
+
+
+@router.patch("/admin/quests/{quest_id}")
+async def admin_update_quest(
+    quest_id: uuid.UUID,
+    body: QuestUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    res = await db.execute(select(Quest).where(Quest.id == quest_id))
+    q = res.scalar_one_or_none()
+    if not q:
+        raise HTTPException(status_code=404, detail="Квест не найден")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(q, k, v)
+    return {"ok": True}
+
+
+@router.delete("/admin/quests/{quest_id}")
+async def admin_delete_quest(
+    quest_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    res = await db.execute(select(Quest).where(Quest.id == quest_id))
+    q = res.scalar_one_or_none()
+    if not q:
+        raise HTTPException(status_code=404, detail="Квест не найден")
+    await db.delete(q)
+    return {"ok": True}
+
+
+# ═══════════════════════════════════════════
+# ADMIN — Achievements CRUD
+# ═══════════════════════════════════════════
+
+class AchievementIn(BaseModel):
+    code: str = Field(..., max_length=50)
+    title: str = Field(..., max_length=150)
+    description: Optional[str] = None
+    icon: str = "Award"
+    category: str = "purchases"
+    grade: str = "bronze"
+    metric: str = "purchases"
+    threshold: Decimal = Decimal("1")
+    xp_reward: int = 100
+    bonus_reward: Decimal = Decimal("0")
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class AchievementUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    category: Optional[str] = None
+    grade: Optional[str] = None
+    metric: Optional[str] = None
+    threshold: Optional[Decimal] = None
+    xp_reward: Optional[int] = None
+    bonus_reward: Optional[Decimal] = None
+    sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+@router.get("/admin/achievements")
+async def admin_list_achievements(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    res = await db.execute(select(Achievement).order_by(Achievement.sort_order))
+    achs = res.scalars().all()
+    out = []
+    for a in achs:
+        cnt_res = await db.execute(
+            select(func.count()).where(CustomerAchievement.achievement_id == a.id)
+        )
+        out.append({
+            "id": str(a.id), "code": a.code, "title": a.title, "description": a.description,
+            "icon": a.icon, "category": a.category, "grade": a.grade, "metric": a.metric,
+            "threshold": float(a.threshold), "xp_reward": a.xp_reward,
+            "bonus_reward": float(a.bonus_reward or 0), "sort_order": a.sort_order,
+            "is_active": a.is_active, "unlocked_by": int(cnt_res.scalar() or 0),
+        })
+    return {"achievements": out}
+
+
+@router.post("/admin/achievements", status_code=201)
+async def admin_create_achievement(
+    body: AchievementIn,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    exists = await db.execute(select(Achievement).where(Achievement.code == body.code))
+    if exists.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Достижение с таким кодом уже существует")
+    a = Achievement(**body.model_dump())
+    db.add(a)
+    await db.flush()
+    return {"id": str(a.id), "ok": True}
+
+
+@router.patch("/admin/achievements/{achievement_id}")
+async def admin_update_achievement(
+    achievement_id: uuid.UUID,
+    body: AchievementUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    res = await db.execute(select(Achievement).where(Achievement.id == achievement_id))
+    a = res.scalar_one_or_none()
+    if not a:
+        raise HTTPException(status_code=404, detail="Достижение не найдено")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(a, k, v)
+    return {"ok": True}
+
+
+@router.delete("/admin/achievements/{achievement_id}")
+async def admin_delete_achievement(
+    achievement_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    res = await db.execute(select(Achievement).where(Achievement.id == achievement_id))
+    a = res.scalar_one_or_none()
+    if not a:
+        raise HTTPException(status_code=404, detail="Достижение не найдено")
+    await db.delete(a)
+    return {"ok": True}
+
+
+# ═══════════════════════════════════════════
+# ADMIN — Overview (быстрая статистика из persistent-таблиц)
+# ═══════════════════════════════════════════
+
+@router.get("/admin/overview")
+async def admin_overview(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    """Сводка по Геймификации 2.0 (быстро, из агрегатов)."""
+    players_res = await db.execute(select(func.count()).select_from(CustomerGameStats))
+    total_players = int(players_res.scalar() or 0)
+
+    xp_res = await db.execute(select(func.coalesce(func.sum(CustomerGameStats.xp), 0)))
+    total_xp = int(xp_res.scalar() or 0)
+
+    # Распределение уровней
+    lvl_res = await db.execute(
+        select(CustomerGameStats.level, func.count()).group_by(CustomerGameStats.level).order_by(CustomerGameStats.level)
+    )
+    level_dist = [{"level": r[0], "count": int(r[1])} for r in lvl_res.all()]
+
+    # Серии: распределение
+    streak_buckets = {"0": 0, "1-2": 0, "3-6": 0, "7-13": 0, "14-29": 0, "30+": 0}
+    s_res = await db.execute(select(CustomerGameStats.current_streak))
+    for (s,) in s_res.all():
+        s = s or 0
+        if s == 0: streak_buckets["0"] += 1
+        elif s <= 2: streak_buckets["1-2"] += 1
+        elif s <= 6: streak_buckets["3-6"] += 1
+        elif s <= 13: streak_buckets["7-13"] += 1
+        elif s <= 29: streak_buckets["14-29"] += 1
+        else: streak_buckets["30+"] += 1
+
+    # Топ по XP
+    top_res = await db.execute(
+        select(CustomerGameStats.customer_id, CustomerGameStats.xp, CustomerGameStats.level,
+               CustomerGameStats.current_streak, Customer.full_name, Customer.phone)
+        .join(Customer, Customer.id == CustomerGameStats.customer_id)
+        .order_by(desc(CustomerGameStats.xp)).limit(10)
+    )
+    top_players = [{
+        "name": r.full_name, "phone": r.phone, "xp": int(r.xp or 0),
+        "level": int(r.level or 1), "streak": int(r.current_streak or 0),
+    } for r in top_res.all()]
+
+    # Квесты: всего выполнено/получено
+    quest_stat = await db.execute(
+        select(
+            func.coalesce(func.sum(case((QuestProgress.status == "completed", 1), else_=0)), 0).label("completed"),
+            func.coalesce(func.sum(case((QuestProgress.status == "claimed", 1), else_=0)), 0).label("claimed"),
+        )
+    )
+    qs = quest_stat.one()
+
+    # Достижения: всего разблокировано + популярные
+    ach_total_res = await db.execute(select(func.count()).select_from(CustomerAchievement))
+    pop_res = await db.execute(
+        select(Achievement.code, Achievement.title, Achievement.icon, Achievement.grade, func.count(CustomerAchievement.id).label("cnt"))
+        .join(CustomerAchievement, CustomerAchievement.achievement_id == Achievement.id)
+        .group_by(Achievement.id).order_by(desc("cnt")).limit(8)
+    )
+    popular = [{"code": r.code, "title": r.title, "icon": r.icon, "grade": r.grade, "count": int(r.cnt)} for r in pop_res.all()]
+
+    quest_count = await db.execute(select(func.count()).select_from(Quest).where(Quest.is_active == True))
+    ach_count = await db.execute(select(func.count()).select_from(Achievement).where(Achievement.is_active == True))
+
+    return {
+        "total_players": total_players,
+        "total_xp": total_xp,
+        "active_quests": int(quest_count.scalar() or 0),
+        "active_achievements": int(ach_count.scalar() or 0),
+        "quests_completed": int(qs.completed or 0),
+        "quests_claimed": int(qs.claimed or 0),
+        "achievements_unlocked": int(ach_total_res.scalar() or 0),
+        "level_distribution": level_dist,
+        "streak_distribution": streak_buckets,
+        "top_players": top_players,
+        "popular_achievements": popular,
     }

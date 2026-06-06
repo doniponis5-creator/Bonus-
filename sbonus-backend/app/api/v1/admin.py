@@ -2028,6 +2028,8 @@ class WheelSegmentInput(BaseModel):
     color: str
     probability: float  # 0.0 - 1.0
     prize_type: str = "bonus"  # "bonus" | "physical" | "none"
+    stock: int | None = None  # None = безлимит; иначе макс. выигрышей за период (запас приза)
+    stock_period: str = "total"  # "day" | "week" | "month" | "total" — окно квоты
 
 
 class WheelConfigUpdateRequest(BaseModel):
@@ -2095,14 +2097,19 @@ async def update_wheel_config(
     # Re-assign sequential IDs
     segments_data = []
     for i, s in enumerate(body.segments, 1):
-        segments_data.append({
+        seg = {
             "id": i,
             "label": s.label.strip(),
             "value": s.value,
             "color": s.color.strip(),
             "probability": round(s.probability, 4),
             "prize_type": s.prize_type if s.prize_type in ("bonus", "physical", "none") else "bonus",
-        })
+        }
+        # Квота приза (запас): сохраняем только если задан
+        if s.stock is not None and int(s.stock) > 0:
+            seg["stock"] = int(s.stock)
+            seg["stock_period"] = s.stock_period if s.stock_period in ("day", "week", "month", "total") else "total"
+        segments_data.append(seg)
 
     # Save to DB
     result = await db.execute(

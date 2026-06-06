@@ -30,7 +30,7 @@ interface TrendsData {
   period_days: number;
 }
 
-const fmt = (v: string | number) => Number(v).toLocaleString('ru-RU') + ' KGS';
+const fmt = (v: string | number) => Number(v).toLocaleString('ru-RU') + ' сом';
 const fmtShort = (v: number) => {
   if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M';
   if (v >= 1_000) return (v / 1_000).toFixed(1) + 'K';

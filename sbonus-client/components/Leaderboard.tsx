@@ -80,7 +80,7 @@ export default function Leaderboard() {
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 12, color: '#8899aa' }}>Покупки</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#e2eaf6' }}>
-            {myTotal.toLocaleString()} KGS
+            {myTotal.toLocaleString()} сом
           </div>
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function Leaderboard() {
                 fontSize: 15, fontWeight: 700, color: '#e2eaf6',
                 textAlign: 'right',
               }}>
-                {l.total_purchases.toLocaleString()} <span style={{ fontSize: 11, color: '#8899aa' }}>KGS</span>
+                {l.total_purchases.toLocaleString()} <span style={{ fontSize: 11, color: '#8899aa' }}>сом</span>
               </div>
             </div>
           ))}

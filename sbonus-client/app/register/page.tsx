@@ -26,7 +26,7 @@ function RegisterForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [referrerName, setReferrerName] = useState('');
-  const [inviteeBonus, setInviteeBonus] = useState('50');
+  const [inviteeBonus, setInviteeBonus] = useState('25');
 
   // Если уже авторизован — на главную
   useEffect(() => {
@@ -113,7 +113,7 @@ function RegisterForm() {
             }}>
               <Gift size={24} color="var(--accent)" />
               <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--accent)', margin: '8px 0 4px' }}>
-                +{inviteeBonus} KGS
+                +{inviteeBonus} сом
               </div>
               <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>
                 Бонус зачислен на ваш счёт!

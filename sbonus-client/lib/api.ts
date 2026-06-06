@@ -140,4 +140,19 @@ export const wheelAPI = {
   status: () => api.get('/api/v1/wheel/status'),
 };
 
+// ─── Gamification 2.0 ───
+export const gamificationAPI = {
+  me: () => api.get('/api/v1/gamification/me'),
+  claim: (progressId: string) => api.post(`/api/v1/gamification/quest/${progressId}/claim`),
+};
+
+// ─── Referral (milestones + leaderboard) ───
+export const referralAPI = {
+  myStats: () => api.get('/api/v1/referral/my-stats'),
+  milestones: () => api.get('/api/v1/referral/milestones'),
+  claimMilestone: (referralsNeeded: number) =>
+    api.post(`/api/v1/referral/claim-milestone?milestone_referrals=${referralsNeeded}`),
+  leaderboard: (limit = 20) => api.get(`/api/v1/referral/leaderboard?limit=${limit}`),
+};
+
 export default api;

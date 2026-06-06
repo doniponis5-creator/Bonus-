@@ -1,12 +1,12 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   LogOut, QrCode, Loader2, RefreshCw, Home, History, User, Gift,
   PlusCircle, MinusCircle, Clock, Users, Ticket, RefreshCcw,
   Pencil, Share2, Copy, Check, ChevronLeft, ChevronRight, Disc3, Trophy,
-  CheckCircle2, XCircle, Smartphone, Link2,
+  CheckCircle2, XCircle, Smartphone, Link2, Target, Lightbulb,
 } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import DebtCard from '@/components/DebtCard';
@@ -17,10 +17,13 @@ import Leaderboard from '@/components/Leaderboard';
 import MyCoupons from '@/components/MyCoupons';
 import ReviewBonus from '@/components/ReviewBonus';
 import PWAInstall from '@/components/PWAInstall';
-import { customerAPI, customerAuthAPI, type CabinetMe } from '@/lib/api';
+import Gamification from '@/components/Gamification';
+import Referral from '@/components/Referral';
+import { customerAPI, customerAuthAPI, wheelAPI, type CabinetMe } from '@/lib/api';
 import { clearToken, getToken, isTokenValid, setToken } from '@/lib/auth';
+import { isNativeShell, syncNativeTab, onNativeTabChange } from '@/lib/nativeBridge';
 
-type Tab = 'home' | 'history' | 'wheel' | 'promo' | 'rank' | 'profile';
+type Tab = 'home' | 'history' | 'wheel' | 'promo' | 'rank' | 'profile' | 'game';
 
 const TX_META: Record<string, { label: string; color: string; sign: '+' | '-' }> = {
   earn:     { label: 'Начисление',    color: '#FFE600', sign: '+' },
@@ -33,6 +36,13 @@ const TX_META: Record<string, { label: string; color: string; sign: '+' | '-' }>
   campaign: { label: 'Кампания',      color: '#22c55e', sign: '+' },
 };
 
+function pluralSpins(n: number): string {
+  const n10 = n % 10, n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return 'попытка';
+  if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return 'попытки';
+  return 'попыток';
+}
+
 export default function Page() {
   return (
     <Suspense fallback={<div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>Загрузка...</div>}>
@@ -44,7 +54,7 @@ export default function Page() {
 function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = (['home', 'history', 'wheel', 'promo', 'rank', 'profile'] as Tab[]).includes(searchParams.get('tab') as Tab)
+  const initialTab = (['home', 'history', 'wheel', 'promo', 'rank', 'profile', 'game'] as Tab[]).includes(searchParams.get('tab') as Tab)
     ? (searchParams.get('tab') as Tab)
     : 'home';
   const [data, setData] = useState<CabinetMe | null>(null);
@@ -73,8 +83,41 @@ function DashboardPage() {
   const [promoLoading, setPromoLoading] = useState(false);
 
   // Referral
-  const [referralInfo, setReferralInfo] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+
+  // Spin prompt (показать «у вас есть вращение» при входе)
+  const [spinPrompt, setSpinPrompt] = useState(0);
+  const spinCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (!data || spinCheckedRef.current) return;
+    spinCheckedRef.current = true;
+    try {
+      if (sessionStorage.getItem('sbonus_spin_prompt_shown')) return;
+    } catch { /* ignore */ }
+    wheelAPI.status()
+      .then(r => {
+        const n = r.data?.spins_available || 0;
+        if (n > 0) {
+          setSpinPrompt(n);
+          try { sessionStorage.setItem('sbonus_spin_prompt_shown', '1'); } catch { /* ignore */ }
+        }
+      })
+      .catch(() => {});
+  }, [data]);
+
+  const goToWheel = () => { setSpinPrompt(0); setTab('wheel'); };
+
+  // ── Native iOS shell (Liquid Glass) integration ──
+  const [native, setNative] = useState(false);
+  useEffect(() => {
+    setNative(isNativeShell());
+    // Слушаем смену вкладки из нативного tab bar
+    const off = onNativeTabChange((t) => setTab(t as Tab));
+    return off;
+  }, []);
+  // Синхронизируем текущую вкладку с нативной оболочкой
+  useEffect(() => { syncNativeTab(tab); }, [tab]);
 
   const fetchData = () => {
     if (!isTokenValid(getToken())) { router.replace('/login'); return; }
@@ -125,13 +168,6 @@ function DashboardPage() {
   useEffect(() => {
     if (tab === 'history') loadTxns(txPage, txType);
   }, [tab, txPage, txType]);
-
-  // Load referral info
-  useEffect(() => {
-    if (tab === 'promo') {
-      customerAPI.referralInfo().then(r => setReferralInfo(r.data)).catch(() => {});
-    }
-  }, [tab]);
 
   // Init profile edit form
   useEffect(() => {
@@ -201,11 +237,11 @@ function DashboardPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button onClick={fetchData} disabled={refreshing} aria-label="Обновить"
-            style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer', padding: 8, display: 'flex', opacity: refreshing ? 0.4 : 1, animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>
+            style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer', width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: refreshing ? 0.4 : 1, animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>
             <RefreshCw size={18} />
           </button>
           <button onClick={handleLogout} aria-label="Выйти"
-            style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer', padding: 8, display: 'flex' }}>
+            style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer', width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <LogOut size={20} />
           </button>
         </div>
@@ -233,12 +269,12 @@ function DashboardPage() {
             <div className="card" style={{ padding: '12px 14px', textAlign: 'center' }}>
               <div style={{ fontSize: 11, color: 'var(--text3)' }}>Получено</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: '#22c55e' }}>{Number(data.total_earned).toLocaleString('ru-RU')}</div>
-              <div style={{ fontSize: 10, color: 'var(--text3)' }}>KGS</div>
+              <div style={{ fontSize: 10, color: 'var(--text3)' }}>сом</div>
             </div>
             <div className="card" style={{ padding: '12px 14px', textAlign: 'center' }}>
               <div style={{ fontSize: 11, color: 'var(--text3)' }}>Потрачено</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: '#f97316' }}>{Number(data.total_spent).toLocaleString('ru-RU')}</div>
-              <div style={{ fontSize: 10, color: 'var(--text3)' }}>KGS</div>
+              <div style={{ fontSize: 10, color: 'var(--text3)' }}>сом</div>
             </div>
           </div>
 
@@ -304,7 +340,7 @@ function DashboardPage() {
                       </div>
                     </div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: meta.color, whiteSpace: 'nowrap' }}>
-                      {meta.sign}{Math.abs(t.amount).toLocaleString('ru-RU')} KGS
+                      {meta.sign}{Math.abs(t.amount).toLocaleString('ru-RU')} сом
                     </div>
                   </div>
                 );
@@ -350,7 +386,7 @@ function DashboardPage() {
                 <span style={{ fontSize: 11, color: 'var(--text3)' }}>Телефон нельзя изменить</span>
               </div>
               <button className="btn btn-primary" onClick={handleSaveProfile} disabled={saving}>
-                {saving ? 'Сохранение...' : 'Сохранить'}
+                {saving ? (<><Loader2 size={16} className="spinner" /> Сохранение...</>) : 'Сохранить'}
               </button>
               {saveMsg && <p style={{ fontSize: 13, color: saveMsg.startsWith('Профиль') ? '#22c55e' : '#ff4d4d', textAlign: 'center' }}>{saveMsg}</p>}
             </div>
@@ -362,9 +398,9 @@ function DashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
                 { label: 'Уровень', value: `${data.tier_name} (${Number(data.tier_percent)}%)`, color: 'var(--accent)' },
-                { label: 'Баланс', value: `${Number(data.balance).toLocaleString('ru-RU')} KGS`, color: 'var(--accent)' },
-                { label: 'Получено всего', value: `${Number(data.total_earned).toLocaleString('ru-RU')} KGS`, color: '#22c55e' },
-                { label: 'Потрачено', value: `${Number(data.total_spent).toLocaleString('ru-RU')} KGS`, color: '#f97316' },
+                { label: 'Баланс', value: `${Number(data.balance).toLocaleString('ru-RU')} сом`, color: 'var(--accent)' },
+                { label: 'Получено всего', value: `${Number(data.total_earned).toLocaleString('ru-RU')} сом`, color: '#22c55e' },
+                { label: 'Потрачено', value: `${Number(data.total_spent).toLocaleString('ru-RU')} сом`, color: '#f97316' },
                 { label: 'QR код', value: data.qr_code, color: 'var(--text2)' },
               ].map(item => (
                 <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -405,129 +441,8 @@ function DashboardPage() {
             )}
           </div>
 
-          {/* Referral - My code */}
-          <div className="card" style={{ marginBottom: 12 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Share2 size={14} /> Пригласи друга — получи бонус!
-            </h3>
-            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
-              Поделитесь ссылкой с другом. Вы получите <strong style={{ color: 'var(--accent)' }}>{referralInfo?.bonus_per_invite || 100} KGS</strong>, а друг — <strong style={{ color: 'var(--accent)' }}>{referralInfo?.invitee_bonus || 50} KGS</strong>!
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,230,0,0.06)', borderRadius: 12, padding: '12px 16px' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>Ваш код:</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent)', letterSpacing: 3 }}>{data.referral_code}</div>
-              </div>
-              <button onClick={copyRef}
-                style={{ background: 'var(--accent)', color: '#000', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                {copied ? <><Check size={14} /> Скопировано</> : <><Copy size={14} /> Копировать</>}
-              </button>
-            </div>
-
-            {/* Share buttons — endi /register?ref= ssylka bilan */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button onClick={() => {
-                const link = `${window.location.origin}/register?ref=${data.referral_code}`;
-                const text = `🎁 Получи ${referralInfo?.invitee_bonus || 50} KGS бонус в Смарт Центр!\n\n📱 Регистрируйся: ${link}`;
-                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-              }}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Smartphone size={14} /> WhatsApp
-              </button>
-              <button onClick={() => {
-                const link = `${window.location.origin}/register?ref=${data.referral_code}`;
-                const text = `🎁 Смарт Центр: ${referralInfo?.invitee_bonus || 50} KGS бонус! Регистрируйся: ${link}`;
-                if (navigator.share) {
-                  navigator.share({ title: 'Смарт Центр — Бонус', text, url: link });
-                } else {
-                  navigator.clipboard.writeText(link);
-                }
-              }}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'rgba(255,255,255,0.08)', color: '#e2eaf6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Link2 size={14} /> Поделиться
-              </button>
-            </div>
-
-            {/* 📋 Как это работает — подсказка */}
-            <div style={{
-              marginTop: 14, padding: '14px 16px', borderRadius: 12,
-              background: 'linear-gradient(135deg, rgba(37,211,102,0.08), rgba(255,230,0,0.06))',
-              border: '1px solid rgba(37,211,102,0.15)',
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#25D366', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                💡 Как это работает?
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  { step: '1', icon: '📋', text: 'Нажмите "Копировать" ниже' },
-                  { step: '2', icon: '📲', text: 'Отправьте ссылку друзьям или в статус WhatsApp' },
-                  { step: '3', icon: '👤', text: 'Друг переходит по ссылке и регистрируется' },
-                  { step: '4', icon: '🎁', text: `Вам ${referralInfo?.bonus_per_invite || 100} KGS, другу ${referralInfo?.invitee_bonus || 50} KGS бонус!` },
-                ].map((item) => (
-                  <div key={item.step} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%',
-                      background: 'rgba(37,211,102,0.15)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center',
-                      fontSize: 14, flexShrink: 0,
-                    }}>{item.icon}</div>
-                    <span style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.4 }}>{item.text}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{
-                marginTop: 10, padding: '8px 12px', borderRadius: 8,
-                background: 'rgba(255,230,0,0.08)', fontSize: 11.5, color: 'var(--accent)',
-                fontWeight: 600, textAlign: 'center',
-              }}>
-                ⚡ Чем больше друзей — тем больше бонусов!
-              </div>
-            </div>
-
-            {referralInfo && (
-              <>
-                <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text2)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Приглашено: <strong style={{ color: 'var(--accent)' }}>{referralInfo.invited_count}</strong></span>
-                  <span>Заработано: <strong style={{ color: '#22c55e' }}>{referralInfo.total_earned?.toLocaleString('ru-RU') || 0} KGS</strong></span>
-                </div>
-
-                {/* Список приглашённых */}
-                {referralInfo.invites && referralInfo.invites.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Ваши приглашённые:</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {referralInfo.invites.slice(0, 10).map((inv: any, i: number) => (
-                        <div key={i} style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10,
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{
-                              width: 28, height: 28, borderRadius: '50%',
-                              background: 'rgba(255,230,0,0.1)', display: 'flex',
-                              alignItems: 'center', justifyContent: 'center',
-                              fontSize: 12, fontWeight: 700, color: 'var(--accent)',
-                            }}>{i + 1}</div>
-                            <span style={{ fontSize: 13, fontWeight: 500 }}>{inv.name}</span>
-                          </div>
-                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-                            {inv.date ? new Date(inv.date).toLocaleDateString('ru-RU') : ''}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Кто меня пригласил */}
-                {referralInfo.referred_by_name && (
-                  <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text3)', padding: '8px 12px', background: 'rgba(96,165,250,0.06)', borderRadius: 10 }}>
-                    Вас пригласил: <strong style={{ color: '#60a5fa' }}>{referralInfo.referred_by_name}</strong>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          {/* Referral — приглашай друзей */}
+          <Referral referralCode={data.referral_code} onBalanceChange={fetchData} />
 
           {/* Coupons */}
           <MyCoupons onBalanceChange={fetchData} />
@@ -541,19 +456,70 @@ function DashboardPage() {
 
       {tab === 'rank' && <Leaderboard />}
 
+      {tab === 'game' && <Gamification />}
+
+      {/* Spin prompt — «у вас есть вращение!» при входе */}
+      {spinPrompt > 0 && (
+        <div
+          onClick={() => setSpinPrompt(0)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(7,8,13,0.88)',
+            backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="float-up"
+            style={{
+              background: 'var(--bg-2)', border: '1px solid rgba(255,230,0,0.3)', borderRadius: 24,
+              padding: '32px 24px 24px', textAlign: 'center', maxWidth: 340, width: '100%', position: 'relative',
+            }}
+          >
+            <div
+              className="pulse"
+              style={{
+                width: 92, height: 92, borderRadius: 26, margin: '0 auto 18px',
+                background: 'linear-gradient(135deg, #FFE600, #f59e0b)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 0 44px rgba(255,230,0,0.5)',
+              }}
+            >
+              <Disc3 size={46} color="#0a0a0a" />
+            </div>
+            <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Вас ждёт удача!</h3>
+            <p style={{ fontSize: 15, color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 22 }}>
+              У вас <b style={{ color: '#FFE600' }}>{spinPrompt}</b> {pluralSpins(spinPrompt)} крутить Колесо Удачи!
+            </p>
+            <button onClick={goToWheel} className="btn btn-primary" style={{ marginBottom: 8 }}>
+              <Disc3 size={18} /> Крутить сейчас!
+            </button>
+            <button onClick={() => setSpinPrompt(0)} className="btn btn-ghost">
+              Позже
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* QR Modal */}
       <QRModal open={qrOpen} qrCode={data.qr_code} fullName={data.full_name} onClose={() => setQrOpen(false)} />
 
-      {/* Bottom Tab Bar */}
+      {/* Bottom Tab Bar — скрыт в нативной оболочке (там нативный iOS 26 Liquid Glass tab bar) */}
+      {!native && (
       <nav style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: 'rgba(10,15,26,0.95)', backdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex', justifyContent: 'space-around', padding: '8px 0 env(safe-area-inset-bottom, 8px)',
+        position: 'fixed', left: 10, right: 10,
+        bottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+        maxWidth: 460, margin: '0 auto',
+        background: 'rgba(14,16,22,0.72)',
+        backdropFilter: 'blur(36px) saturate(180%)', WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 26,
+        boxShadow: '0 16px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10)',
+        display: 'flex', alignItems: 'center', padding: 6, gap: 2,
         zIndex: 100,
       }}>
         {([
           { id: 'home', icon: Home, label: 'Главная' },
+          { id: 'game', icon: Target, label: 'Цели' },
           { id: 'wheel', icon: Disc3, label: 'Удача' },
           { id: 'rank', icon: Trophy, label: 'Рейтинг' },
           { id: 'promo', icon: Gift, label: 'Бонусы' },
@@ -562,22 +528,31 @@ function DashboardPage() {
           const Icon = t.icon;
           const active = tab === t.id;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)}
+            <button key={t.id} onClick={() => setTab(t.id)} aria-label={t.label} className="tap"
               style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '4px 12px',
-                color: active ? 'var(--accent)' : 'var(--text3)',
-                transition: 'color 0.2s',
+                flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer',
+                position: 'relative', borderRadius: 16,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 0',
+                color: active ? 'var(--accent)' : 'var(--text-3)',
+                transition: 'color 0.25s var(--ease-out)',
               }}>
-              <Icon size={20} strokeWidth={active ? 2.5 : 1.5} />
-              <span style={{ fontSize: 10, fontWeight: active ? 700 : 400 }}>{t.label}</span>
+              {active && (
+                <span style={{
+                  position: 'absolute', inset: '2px 4px', borderRadius: 15, zIndex: 0,
+                  background: 'rgba(255,230,0,0.10)', border: '1px solid rgba(255,230,0,0.16)',
+                  boxShadow: '0 0 16px rgba(255,220,0,0.18)',
+                }} />
+              )}
+              <Icon size={21} strokeWidth={active ? 2.4 : 1.9} style={{ position: 'relative', zIndex: 1 }} />
+              <span style={{ fontSize: 9.5, fontWeight: active ? 800 : 500, letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative', zIndex: 1 }}>{t.label}</span>
             </button>
           );
         })}
       </nav>
+      )}
 
-      {/* PWA Install Banner */}
-      <PWAInstall />
+      {/* PWA Install Banner — не показываем в нативном приложении */}
+      {!native && <PWAInstall />}
 
       {/* Bottom padding for tab bar */}
       <div style={{ height: 80 }} />

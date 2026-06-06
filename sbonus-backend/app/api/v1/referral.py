@@ -60,10 +60,10 @@ class MilestoneConfig(BaseModel):
 
 # ─── Default milestones ───
 DEFAULT_MILESTONES = [
-    {"referrals_needed": 5,  "reward_amount": 500,   "title": "Yangi do'st — 5 ta taklif"},
-    {"referrals_needed": 10, "reward_amount": 1500,  "title": "Faol tarqatuvchi — 10 ta taklif"},
-    {"referrals_needed": 20, "reward_amount": 3000,  "title": "Ambassador — 20 ta taklif"},
-    {"referrals_needed": 50, "reward_amount": 10000, "title": "Legenda — 50 ta taklif"},
+    {"referrals_needed": 5,  "reward_amount": 100,  "title": "5 друзей"},
+    {"referrals_needed": 10, "reward_amount": 250,  "title": "10 друзей"},
+    {"referrals_needed": 20, "reward_amount": 600,  "title": "20 друзей"},
+    {"referrals_needed": 50, "reward_amount": 1500, "title": "50 друзей"},
 ]
 
 

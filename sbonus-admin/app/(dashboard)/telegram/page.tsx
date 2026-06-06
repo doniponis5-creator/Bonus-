@@ -314,7 +314,7 @@ export default function TelegramPage() {
                 value={config.notify_large_spend_threshold}
                 onChange={(v) => setConfig({ ...config, notify_large_spend_threshold: Number(v) || 5000 })}
                 type="number"
-                suffix="KGS"
+                suffix="сом"
               />
             </div>
           )}
@@ -334,7 +334,7 @@ export default function TelegramPage() {
                 value={config.notify_large_purchase_threshold}
                 onChange={(v) => setConfig({ ...config, notify_large_purchase_threshold: Number(v) || 50000 })}
                 type="number"
-                suffix="KGS"
+                suffix="сом"
               />
             </div>
           )}

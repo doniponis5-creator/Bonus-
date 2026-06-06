@@ -11,6 +11,8 @@ interface Segment {
   color: string;
   probability: number;
   prize_type: "bonus" | "physical" | "none";
+  stock?: number | null;      // null/пусто = без лимита
+  stock_period?: "day" | "week" | "month" | "total";
 }
 
 const PRESET_COLORS = [
@@ -98,7 +100,7 @@ export default function WheelSettingsPage() {
     setSegments(segments.filter((_, i) => i !== index));
   };
 
-  const updateSegment = (index: number, field: keyof Segment, value: string | number) => {
+  const updateSegment = (index: number, field: keyof Segment, value: string | number | null) => {
     setSegments(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s));
   };
 
@@ -197,12 +199,14 @@ export default function WheelSettingsPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {segments.map((seg, idx) => (
               <div key={idx} style={{
+                background: colors.cardBg, border: `1px solid ${colors.border}`,
+                borderRadius: 12, padding: "12px 14px",
+              }}>
+              <div style={{
                 display: "grid",
                 gridTemplateColumns: "36px 40px 1fr 90px 90px 100px 36px",
                 minWidth: 540, /* scroll on mobile */
                 gap: 8, alignItems: "center",
-                background: colors.cardBg, border: `1px solid ${colors.border}`,
-                borderRadius: 12, padding: "12px 14px",
               }}>
                 {/* Index */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: colors.textMuted }}>
@@ -242,7 +246,7 @@ export default function WheelSettingsPage() {
                   <span style={{
                     position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
                     fontSize: 11, color: colors.textMuted, fontWeight: 600,
-                  }}>KGS</span>
+                  }}>сом</span>
                 </div>
 
                 {/* Prize type */}
@@ -294,6 +298,37 @@ export default function WheelSettingsPage() {
                 >
                   <Trash2 size={16} />
                 </button>
+              </div>
+
+              {/* Запас приза (квота) */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+                marginTop: 10, paddingTop: 10, borderTop: `1px solid ${colors.border}`,
+                fontSize: 12, color: colors.textMuted,
+              }}>
+                <span style={{ fontWeight: 600 }}>Запас приза:</span>
+                <input
+                  type="number" min={0} placeholder="∞"
+                  value={seg.stock ?? ""}
+                  onChange={e => {
+                    const v = e.target.value;
+                    updateSegment(idx, "stock", v === "" ? null : (parseInt(v) || 0));
+                  }}
+                  style={{ ...inputStyle(colors), width: 80, padding: "6px 10px" }}
+                />
+                <span>за</span>
+                <select
+                  value={seg.stock_period ?? "total"}
+                  onChange={e => updateSegment(idx, "stock_period", e.target.value)}
+                  style={{ ...inputStyle(colors), width: 130, padding: "6px 8px", cursor: "pointer", appearance: "auto" }}
+                >
+                  <option value="total">всё время</option>
+                  <option value="day">день</option>
+                  <option value="week">неделю</option>
+                  <option value="month">месяц</option>
+                </select>
+                <span style={{ opacity: 0.7 }}>пусто = без лимита</span>
+              </div>
               </div>
             ))}
           </div>

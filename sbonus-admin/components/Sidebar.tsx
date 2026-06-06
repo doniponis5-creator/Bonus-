@@ -5,80 +5,12 @@ import { useEffect, useState, useRef } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Store, Briefcase, Trophy, Ticket,
   Settings, LogOut, FileSearch, Gift, Tag, Star, BarChart3, Disc3,
-  Flame, Send, MessageCircle, Menu, X, ChevronDown, Gamepad2, GitBranch, MessageSquarePlus, FileBarChart,
+  Flame, Send, MessageCircle, Menu, X, ChevronDown, Gamepad2, GitBranch, MessageSquarePlus, FileBarChart, LayoutGrid,
   FlaskConical, QrCode, Bot, Percent, Activity, PieChart, Crosshair,
   Package, Wallet, Brain, Scan, TrendingUp,
 } from 'lucide-react';
 
-// ─── Navigation structure with groups ───
-interface NavItem {
-  href: string;
-  icon: any;
-  label: string;
-}
-
-interface NavGroup {
-  title: string;
-  items: NavItem[];
-}
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    title: 'Основное',
-    items: [
-      { href: '/', icon: LayoutDashboard, label: 'Дашборд' },
-      { href: '/customers', icon: Users, label: 'Клиенты' },
-      { href: '/customer360', icon: Scan, label: 'Customer 360' },
-      { href: '/transactions', icon: CreditCard, label: 'Транзакции' },
-      { href: '/branches', icon: Store, label: 'Филиалы' },
-      { href: '/cashiers', icon: Briefcase, label: 'Кассиры' },
-      { href: '/tiers', icon: Trophy, label: 'Уровни' },
-    ],
-  },
-  {
-    title: 'Маркетинг',
-    items: [
-      { href: '/campaigns', icon: Gift, label: 'Кампании' },
-      { href: '/promo-codes', icon: Ticket, label: 'Промокоды' },
-      { href: '/coupons', icon: Tag, label: 'Купоны' },
-      { href: '/cashback', icon: Percent, label: 'Кешбэк' },
-      { href: '/ab-testing', icon: FlaskConical, label: 'A/B тесты' },
-      { href: '/wa-broadcast', icon: MessageCircle, label: 'Рассылки WA' },
-      { href: '/referral-board', icon: Users, label: 'Referral 2.0' },
-      { href: '/smart-campaigns', icon: Brain, label: 'Smart Кампании' },
-    ],
-  },
-  {
-    title: 'Аналитика',
-    items: [
-      { href: '/analytics', icon: BarChart3, label: 'Аналитика' },
-      { href: '/product-analytics', icon: Package, label: 'Товары' },
-      { href: '/financials', icon: Wallet, label: 'P&L Финансы' },
-      { href: '/pro-analytics', icon: Brain, label: 'PRO Аналитика' },
-      { href: '/qr-analytics', icon: QrCode, label: 'QR аналитика' },
-      { href: '/business-analytics', icon: PieChart, label: 'Бизнес PRO' },
-      { href: '/marketing-roi', icon: Crosshair, label: 'Воронка и ROI' },
-      { href: '/forecast', icon: TrendingUp, label: 'AI Прогноз' },
-      { href: '/branch-compare', icon: GitBranch, label: 'Филиалы PRO' },
-      { href: '/feedback', icon: MessageSquarePlus, label: 'NPS & Отзывы' },
-      { href: '/gamification', icon: Gamepad2, label: 'Геймификация' },
-      { href: '/reports', icon: FileBarChart, label: 'PDF Отчёты' },
-      { href: '/realtime', icon: Activity, label: 'Real-time' },
-      { href: '/reviews', icon: Star, label: 'Отзывы' },
-      { href: '/audit-logs', icon: FileSearch, label: 'Журнал' },
-    ],
-  },
-  {
-    title: 'Настройки',
-    items: [
-      { href: '/wheel-settings', icon: Disc3, label: 'Колесо удачи' },
-      { href: '/cashier-bonuses', icon: Flame, label: 'Мотивация' },
-      { href: '/telegram', icon: Send, label: 'TG бот (админ)' },
-      { href: '/customer-tg-bot', icon: Bot, label: 'TG бот (клиент)' },
-      { href: '/settings', icon: Settings, label: 'Настройки' },
-    ],
-  },
-];
+import { NAV_GROUPS, QUICK_NAV } from '@/lib/nav';
 
 // Flat list for mobile "More" sheet
 const ALL_NAV = NAV_GROUPS.flatMap(g => g.items);
@@ -155,49 +87,33 @@ function DesktopSidebar({ path }: { path: string }) {
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-        {NAV_GROUPS.map(group => {
-          const isCollapsed = collapsed[group.title];
-          const hasActive = group.items.some(n => path === n.href || (n.href !== '/' && path.startsWith(n.href)));
-
+        {/* Хаб всех разделов */}
+        <Link href="/menu" style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 10,
+          borderRadius: 10, fontSize: 13, fontWeight: 700,
+          color: path === '/menu' ? 'var(--accent)' : 'var(--text)',
+          background: path === '/menu' ? 'rgba(255,230,0,0.10)' : 'rgba(99,102,241,0.12)',
+          border: `1px solid ${path === '/menu' ? 'rgba(255,230,0,0.25)' : 'rgba(99,102,241,0.22)'}`,
+        }}>
+          <LayoutGrid size={18} /> Все разделы
+        </Link>
+        {/* Быстрый доступ — часто используемое. Остальное — в «Все разделы». */}
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#5a6a7a', padding: '6px 12px', marginTop: 4 }}>
+          Быстрый доступ
+        </div>
+        {QUICK_NAV.map(n => {
+          const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
+          const Icon = n.icon;
           return (
-            <div key={group.title} style={{ marginBottom: 4 }}>
-              {/* Group header */}
-              <button
-                onClick={() => toggle(group.title)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  width: '100%', padding: '6px 12px', marginBottom: 2,
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                  color: hasActive ? 'var(--accent)' : '#5a6a7a',
-                  transition: 'color 0.15s',
-                }}
-              >
-                {group.title}
-                <ChevronDown size={12} style={{
-                  transition: 'transform 0.2s',
-                  transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0)',
-                  opacity: 0.5,
-                }} />
-              </button>
-
-              {/* Group items */}
-              {!isCollapsed && group.items.map(n => {
-                const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
-                const Icon = n.icon;
-                return (
-                  <Link key={n.href} href={n.href} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-                    borderRadius: 10, fontSize: 13, fontWeight: active ? 700 : 500,
-                    color: active ? 'var(--accent)' : 'var(--text2)',
-                    background: active ? 'rgba(255,230,0,0.08)' : 'transparent',
-                    transition: 'all 0.15s',
-                  }}>
-                    <Icon size={18} />{n.label}
-                  </Link>
-                );
-              })}
-            </div>
+            <Link key={n.href} href={n.href} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+              borderRadius: 10, fontSize: 13, fontWeight: active ? 700 : 500,
+              color: active ? 'var(--accent)' : 'var(--text2)',
+              background: active ? 'rgba(255,230,0,0.08)' : 'transparent',
+              transition: 'all 0.15s',
+            }}>
+              <Icon size={18} />{n.label}
+            </Link>
           );
         })}
       </nav>

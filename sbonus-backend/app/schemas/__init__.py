@@ -228,6 +228,7 @@ class SettingsUpdateRequest(BaseModel):
     WA_MESSAGE_INTERVAL: Optional[str] = None
     WHEEL_FREE_SPINS_ON_REGISTER: Optional[str] = None
     REFERRAL_DAILY_LIMIT: Optional[str] = None
+    REFERRAL_MILESTONES: Optional[str] = None  # JSON: [{referrals_needed, reward_amount, title}]
     # ─── FCM Push Notifications ───
     ENABLE_PUSH_NOTIFICATIONS: Optional[str] = None
     FCM_PROJECT_ID: Optional[str] = None

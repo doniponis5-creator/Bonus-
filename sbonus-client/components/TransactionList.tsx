@@ -67,7 +67,7 @@ export default function TransactionList({ items }: Props) {
                   }}
                 >
                   {meta.sign}
-                  {amount.toLocaleString('ru-RU')} KGS
+                  {amount.toLocaleString('ru-RU')} сом
                 </div>
               </div>
             );

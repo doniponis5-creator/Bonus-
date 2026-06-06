@@ -43,14 +43,14 @@ export default function BalanceCard({
         <Wallet size={12} /> Ваш бонус
       </p>
       <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1 }}>
-        {balance.toLocaleString('ru-RU')} <span style={{ fontSize: 18, color: 'var(--text2)' }}>KGS</span>
+        {balance.toLocaleString('ru-RU')} <span style={{ fontSize: 18, color: 'var(--text2)' }}>сом</span>
       </div>
 
       {nextTierName && nextTierRemaining != null && (
         <div style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)' }}>
             <span>До <strong style={{ color: 'var(--text)' }}>{nextTierName}</strong></span>
-            <span>{nextTierRemaining.toLocaleString('ru-RU')} KGS</span>
+            <span>{nextTierRemaining.toLocaleString('ru-RU')} сом</span>
           </div>
           <div className="progress">
             <div className="progress-bar" style={{ width: `${Math.min(100, Number(progressPercent))}%` }} />

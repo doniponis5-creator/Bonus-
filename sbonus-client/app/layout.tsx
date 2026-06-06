@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 
 export const metadata: Metadata = {
-  title: 'S Bonus — Личный кабинет',
-  description: 'Бонусная программа Смарт Центр',
+  title: 'S Bonus — Личный кабинет · Смарт Центр',
+  description: 'Бонусная программа Смарт Центр. Копите, тратьте, выигрывайте.',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -13,13 +13,20 @@ export const metadata: Metadata = {
     shortcut: '/favicon.ico',
     apple: '/icon-192.png',
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'S Bonus',
+  },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#0a0f1a',
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#07080d',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />

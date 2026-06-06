@@ -61,7 +61,7 @@ export default function PromoCodesPage() {
                     {p.code}
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#e2eaf6' }}>
-                    +{Number(p.bonus_amount).toLocaleString('ru-RU')} KGS
+                    +{Number(p.bonus_amount).toLocaleString('ru-RU')} сом
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6' }}>
                     {p.used_count}
@@ -132,7 +132,7 @@ export default function PromoCodesPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (KGS) *</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (сом) *</label>
               <input className="input" name="amount" type="number" min="1" placeholder="500" required />
             </div>
             <div>

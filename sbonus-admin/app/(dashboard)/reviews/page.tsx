@@ -128,7 +128,7 @@ export default function ReviewsPage() {
                     </a>
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#22c55e' }}>
-                    +{Number(r.bonus_amount).toLocaleString('ru-RU')} KGS
+                    +{Number(r.bonus_amount).toLocaleString('ru-RU')} сом
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
                     <span style={{

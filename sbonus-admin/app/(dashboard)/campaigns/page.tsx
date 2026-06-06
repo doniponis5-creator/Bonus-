@@ -25,7 +25,7 @@ export default function CampaignsPage() {
   const [bonusDate, setBonusDate] = useState('');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
-  const [template, setTemplate] = useState('Здравствуйте, {name}! Вам начислен бонус +{amount} KGS. Баланс: {balance} KGS.');
+  const [template, setTemplate] = useState('Здравствуйте, {name}! Вам начислен бонус +{amount} сом. Баланс: {balance} сом.');
   const [targetType, setTargetType] = useState<'all' | 'individual'>('all');
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
@@ -168,7 +168,7 @@ export default function CampaignsPage() {
                     {c.campaign_type === 'wheel' ? (
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Disc size={14} /> Спин</span>
                     ) : (
-                      <>+{Number(c.amount).toLocaleString('ru-RU')} KGS</>
+                      <>+{Number(c.amount).toLocaleString('ru-RU')} сом</>
                     )}
                   </td>
                   <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
@@ -218,7 +218,7 @@ export default function CampaignsPage() {
           <div>
             <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Тип кампании *</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => { setCampaignType('bonus'); setTemplate('Здравствуйте, {name}! Вам начислен бонус +{amount} KGS. Баланс: {balance} KGS.'); }}
+              <button type="button" onClick={() => { setCampaignType('bonus'); setTemplate('Здравствуйте, {name}! Вам начислен бонус +{amount} сом. Баланс: {balance} сом.'); }}
                 className="btn btn-secondary" style={{ flex: 1, background: campaignType === 'bonus' ? 'rgba(255,230,0,0.15)' : undefined, color: campaignType === 'bonus' ? '#FFE600' : undefined, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Gift size={14} /> Бонусы
               </button>
@@ -241,7 +241,7 @@ export default function CampaignsPage() {
             </div>
             {campaignType === 'bonus' && (
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (KGS) *</label>
+                <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (сом) *</label>
                 <input className="input" type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="200" required />
               </div>
             )}
@@ -263,10 +263,10 @@ export default function CampaignsPage() {
                 { label: 'Праздник', text: '{name}, с праздником! Дарим вам спин Колеса удачи! Крутите и выигрывайте!\n{link}' },
                 { label: 'VIP', text: '{name}, спасибо за лояльность! Дарим бесплатный спин Колеса удачи! Попробуйте свою удачу!\n{link}' },
               ] : [
-                { label: 'Стандарт', text: 'Здравствуйте, {name}! Вам начислен бонус +{amount} KGS. Баланс: {balance} KGS.\n{link}\nСмарт Центр' },
-                { label: 'Праздник', text: '{name}, поздравляем с праздником!\nВам начислено +{amount} KGS бонусов!\nБаланс: {balance} KGS\n{link}' },
-                { label: 'Скидка', text: '{name}, только для вас!\nБонус +{amount} KGS уже на счёте!\nИспользуйте при следующей покупке.\n{link}' },
-                { label: 'VIP', text: '{name}, спасибо за лояльность!\nВам начислено +{amount} KGS как VIP клиенту.\nБаланс: {balance} KGS\n{link}' },
+                { label: 'Стандарт', text: 'Здравствуйте, {name}! Вам начислен бонус +{amount} сом. Баланс: {balance} сом.\n{link}\nСмарт Центр' },
+                { label: 'Праздник', text: '{name}, поздравляем с праздником!\nВам начислено +{amount} сом бонусов!\nБаланс: {balance} сом\n{link}' },
+                { label: 'Скидка', text: '{name}, только для вас!\nБонус +{amount} сом уже на счёте!\nИспользуйте при следующей покупке.\n{link}' },
+                { label: 'VIP', text: '{name}, спасибо за лояльность!\nВам начислено +{amount} сом как VIP клиенту.\nБаланс: {balance} сом\n{link}' },
               ]).map(t => (
                 <button key={t.label} type="button" onClick={() => setTemplate(t.text)}
                   style={{

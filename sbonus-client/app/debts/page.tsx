@@ -48,7 +48,7 @@ export default function DebtsPage() {
         </button>
         <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text1)' }}>Рассрочки</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)', background: 'var(--card)', padding: '3px 10px', borderRadius: 12 }}>
-          {data.count} та
+          {data.count} шт.
         </span>
       </div>
 
