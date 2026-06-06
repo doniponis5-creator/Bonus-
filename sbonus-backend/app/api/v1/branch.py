@@ -377,7 +377,7 @@ async def get_branch_top_customers(
             Transaction.created_at >= since,
         )
         .group_by(Customer.id, Customer.full_name, Customer.phone)
-        .order_by(func.sum(Transaction.purchase_amount).desc())
+        .order_by(func.coalesce(func.sum(Transaction.purchase_amount), 0).desc())
         .limit(limit)
     )
     rows = q.all()

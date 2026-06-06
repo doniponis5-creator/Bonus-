@@ -397,7 +397,9 @@ async def get_leaderboard(
 
     q = (
         q.group_by(Customer.id, Customer.full_name)
-        .order_by(func.sum(Transaction.purchase_amount).desc())
+        # coalesce → NULL-суммы (покупки без purchase_amount) идут ВНИЗ, а не вверх
+        # (в PostgreSQL обычный DESC ставит NULL первыми)
+        .order_by(func.coalesce(func.sum(Transaction.purchase_amount), 0).desc())
         .limit(10)
     )
     result = await db.execute(q)
