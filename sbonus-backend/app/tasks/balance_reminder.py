@@ -167,11 +167,30 @@ async def send_balance_reminders() -> None:
             customer = row[0]
             balance = row[1]
 
+            # ── Magic-link: уникальный auto-login для каждого клиента ──
+            cabinet_link = "https://cabinet.smartcentr.store"
+            try:
+                import secrets
+                from datetime import timedelta
+                from app.models import CustomerAuthToken
+
+                token_value = secrets.token_urlsafe(32)[:64]
+                auth_token = CustomerAuthToken(
+                    customer_id=customer.id,
+                    token=token_value,
+                    expires_at=now + timedelta(days=7),
+                )
+                db.add(auth_token)
+                await db.flush()
+                cabinet_link = f"https://cabinet.smartcentr.store?token={token_value}"
+            except Exception:
+                pass  # fallback to plain link
+
             msg = (
                 template
                 .replace("{name}", customer.full_name or "")
                 .replace("{balance}", str(int(balance)))
-                .replace("{link}", "https://cabinet.smartcentr.store")
+                .replace("{link}", cabinet_link)
             )
 
             try:
