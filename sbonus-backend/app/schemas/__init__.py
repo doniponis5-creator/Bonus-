@@ -226,6 +226,10 @@ class SettingsUpdateRequest(BaseModel):
     REFERRAL_BONUS_INVITER: Optional[str] = None
     REFERRAL_BONUS_INVITEE: Optional[str] = None
     WA_MESSAGE_INTERVAL: Optional[str] = None
+    CAMPAIGN_BATCH_SIZE: Optional[str] = None
+    CAMPAIGN_BATCH_PAUSE: Optional[str] = None
+    BONUS_EXPIRATION_DAYS: Optional[str] = None
+    BONUS_EXPIRATION_WARNING_DAYS: Optional[str] = None
     WHEEL_FREE_SPINS_ON_REGISTER: Optional[str] = None
     REFERRAL_DAILY_LIMIT: Optional[str] = None
     REFERRAL_MILESTONES: Optional[str] = None  # JSON: [{referrals_needed, reward_amount, title}]
@@ -233,6 +237,16 @@ class SettingsUpdateRequest(BaseModel):
     ENABLE_PUSH_NOTIFICATIONS: Optional[str] = None
     FCM_PROJECT_ID: Optional[str] = None
     FCM_SERVICE_ACCOUNT_JSON: Optional[str] = None
+    # ─── Threshold Bonus (порог-бонусы за размер чека) ───
+    BASKET_BONUS_TIERS: Optional[str] = None  # JSON: [{"min": 1000, "bonus": 30}, ...]
+    # ─── Auto-Coupon Engine (персональные купоны на повышение чека) ───
+    AUTO_COUPON_ENABLED: Optional[str] = None
+    AUTO_COUPON_MULTIPLIER: Optional[str] = None       # default 1.3
+    AUTO_COUPON_BONUS_PERCENT: Optional[str] = None    # default 7
+    AUTO_COUPON_VALIDITY_DAYS: Optional[str] = None    # default 7
+    AUTO_COUPON_MAX_PER_RUN: Optional[str] = None      # default 50
+    AUTO_COUPON_COOLDOWN_DAYS: Optional[str] = None    # default 30
+    AUTO_COUPON_MIN_PURCHASES: Optional[str] = None    # default 3
 
 
 class AdminCustomerUpdateRequest(BaseModel):

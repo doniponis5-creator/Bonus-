@@ -414,6 +414,12 @@ export const smartCampaignAPI = {
   suggest: (data: { segment_id: string; bonus_amount?: number }) =>
     api.post('/api/v1/smart-campaigns/suggest', data),
   templates: () => api.get('/api/v1/smart-campaigns/templates'),
+  launch: (data: { segment_id: string; bonus_amount: number; name?: string; message_template?: string }) =>
+    api.post('/api/v1/smart-campaigns/launch', data),
+};
+
+export const autoCouponAPI = {
+  runNow: () => api.post('/api/v1/admin/coupons/auto-coupon/run'),
 };
 
 // ─── Reports ───

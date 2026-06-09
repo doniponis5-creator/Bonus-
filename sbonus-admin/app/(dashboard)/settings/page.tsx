@@ -65,6 +65,14 @@ export default function SettingsPage() {
     REFERRAL_BONUS_INVITEE: "25",
     REFERRAL_DAILY_LIMIT: "5",
     REFERRAL_MILESTONES: "",
+    BASKET_BONUS_TIERS: "",
+    AUTO_COUPON_ENABLED: "false",
+    AUTO_COUPON_MULTIPLIER: "1.3",
+    AUTO_COUPON_BONUS_PERCENT: "7",
+    AUTO_COUPON_VALIDITY_DAYS: "7",
+    AUTO_COUPON_MAX_PER_RUN: "50",
+    AUTO_COUPON_COOLDOWN_DAYS: "30",
+    AUTO_COUPON_MIN_PURCHASES: "3",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
@@ -80,6 +88,19 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, REFERRAL_MILESTONES: JSON.stringify(arr) }));
   };
 
+  const [basketTiers, setBasketTiers] = useState<{ min: number; bonus: number }[]>([
+    { min: 1000, bonus: 30 },
+    { min: 2000, bonus: 80 },
+    { min: 3000, bonus: 150 },
+  ]);
+  const [basketEnabled, setBasketEnabled] = useState(false);
+
+  const updateBasketTiers = (arr: { min: number; bonus: number }[], enabled: boolean) => {
+    setBasketTiers(arr);
+    setBasketEnabled(enabled);
+    setSettings((prev) => ({ ...prev, BASKET_BONUS_TIERS: enabled ? JSON.stringify(arr) : "[]" }));
+  };
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -92,6 +113,12 @@ export default function SettingsPage() {
         try {
           const m = JSON.parse(data.REFERRAL_MILESTONES);
           if (Array.isArray(m) && m.length) setMilestones(m);
+        } catch { /* keep defaults */ }
+      }
+      if (data.BASKET_BONUS_TIERS) {
+        try {
+          const t = JSON.parse(data.BASKET_BONUS_TIERS);
+          if (Array.isArray(t) && t.length) { setBasketTiers(t); setBasketEnabled(true); }
         } catch { /* keep defaults */ }
       }
     } catch (err) {
@@ -778,6 +805,92 @@ export default function SettingsPage() {
                 WhatsApp напоминание за N дней до списания
               </span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AVG CHECK CARD: Порог-бонусы + Auto-Coupon */}
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardTitleWrapper}>
+            <Gift size={24} color={colors.accent} />
+            <div>
+              <h2 style={styles.cardTitle}>Повышение среднего чека</h2>
+              <p style={styles.cardDesc}>Порог-бонусы за размер чека и персональные авто-купоны</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Порог-бонусы */}
+        <div style={{ padding: "16px", background: "rgba(255,230,0,0.04)", borderRadius: "12px", border: "1px solid rgba(255,230,0,0.1)", marginBottom: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text }}>Порог-бонусы за размер чека</div>
+            <button
+              onClick={() => updateBasketTiers(basketTiers, !basketEnabled)}
+              style={{ padding: "6px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
+                background: basketEnabled ? "linear-gradient(135deg, #22c55e, #16a34a)" : "#1c2a3a",
+                color: basketEnabled ? "#fff" : "#8899aa" }}
+            >
+              {basketEnabled ? "Включено" : "Выключено"}
+            </button>
+          </div>
+          <div style={{ fontSize: "12px", color: colors.textMuted, marginBottom: "12px" }}>
+            Клиент получает доп. бонус при чеке выше порога. Применяется максимальный достигнутый порог.
+          </div>
+          {basketTiers.map((t, i) => (
+            <div key={i} style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "8px" }}>
+              <span style={{ fontSize: "13px", color: colors.textMuted, minWidth: "60px" }}>Чек от</span>
+              <input style={{ ...styles.input, maxWidth: "110px" }} type="number" value={t.min}
+                onChange={(e) => { const arr = [...basketTiers]; arr[i] = { ...arr[i], min: Number(e.target.value) }; updateBasketTiers(arr, basketEnabled); }} />
+              <span style={{ fontSize: "13px", color: colors.textMuted }}>сом → бонус</span>
+              <input style={{ ...styles.input, maxWidth: "100px" }} type="number" value={t.bonus}
+                onChange={(e) => { const arr = [...basketTiers]; arr[i] = { ...arr[i], bonus: Number(e.target.value) }; updateBasketTiers(arr, basketEnabled); }} />
+              <span style={{ fontSize: "13px", color: colors.textMuted }}>сом</span>
+              <button onClick={() => updateBasketTiers(basketTiers.filter((_, j) => j !== i), basketEnabled)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "4px" }}>
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+          <button onClick={() => updateBasketTiers([...basketTiers, { min: 5000, bonus: 300 }], basketEnabled)}
+            style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: `1px dashed ${colors.border}`, borderRadius: "8px", padding: "8px 14px", cursor: "pointer", color: colors.textMuted, fontSize: "13px", marginTop: "4px" }}>
+            <Plus size={14} /> Добавить порог
+          </button>
+        </div>
+
+        {/* Auto-Coupon */}
+        <div style={{ padding: "16px", background: "rgba(99,102,241,0.05)", borderRadius: "12px", border: "1px solid rgba(99,102,241,0.15)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text }}>Auto-Coupon Engine (Чт 11:00, еженедельно)</div>
+            <button
+              onClick={() => toggleBoolean("AUTO_COUPON_ENABLED")}
+              style={{ padding: "6px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
+                background: settings.AUTO_COUPON_ENABLED === "true" ? "linear-gradient(135deg, #22c55e, #16a34a)" : "#1c2a3a",
+                color: settings.AUTO_COUPON_ENABLED === "true" ? "#fff" : "#8899aa" }}
+            >
+              {settings.AUTO_COUPON_ENABLED === "true" ? "Включено" : "Выключено"}
+            </button>
+          </div>
+          <div style={{ fontSize: "12px", color: colors.textMuted, marginBottom: "12px" }}>
+            Персональный купон: порог = средний чек клиента × множитель. Купон активируется в кабинете только после покупки выше порога.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "12px" }}>
+            {[
+              { key: "AUTO_COUPON_MULTIPLIER", label: "Множитель чека", hint: "1.3 = чек +30%" },
+              { key: "AUTO_COUPON_BONUS_PERCENT", label: "Бонус, % от порога", hint: "7%" },
+              { key: "AUTO_COUPON_VALIDITY_DAYS", label: "Срок купона, дней", hint: "7" },
+              { key: "AUTO_COUPON_MAX_PER_RUN", label: "Макс. за запуск", hint: "50" },
+              { key: "AUTO_COUPON_COOLDOWN_DAYS", label: "Пауза, дней", hint: "30" },
+              { key: "AUTO_COUPON_MIN_PURCHASES", label: "Мин. покупок (90д)", hint: "3" },
+            ].map((f) => (
+              <div key={f.key}>
+                <label style={{ fontSize: "12px", color: colors.textMuted, display: "block", marginBottom: "6px" }}>{f.label}</label>
+                <input style={{ ...styles.input }} type="number" step="0.1"
+                  value={settings[f.key as keyof typeof settings]}
+                  onChange={(e) => handleChange(f.key as keyof typeof settings, e.target.value)}
+                  placeholder={f.hint} />
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -1718,6 +1718,18 @@ async def test_whatsapp(
 # SMART COUPONS (Персональные купоны)
 # ═══════════════════════════════════════
 
+@router.post(
+    "/coupons/auto-coupon/run",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def run_auto_coupon_now() -> dict:
+    """Запустить Auto-Coupon Engine вручную (вместо ожидания cron Чт 11:00)."""
+    import asyncio
+    from app.services.auto_coupon import run_auto_coupon
+    asyncio.create_task(run_auto_coupon())
+    return {"success": True, "message": "Auto-Coupon Engine запущен в фоновом режиме"}
+
+
 class CouponCreateRequest(BaseModel):
     customer_id: str | None = None  # None = доступен всем
     title: str

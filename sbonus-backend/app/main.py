@@ -44,6 +44,7 @@ from app.services.customer_telegram_bot import (
     stop_customer_bot,
 )
 from app.services.product_alerts import send_product_daily_digest, check_critical_stock
+from app.services.auto_coupon import run_auto_coupon
 from app.services.smart_notifications import (
     run_churn_prevention,
     run_birthday_pre_reminder,
@@ -213,6 +214,14 @@ async def lifespan(app: FastAPI):
         send_pnl_telegram_report,
         CronTrigger(hour=21, minute=30),
         id="tg_pnl_report",
+        replace_existing=True,
+    )
+
+    # Cron: Auto-Coupon Engine — четверг 11:00 (персональные купоны на повышение чека)
+    scheduler.add_job(
+        run_auto_coupon,
+        CronTrigger(day_of_week="thu", hour=11, minute=0),
+        id="auto_coupon",
         replace_existing=True,
     )
 

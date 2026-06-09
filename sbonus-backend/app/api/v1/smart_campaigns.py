@@ -18,6 +18,7 @@ from app.core.security import get_current_user, require_role, UserRole
 from app.models import (
     Customer, BonusAccount, Transaction, TransactionType,
     Tier, Setting,
+    BonusCampaign, BonusCampaignRecipient, CampaignStatus, CampaignTargetType,
 )
 
 router = APIRouter(prefix="/smart-campaigns", tags=["Smart Campaigns"])
@@ -388,3 +389,70 @@ async def get_campaign_templates(
         },
     ]
     return {"templates": templates}
+
+
+# ═══════════════════════════════════════════
+# LAUNCH — создать кампанию из сегмента
+# ═══════════════════════════════════════════
+
+class SegmentCampaignLaunch(BaseModel):
+    segment_id: str
+    bonus_amount: int = 100
+    name: Optional[str] = None
+    message_template: Optional[str] = None
+    days: int = 365
+
+
+@router.post("/launch")
+async def launch_segment_campaign(
+    data: SegmentCampaignLaunch,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+):
+    """
+    Создать бонусную кампанию для RFM-сегмента.
+    Получатели фиксируются на момент создания. Кампания создаётся в статусе
+    PENDING — отправка через страницу «Кампании» (кнопка «Отправить»).
+    """
+    if data.segment_id not in RFM_SEGMENTS:
+        raise HTTPException(status_code=404, detail="Сегмент не найден")
+    if data.bonus_amount <= 0:
+        raise HTTPException(status_code=400, detail="Сумма бонуса должна быть больше 0")
+
+    seg = RFM_SEGMENTS[data.segment_id]
+    customers = await _compute_rfm_scores(db, data.days)
+    customer_ids = [
+        uuid.UUID(c["customer_id"]) for c in customers if c["segment"] == data.segment_id
+    ]
+    if not customer_ids:
+        raise HTTPException(status_code=400, detail="В сегменте нет клиентов")
+
+    template = data.message_template or (seg["template"] + "\n{link}")
+    tz = timezone(timedelta(hours=6))
+
+    campaign = BonusCampaign(
+        name=data.name or f"RFM: {seg['name']} ({datetime.now(tz).strftime('%d.%m.%Y')})",
+        campaign_type="bonus",
+        bonus_date=datetime.now(tz).date(),
+        amount=Decimal(str(data.bonus_amount)),
+        reason=f"RFM-сегмент: {seg['name']} ({len(customer_ids)} клиентов)",
+        message_template=template,
+        target_type=CampaignTargetType.INDIVIDUAL,
+        status=CampaignStatus.PENDING,
+        created_by=uuid.UUID(user["sub"]) if user.get("sub") else None,
+    )
+    db.add(campaign)
+    await db.flush()
+
+    for cid in customer_ids:
+        db.add(BonusCampaignRecipient(campaign_id=campaign.id, customer_id=cid))
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "campaign_id": str(campaign.id),
+        "name": campaign.name,
+        "recipients": len(customer_ids),
+        "message": f"Кампания создана ({len(customer_ids)} получателей). Отправьте её со страницы «Кампании».",
+    }

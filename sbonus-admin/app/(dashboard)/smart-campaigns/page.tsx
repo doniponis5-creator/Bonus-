@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Brain, Target, Users, Zap, TrendingUp, Send, MessageCircle, DollarSign, Clock, Calendar, Crown, Gem, Sprout, UserPlus, AlertTriangle, Eye, Moon, BedDouble, PartyPopper, Heart, Gift, Cake, CircleDot } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { smartCampaignAPI } from '@/lib/api';
@@ -48,6 +49,29 @@ export default function SmartCampaignsPage() {
   const [suggestion, setSuggestion] = useState<any>(null);
   const [bonusAmount, setBonusAmount] = useState(100);
   const [loading, setLoading] = useState(true);
+  const [launching, setLaunching] = useState(false);
+  const [launchResult, setLaunchResult] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleLaunch = async () => {
+    if (!selectedSeg || !suggestion) return;
+    if (!confirm(`Создать кампанию для сегмента «${suggestion.segment?.name}» (${suggestion.recipients} клиентов, ${bonusAmount} сом каждому)?`)) return;
+    setLaunching(true);
+    setLaunchResult(null);
+    try {
+      const r = await smartCampaignAPI.launch({
+        segment_id: selectedSeg,
+        bonus_amount: bonusAmount,
+        message_template: suggestion.message_template ? suggestion.message_template + '\n{link}' : undefined,
+      });
+      setLaunchResult(r.data.message || 'Кампания создана');
+      setTimeout(() => router.push('/campaigns'), 1500);
+    } catch (e: any) {
+      setLaunchResult(e?.response?.data?.detail || 'Ошибка создания кампании');
+    } finally {
+      setLaunching(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -181,6 +205,25 @@ export default function SmartCampaignsPage() {
               <Calendar size={14} style={{ display: 'inline', verticalAlign: -2 }} /> Лучшие дни: <b style={{ color: '#f1f5f9' }}>{suggestion.best_day}</b>
             </div>
           </div>
+
+          <button
+            onClick={handleLaunch}
+            disabled={launching || suggestion.recipients === 0}
+            style={{
+              marginTop: 16, width: '100%', padding: '14px 20px', borderRadius: 10,
+              background: launching ? '#4b5563' : 'linear-gradient(135deg, #10b981, #059669)',
+              color: 'white', fontSize: 15, fontWeight: 700, border: 'none',
+              cursor: launching || suggestion.recipients === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              opacity: suggestion.recipients === 0 ? 0.5 : 1,
+            }}
+          >
+            <Send size={18} />
+            {launching ? 'Создание кампании...' : `Запустить кампанию (${suggestion.recipients} клиентов)`}
+          </button>
+          {launchResult && (
+            <div style={{ marginTop: 10, fontSize: 13, color: '#10b981', textAlign: 'center' }}>{launchResult}</div>
+          )}
         </div>
       )}
 

@@ -30,6 +30,38 @@ from app.core.events import emit_bonus_earned, emit_bonus_spent
 
 settings = get_settings()
 
+async def get_basket_bonus_tiers(db: AsyncSession) -> list[dict]:
+    """
+    BASKET_BONUS_TIERS — порог-бонусы за размер чека (DB Settings, JSON):
+    [{"min": 1000, "bonus": 30}, {"min": 2000, "bonus": 80}, {"min": 3000, "bonus": 150}]
+    Возвращает отсортированный по min список (или []).
+    """
+    import json
+    result = await db.execute(select(Setting).where(Setting.key == "BASKET_BONUS_TIERS"))
+    record = result.scalar_one_or_none()
+    if not record or not record.value:
+        return []
+    try:
+        tiers = json.loads(record.value)
+        valid = [
+            {"min": Decimal(str(t["min"])), "bonus": Decimal(str(t["bonus"]))}
+            for t in tiers
+            if isinstance(t, dict) and "min" in t and "bonus" in t
+        ]
+        return sorted(valid, key=lambda t: t["min"])
+    except Exception:
+        return []
+
+
+def calc_basket_bonus(purchase_amount: Decimal, tiers: list[dict]) -> Decimal:
+    """Найти максимальный применимый порог-бонус для суммы чека."""
+    extra = Decimal("0")
+    for t in tiers:
+        if purchase_amount >= t["min"]:
+            extra = t["bonus"]
+    return extra
+
+
 # Simple TTL cache for WhatsApp settings
 _wa_cache: dict = {}
 _wa_cache_ttl: float = 0
@@ -134,6 +166,13 @@ class BonusService:
         )
         bonus_amount = (purchase_amount * cashback_percent / Decimal("100")).quantize(Decimal("0.01"))
 
+        # Threshold Bonus: доп. бонус за размер чека (BASKET_BONUS_TIERS из DB Settings)
+        basket_tiers = await get_basket_bonus_tiers(self.db)
+        basket_extra = calc_basket_bonus(purchase_amount, basket_tiers)
+        if basket_extra > 0:
+            bonus_amount += basket_extra
+            note = (note + " | " if note else "") + f"Порог-бонус +{basket_extra} (чек {purchase_amount})"
+
         # Обновление баланса
         account.balance += bonus_amount
         account.total_earned += bonus_amount
@@ -205,8 +244,8 @@ class BonusService:
             new_balance=account.balance,
             tier_name=tier_name,
             tier_upgraded=tier_upgraded,
-            message_ru=f"✅ Начислено +{bonus_amount} KGS бонус ({tier_name} {tier.bonus_percent}%)",
-            message_kg=f"✅ +{bonus_amount} KGS бонус кошулду ({tier_name} {tier.bonus_percent}%)",
+            message_ru=f"✅ Начислено +{bonus_amount} KGS бонус ({tier_name} {tier.bonus_percent}%)" + (f" вкл. порог-бонус +{basket_extra}" if basket_extra > 0 else ""),
+            message_kg=f"✅ +{bonus_amount} KGS бонус кошулду ({tier_name} {tier.bonus_percent}%)" + (f" (+{basket_extra} порог-бонус)" if basket_extra > 0 else ""),
         )
 
     # ─── SPEND (Списание) ───

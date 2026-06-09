@@ -144,3 +144,14 @@ export const productsAPI = {
 
   config: () => api.get('/api/v1/cashier/products/config'),
 };
+
+// ═══════════════════════════════════════
+// UPSELL API (порог-бонусы + рекомендации)
+// ═══════════════════════════════════════
+
+export const upsellAPI = {
+  basketTiers: () => api.get('/api/v1/cashier/products/basket-tiers'),
+
+  suggestions: (customerId: string) =>
+    api.get(`/api/v1/cashier/products/upsell/${customerId}`, { params: { limit: 3 } }),
+};

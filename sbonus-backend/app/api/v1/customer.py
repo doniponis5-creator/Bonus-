@@ -549,6 +549,27 @@ async def activate_coupon(
     if coupon.expires_at and coupon.expires_at < now:
         raise HTTPException(status_code=400, detail={"message": "Купон истёк"})
 
+    # Проверка порога покупки: купон активируется только после покупки >= min_purchase
+    # (покупка должна быть СОВЕРШЕНА ПОСЛЕ выдачи купона)
+    if coupon.min_purchase and coupon.min_purchase > 0:
+        qualifying = await db.execute(
+            select(func.count(Transaction.id)).where(
+                Transaction.customer_id == customer_id,
+                Transaction.type == TransactionType.EARN,
+                Transaction.purchase_amount >= coupon.min_purchase,
+                Transaction.created_at >= coupon.created_at,
+            )
+        )
+        if (qualifying.scalar() or 0) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "COUPON_MIN_PURCHASE",
+                    "message": f"Купон активируется после покупки от {int(coupon.min_purchase)} сом",
+                    "min_purchase": float(coupon.min_purchase),
+                },
+            )
+
     # Начислить бонус
     account = (await db.execute(
         select(BonusAccount).where(BonusAccount.customer_id == customer_id).with_for_update()
