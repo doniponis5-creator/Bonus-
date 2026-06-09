@@ -76,6 +76,9 @@ function DashboardPage() {
   const [editBirth, setEditBirth] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState('');
 
   // Promo
   const [promoCode, setPromoCode] = useState('');
@@ -189,6 +192,18 @@ function DashboardPage() {
     } catch (err: any) {
       setSaveMsg(err?.response?.data?.detail?.message || 'Ошибка сохранения');
     } finally { setSaving(false); }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true); setDeleteErr('');
+    try {
+      await customerAPI.deleteAccount();
+      clearToken();
+      router.replace('/login?deleted=1');
+    } catch (err: any) {
+      setDeleteErr(err?.response?.data?.detail?.message || 'Не удалось удалить аккаунт. Попробуйте позже.');
+      setDeleting(false);
+    }
   };
 
   const handlePromo = async () => {
@@ -405,6 +420,79 @@ function DashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Конфиденциальность и аккаунт */}
+          <div className="card" style={{ marginTop: 12 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--text2)' }}>Конфиденциальность и аккаунт</h3>
+            <a
+              href="/privacy"
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                color: 'var(--text2)', fontSize: 14, textDecoration: 'none',
+              }}
+            >
+              <span>Политика конфиденциальности</span>
+              <ChevronRight size={16} color="var(--text3)" />
+            </a>
+            <button
+              onClick={() => { setDeleteErr(''); setShowDeleteModal(true); }}
+              style={{
+                width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
+                color: '#ff4d4d', fontSize: 14,
+              }}
+            >
+              <span>Удалить аккаунт</span>
+              <ChevronRight size={16} color="#ff4d4d" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка удаления аккаунта */}
+      {showDeleteModal && (
+        <div
+          onClick={() => !deleting && setShowDeleteModal(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(7,8,13,0.88)',
+            backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="float-up"
+            style={{
+              background: 'var(--bg-2)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: 24,
+              padding: '28px 24px 24px', textAlign: 'center', maxWidth: 360, width: '100%',
+            }}
+          >
+            <div style={{
+              width: 72, height: 72, borderRadius: 22, margin: '0 auto 16px',
+              background: 'rgba(255,77,77,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <XCircle size={38} color="#ff4d4d" />
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 10 }}>Удалить аккаунт?</h3>
+            <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 20 }}>
+              Ваши персональные данные (имя, телефон, дата рождения) будут удалены без возможности восстановления.
+              Бонусный баланс будет аннулирован. Это действие необратимо.
+            </p>
+            {deleteErr && (
+              <p style={{ fontSize: 13, color: '#ff4d4d', marginBottom: 14 }}>{deleteErr}</p>
+            )}
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleting}
+              className="btn"
+              style={{ background: '#ff4d4d', color: '#fff', marginBottom: 8, width: '100%' }}
+            >
+              {deleting ? (<><Loader2 size={16} className="spinner" /> Удаление...</>) : 'Да, удалить навсегда'}
+            </button>
+            <button onClick={() => setShowDeleteModal(false)} disabled={deleting} className="btn btn-ghost">
+              Отмена
+            </button>
           </div>
         </div>
       )}

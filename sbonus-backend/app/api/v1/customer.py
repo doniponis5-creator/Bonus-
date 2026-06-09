@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.core.redis import check_rate_limit
+from app.core.redis import blacklist_token, check_rate_limit
 from app.core.security import get_current_customer
 from app.models import (
     BonusAccount, Coupon, Customer, CustomerDebt, ReviewRequest, ReviewPlatform, ReviewStatus,
@@ -776,3 +776,76 @@ async def get_debt_detail(
         "created_at": debt.created_at.isoformat() if debt.created_at else None,
         "synced_at": debt.synced_at.isoformat() if debt.synced_at else None,
     }
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Удаление аккаунта (требование Google Play / App Store)
+# ──────────────────────────────────────────────────────────────────────────
+class AccountDeleteRequest(BaseModel):
+    confirm: bool = False
+
+
+@router.delete("/account")
+async def delete_account(
+    confirm: bool = Query(False, description="Подтверждение удаления"),
+    body: AccountDeleteRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """
+    Клиент удаляет свой аккаунт (требование магазинов приложений).
+
+    Soft-delete + анонимизация PII. История бонусов (Transaction) IMMUTABLE —
+    не удаляется, но обезличивается через отвязку персональных данных клиента.
+    После удаления текущий токен заносится в blacklist, телефон/QR/реферал
+    освобождаются для повторной регистрации.
+
+    Подтверждение принимается из query (?confirm=true) или из тела {"confirm": true} —
+    чтобы работать даже если прокси отбрасывает тело DELETE-запроса.
+    """
+    confirmed = confirm or (body.confirm if body else False)
+    if not confirmed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "CONFIRM_REQUIRED", "message": "Требуется подтверждение удаления"},
+        )
+
+    customer_id = current["sub"]
+    result = await db.execute(select(Customer).where(Customer.id == customer_id))
+    customer = result.scalar_one_or_none()
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "CUSTOMER_NOT_FOUND", "message": "Клиент не найден"},
+        )
+
+    if not customer.is_active:
+        return {"message": "Аккаунт уже удалён"}
+
+    # Анонимизация уникальных PII-полей (nullable=False → подставляем уникальные заглушки)
+    short_id = str(customer.id).replace("-", "")[:12]
+    customer.full_name = "Удалённый пользователь"
+    customer.phone = f"deleted_{short_id}"
+    customer.qr_code = f"deleted_{short_id}"
+    customer.referral_code = f"del_{short_id}"
+    customer.birth_date = None
+    customer.is_active = False
+
+    await db.commit()
+
+    # Отзываем текущий токен (если есть jti + exp)
+    jti = current.get("jti")
+    exp = current.get("exp")
+    if jti:
+        ttl = 30 * 24 * 3600
+        if isinstance(exp, (int, float)):
+            from datetime import datetime, timezone
+            remaining = int(exp - datetime.now(timezone.utc).timestamp())
+            if remaining > 0:
+                ttl = remaining
+        try:
+            await blacklist_token(jti, ttl)
+        except Exception:
+            pass
+
+    return {"message": "Аккаунт удалён", "deleted": True}

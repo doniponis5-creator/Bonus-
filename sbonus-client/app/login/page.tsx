@@ -14,11 +14,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [deleted, setDeleted] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     if (isTokenValid(getToken())) router.replace('/');
   }, [router]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('deleted')) {
+      setDeleted(true);
+    }
+  }, []);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -224,6 +231,14 @@ export default function LoginPage() {
           <p className="muted">Личный кабинет Смарт Центр</p>
         </div>
 
+        {deleted && (
+          <div className="card" style={{ marginBottom: 16, borderColor: 'rgba(34,197,94,0.4)', textAlign: 'center' }}>
+            <p style={{ color: '#22c55e', fontSize: 14, margin: 0 }}>
+              Ваш аккаунт удалён. Спасибо, что были с нами!
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handleSendOtp} className="card" style={{ marginBottom: 16 }}>
           <h2 className="h2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Phone size={18} /> Вход по номеру
@@ -260,6 +275,11 @@ export default function LoginPage() {
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)' }}>
           Нет аккаунта?{' '}
           <a href="/register" style={{ color: 'var(--accent)', fontWeight: 600 }}>Зарегистрироваться</a>
+        </p>
+
+        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text3)', marginTop: 16 }}>
+          Входя, вы принимаете{' '}
+          <a href="/privacy" style={{ color: 'var(--text2)' }}>Политику конфиденциальности</a>
         </p>
       </div>
     </div>

@@ -82,6 +82,8 @@ export const customerAPI = {
     api.get(`/api/v1/customer/transactions?page=${page}&limit=${limit}${type ? `&tx_type=${type}` : ''}`),
   updateProfile: (data: { full_name?: string; birth_date?: string | null }) =>
     api.patch('/api/v1/customer/profile', data),
+  deleteAccount: () =>
+    api.delete('/api/v1/customer/account?confirm=true', { data: { confirm: true } }),
   applyPromo: (code: string) =>
     api.post('/api/v1/customer/promo', { code }),
   applyReferral: (code: string) =>

@@ -491,11 +491,17 @@ async def send_otp(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Отправить 4-значный OTP код клиенту в WhatsApp.
+    Отправить 4-значный OTP код + magic-link клиенту в WhatsApp.
 
-    Rate limit: 3 попытки в 2 минуты на IP + телефон.
-    Код действует 5 минут.
+    Безопасность:
+    - OTP генерируется через secrets (криптостойкий)
+    - В Redis хранится HMAC-SHA256 хеш, НЕ открытый код
+    - Rate limit: 3 попытки в 2 минуты
+    - Код действует 5 минут
+    - Generic response (без phone enumeration)
     """
+    import hashlib
+    import hmac
     from app.core.redis import redis_client
 
     phone = normalize_phone(body.phone.strip())
@@ -510,51 +516,64 @@ async def send_otp(
             detail={"code": "RATE_LIMIT_EXCEEDED", "message": "Слишком много запросов. Подождите 2 минуты."},
         )
 
+    generic = {"success": True, "message": "Если номер зарегистрирован, код отправлен в WhatsApp"}
+
     # Проверить что клиент существует
     result = await db.execute(select(Customer).where(Customer.phone == phone))
     customer = result.scalar_one_or_none()
-    if not customer:
-        # Безопасность: не раскрываем существование номера
-        # Но всё равно "отправляем" — чтоб не было phone enumeration
-        return {"success": True, "message": "Если номер зарегистрирован, код отправлен в WhatsApp"}
+    if not customer or not customer.is_active:
+        return generic
 
-    # Генерировать 4-значный код
-    import random
-    code = f"{random.randint(1000, 9999)}"
+    # ── Генерация OTP (криптостойкий) ──
+    code = f"{secrets.randbelow(9000) + 1000}"
 
-    # Сохранить в Redis: otp:{phone} = code, TTL 5 минут
+    # HMAC хеш для Redis (не храним открытый код)
+    otp_secret = (settings.webhook_1c_secret or "sbonus-otp-default").encode()
+    code_hash = hmac.new(otp_secret, code.encode(), hashlib.sha256).hexdigest()
+
     otp_key = f"otp:{phone}"
-    await redis_client.setex(otp_key, 300, code)  # 5 минут
+    await redis_client.setex(otp_key, 300, code_hash)  # 5 минут, хеш
 
-    # Счётчик попыток верификации (защита от brute-force)
+    # Сбросить счётчик попыток
     attempts_key = f"otp_attempts:{phone}"
     await redis_client.delete(attempts_key)
 
-    # Отправить код в WhatsApp
+    # ── Magic-link (для быстрого входа) ──
+    token_value = secrets.token_urlsafe(32)[:64]
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+    db.add(CustomerAuthToken(
+        customer_id=customer.id,
+        token=token_value,
+        expires_at=expires_at,
+        ip_address=ip,
+    ))
+    await db.commit()
+
+    cabinet_url = settings.customer_cabinet_base_url.rstrip("/")
+    link = f"{cabinet_url}/auth?token={token_value}"
+
+    # ── Отправить в WhatsApp: код + ссылка ──
     instance_id, api_token, wa_enabled = await _get_whatsapp_credentials(db)
     if wa_enabled and instance_id and api_token:
         try:
-            wa_phone = phone.replace("+", "")
             message = (
-                f"🔐 *S Bonus — Код входа*\n\n"
+                f"\U0001f512 *S Bonus — Вход в кабинет*\n\n"
                 f"Ваш код: *{code}*\n\n"
-                f"Код действителен 5 минут.\n"
-                f"Никому не сообщайте этот код!"
+                f"Или войдите по ссылке:\n{link}\n\n"
+                f"\u23f1 Код и ссылка действуют 5 минут.\n"
+                f"\u26a0\ufe0f Никому не сообщайте код!"
             )
             await send_whatsapp_message(
-                instance_id=instance_id,
-                api_token=api_token,
-                phone=wa_phone,
-                message=message,
+                phone=phone, message=message,
+                instance_id=instance_id, api_token=api_token,
             )
-            logger.info(f"OTP sent to {phone[-4:]}")
+            logger.info(f"OTP+link sent to ...{phone[-4:]}")
         except Exception as e:
             logger.error(f"OTP WhatsApp send error: {e}")
-            # Не падаем — код всё равно в Redis, можно для дебага
     else:
         logger.warning("WhatsApp disabled — OTP not sent")
 
-    return {"success": True, "message": "Если номер зарегистрирован, код отправлен в WhatsApp"}
+    return generic
 
 
 @router.post("/verify-otp", status_code=200)
@@ -567,8 +586,13 @@ async def verify_otp(
     """
     Проверить OTP код и выдать JWT.
 
-    Максимум 5 попыток на код. После 5 — код аннулируется.
+    Безопасность:
+    - Constant-time HMAC сравнение (защита от timing attack)
+    - Максимум 5 попыток, после — код аннулируется
+    - Код удаляется после успешной верификации
     """
+    import hashlib
+    import hmac as hmac_mod
     from app.core.redis import redis_client
 
     phone = normalize_phone(body.phone.strip())
@@ -577,22 +601,28 @@ async def verify_otp(
     if len(code) != 4 or not code.isdigit():
         raise HTTPException(status_code=400, detail="Код должен быть 4 цифры")
 
-    # Проверить попытки (brute-force protection)
+    # Brute-force protection: макс 5 попыток
     attempts_key = f"otp_attempts:{phone}"
     attempts = await redis_client.incr(attempts_key)
     if attempts == 1:
-        await redis_client.expire(attempts_key, 300)  # 5 мин
+        await redis_client.expire(attempts_key, 300)
     if attempts > 5:
-        # Удалить код — слишком много попыток
         await redis_client.delete(f"otp:{phone}")
         await redis_client.delete(attempts_key)
         raise HTTPException(status_code=429, detail="Слишком много попыток. Запросите новый код.")
 
-    # Проверить код из Redis
+    # Получить хеш из Redis
     otp_key = f"otp:{phone}"
-    stored_code = await redis_client.get(otp_key)
+    stored_hash = await redis_client.get(otp_key)
 
-    if not stored_code or stored_code != code:
+    if not stored_hash:
+        raise HTTPException(status_code=401, detail="Код истёк или не запрашивался. Запросите новый.")
+
+    # Constant-time HMAC сравнение
+    otp_secret = (settings.webhook_1c_secret or "sbonus-otp-default").encode()
+    code_hash = hmac_mod.new(otp_secret, code.encode(), hashlib.sha256).hexdigest()
+
+    if not hmac_mod.compare_digest(stored_hash, code_hash):
         remaining = 5 - attempts
         raise HTTPException(
             status_code=401,
@@ -606,14 +636,14 @@ async def verify_otp(
     # Найти клиента
     result = await db.execute(select(Customer).where(Customer.phone == phone))
     customer = result.scalar_one_or_none()
-    if not customer:
+    if not customer or not customer.is_active:
         raise HTTPException(status_code=404, detail="Клиент не найден")
 
-    # Выдать JWT (как в verify magic-link)
+    # Выдать JWT
     days = settings.customer_token_expire_days
     jwt_token = create_customer_token(str(customer.id), days=days)
 
-    # Set httpOnly cookie
+    # httpOnly cookie
     response.set_cookie(
         key="customer_token",
         value=jwt_token,
@@ -624,7 +654,7 @@ async def verify_otp(
         path="/",
     )
 
-    logger.info(f"OTP login success: {phone[-4:]}")
+    logger.info(f"OTP login success: ...{phone[-4:]}")
 
     return CustomerTokenResponse(
         access_token=jwt_token,
