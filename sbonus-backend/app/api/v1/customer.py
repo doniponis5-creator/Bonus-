@@ -97,6 +97,36 @@ async def get_me(
     debt_count = debt_row[1]
     debt_updated_at = debt_row[2]
 
+    # ── Сгорающие бонусы (для карточки-предупреждения) ──
+    expiring_amount = Decimal("0")
+    expiring_date = None
+    if account and account.balance > 0:
+        try:
+            from datetime import datetime as _dt, timedelta, timezone as _tz
+            from app.tasks.expiration import _calculate_expirable, _get_expiration_settings, _EARN_TYPES
+            exp_days, warn_days = await _get_expiration_settings(db)
+            now_utc = _dt.now(_tz.utc)
+            warning_cutoff = now_utc - timedelta(days=exp_days - warn_days)
+            expire_cutoff = now_utc - timedelta(days=exp_days)
+            will_expire = await _calculate_expirable(db, customer.id, warning_cutoff)
+            already = await _calculate_expirable(db, customer.id, expire_cutoff)
+            about = min(will_expire - already, account.balance)
+            if about > 0:
+                oldest_result = await db.execute(
+                    select(func.min(Transaction.created_at)).where(
+                        Transaction.customer_id == customer.id,
+                        Transaction.type.in_(_EARN_TYPES),
+                        Transaction.created_at > expire_cutoff,
+                        Transaction.created_at <= warning_cutoff,
+                    )
+                )
+                oldest = oldest_result.scalar()
+                if oldest:
+                    expiring_amount = about
+                    expiring_date = (oldest + timedelta(days=exp_days)).date()
+        except Exception:
+            pass  # карточка не критична — не ломаем /me
+
     # ── Последние 5 транзакций ──
     tx_result = await db.execute(
         select(Transaction)
@@ -133,8 +163,33 @@ async def get_me(
         tier_progress_percent=progress_percent,
         debt_amount=debt_amount,
         debt_updated_at=debt_updated_at,
+        expiring_amount=expiring_amount,
+        expiring_date=expiring_date,
         recent_transactions=transactions,
     )
+
+
+@router.get("/tiers")
+async def get_tiers(
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """Все активные уровни лояльности (для экрана сравнения уровней)."""
+    result = await db.execute(
+        select(Tier).where(Tier.is_active == True).order_by(Tier.min_total_kgs.asc())
+    )
+    tiers = result.scalars().all()
+    return {
+        "tiers": [
+            {
+                "name": t.name,
+                "min_total": float(t.min_total_kgs),
+                "bonus_percent": float(t.bonus_percent),
+                "max_spend_pct": float(t.max_spend_pct),
+            }
+            for t in tiers
+        ]
+    }
 
 
 @router.get("/transactions")

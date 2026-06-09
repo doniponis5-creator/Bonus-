@@ -1730,6 +1730,18 @@ async def run_auto_coupon_now() -> dict:
     return {"success": True, "message": "Auto-Coupon Engine запущен в фоновом режиме"}
 
 
+@router.post(
+    "/notifications/post-purchase/run",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def run_post_purchase_now() -> dict:
+    """Запустить Post-Purchase Follow-up вручную (вместо ожидания cron 11:10)."""
+    import asyncio
+    from app.services.smart_notifications import run_post_purchase_followup
+    asyncio.create_task(run_post_purchase_followup())
+    return {"success": True, "message": "Post-Purchase Follow-up запущен в фоновом режиме"}
+
+
 class CouponCreateRequest(BaseModel):
     customer_id: str | None = None  # None = доступен всем
     title: str

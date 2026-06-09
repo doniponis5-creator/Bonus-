@@ -7,6 +7,7 @@ import {
   PlusCircle, MinusCircle, Clock, Users, Ticket, RefreshCcw,
   Pencil, Share2, Copy, Check, ChevronLeft, ChevronRight, Disc3, Trophy,
   CheckCircle2, XCircle, Smartphone, Link2, Target, Lightbulb,
+  Flame, Crown, Receipt,
 } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import DebtCard from '@/components/DebtCard';
@@ -91,6 +92,31 @@ function DashboardPage() {
   // Spin prompt (показать «у вас есть вращение» при входе)
   const [spinPrompt, setSpinPrompt] = useState(0);
   const spinCheckedRef = useRef(false);
+
+  // PRO UI: tier sheet, tx detail sheet, coupon badge
+  const [tierSheet, setTierSheet] = useState(false);
+  const [tiersList, setTiersList] = useState<{ name: string; min_total: number; bonus_percent: number; max_spend_pct: number }[]>([]);
+  const [txDetail, setTxDetail] = useState<any | null>(null);
+  const [hasNewCoupons, setHasNewCoupons] = useState(false);
+  const couponCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (!data || couponCheckedRef.current) return;
+    couponCheckedRef.current = true;
+    customerAPI.coupons()
+      .then(r => {
+        const list = r.data?.coupons || [];
+        setHasNewCoupons(list.some((c: any) => !c.is_used));
+      })
+      .catch(() => {});
+  }, [data]);
+
+  const openTierSheet = () => {
+    setTierSheet(true);
+    if (tiersList.length === 0) {
+      customerAPI.tiers().then(r => setTiersList(r.data?.tiers || [])).catch(() => {});
+    }
+  };
 
   useEffect(() => {
     if (!data || spinCheckedRef.current) return;
@@ -237,7 +263,19 @@ function DashboardPage() {
   );
 
   if (!data) return (
-    <div className="center"><Loader2 className="spinner" size={32} color="var(--accent)" /></div>
+    <div className="app">
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 4px 12px' }}>
+        <div className="skeleton" style={{ width: 90, height: 24 }} />
+        <div className="skeleton" style={{ width: 40, height: 24, borderRadius: 999 }} />
+      </div>
+      <div className="skeleton" style={{ height: 180, marginBottom: 12, borderRadius: 16 }} />
+      <div className="skeleton" style={{ height: 48, marginBottom: 12, borderRadius: 12 }} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+        <div className="skeleton" style={{ height: 76, borderRadius: 12 }} />
+        <div className="skeleton" style={{ height: 76, borderRadius: 12 }} />
+      </div>
+      <div className="skeleton" style={{ height: 220, borderRadius: 16 }} />
+    </div>
   );
 
   const txTotalPages = Math.ceil(txTotal / txLimit);
@@ -255,10 +293,6 @@ function DashboardPage() {
             style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer', width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: refreshing ? 0.4 : 1, animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>
             <RefreshCw size={18} />
           </button>
-          <button onClick={handleLogout} aria-label="Выйти"
-            style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer', width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <LogOut size={20} />
-          </button>
         </div>
       </header>
 
@@ -273,14 +307,42 @@ function DashboardPage() {
             nextTierName={data.next_tier_name}
             nextTierRemaining={data.next_tier_remaining != null ? Number(data.next_tier_remaining) : null}
             progressPercent={Number(data.tier_progress_percent)}
+            onTierClick={openTierSheet}
           />
+
+          {/* Сгорающие бонусы */}
+          {Number(data.expiring_amount || 0) > 0 && data.expiring_date && (
+            <div className="card fade-up" style={{
+              animationDelay: '60ms',
+              borderColor: 'rgba(251,191,36,0.3)',
+              background: 'linear-gradient(135deg, rgba(251,191,36,0.08), rgba(251,191,36,0.01)), var(--card)',
+              display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px',
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+                background: 'rgba(251,191,36,0.13)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Flame size={19} color="var(--warn)" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--warn)' }} className="numeric">
+                  {Number(data.expiring_amount).toLocaleString('ru-RU')} сом сгорит {new Date(data.expiring_date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 1 }}>
+                  Успейте использовать бонусы в Смарт Центр
+                </div>
+              </div>
+            </div>
+          )}
+
           <DebtCard amount={Number(data.debt_amount)} updatedAt={data.debt_updated_at} />
-          <button className="btn btn-secondary" style={{ marginBottom: 12 }} onClick={() => setQrOpen(true)}>
+          <button className="btn btn-secondary fade-up" style={{ marginBottom: 12, animationDelay: '100ms' }} onClick={() => setQrOpen(true)}>
             <QrCode size={18} /> Показать QR кассиру
           </button>
 
           {/* Quick stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+          <div className="fade-up" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12, animationDelay: '140ms' }}>
             <div className="card" style={{ padding: '12px 14px', textAlign: 'center' }}>
               <div style={{ fontSize: 11, color: 'var(--text3)' }}>Получено</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: '#22c55e' }}>{Number(data.total_earned).toLocaleString('ru-RU')}</div>
@@ -293,10 +355,16 @@ function DashboardPage() {
             </div>
           </div>
 
-          <TransactionList items={data.recent_transactions} />
+          <div className="fade-up" style={{ animationDelay: '180ms' }}>
+            <TransactionList
+              items={data.recent_transactions}
+              onShowAll={() => setTab('history')}
+              onSelect={(t) => setTxDetail(t)}
+            />
+          </div>
 
           {/* Referral code */}
-          <div className="card" style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px' }}>
+          <div className="card fade-up" style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', animationDelay: '220ms' }}>
             <div>
               <div style={{ fontSize: 11, color: 'var(--text3)' }}>Ваш реферальный код</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)', letterSpacing: 2 }}>{data.referral_code}</div>
@@ -343,7 +411,7 @@ function DashboardPage() {
               {txns.map(t => {
                 const meta = TX_META[t.type] || { label: t.type, color: '#8899aa', sign: '+' };
                 return (
-                  <div key={t.id} className="card" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div key={t.id} className="card tap" onClick={() => setTxDetail(t)} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: `${meta.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color }} />
                     </div>
@@ -437,11 +505,23 @@ function DashboardPage() {
               <ChevronRight size={16} color="var(--text3)" />
             </a>
             <button
+              onClick={handleLogout}
+              style={{
+                width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text2)', fontSize: 14, borderBottom: '1px solid rgba(255,255,255,0.05)',
+                fontFamily: 'inherit',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><LogOut size={15} /> Выйти из аккаунта</span>
+              <ChevronRight size={16} color="var(--text3)" />
+            </button>
+            <button
               onClick={() => { setDeleteErr(''); setShowDeleteModal(true); }}
               style={{
                 width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
-                color: '#ff4d4d', fontSize: 14,
+                color: '#ff4d4d', fontSize: 14, fontFamily: 'inherit',
               }}
             >
               <span>Удалить аккаунт</span>
@@ -627,12 +707,139 @@ function DashboardPage() {
                   boxShadow: '0 0 16px rgba(255,220,0,0.18)',
                 }} />
               )}
-              <Icon size={21} strokeWidth={active ? 2.4 : 1.9} style={{ position: 'relative', zIndex: 1 }} />
+              <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex' }}>
+                <Icon size={21} strokeWidth={active ? 2.4 : 1.9} />
+                {t.id === 'promo' && hasNewCoupons && (
+                  <span style={{
+                    position: 'absolute', top: -2, right: -4, width: 8, height: 8,
+                    background: '#f87171', borderRadius: '50%',
+                    border: '2px solid rgba(20,23,32,1)',
+                  }} />
+                )}
+              </span>
               <span style={{ fontSize: 9.5, fontWeight: active ? 800 : 500, letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative', zIndex: 1 }}>{t.label}</span>
             </button>
           );
         })}
       </nav>
+      )}
+
+      {/* ── Tier Benefits Sheet ── */}
+      {tierSheet && (
+        <>
+          <div className="sheet-backdrop" onClick={() => setTierSheet(false)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Crown size={18} color="var(--accent)" /> Уровни лояльности
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>
+              Чем больше покупок — тем выше уровень и процент бонуса
+            </p>
+            {tiersList.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                <div className="skeleton" style={{ height: 64 }} />
+                <div className="skeleton" style={{ height: 64 }} />
+                <div className="skeleton" style={{ height: 64 }} />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {tiersList.map((t) => {
+                  const isCurrent = t.name === data.tier_name;
+                  const tierColor = ({ Bronze: 'var(--bronze)', Silver: 'var(--silver)', Gold: 'var(--gold)', Platinum: 'var(--platinum)' } as Record<string, string>)[t.name] || 'var(--text2)';
+                  return (
+                    <div key={t.name} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                      borderRadius: 14,
+                      background: isCurrent ? 'rgba(255,230,0,0.07)' : 'rgba(255,255,255,0.03)',
+                      border: isCurrent ? '1px solid rgba(255,230,0,0.3)' : '1px solid rgba(255,255,255,0.05)',
+                    }}>
+                      <div style={{
+                        width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+                        background: 'rgba(255,255,255,0.05)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <Crown size={18} color={tierColor} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: tierColor }}>
+                          {t.name} {isCurrent && <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>— вы здесь</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text3)' }} className="numeric">
+                          от {t.min_total.toLocaleString('ru-RU')} сом покупок
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: tierColor }} className="numeric">{t.bonus_percent}%</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>бонус</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {data.next_tier_name && data.next_tier_remaining != null && (
+              <div style={{
+                padding: '11px 14px', borderRadius: 12, marginBottom: 12,
+                background: 'rgba(255,230,0,0.06)', fontSize: 13, color: 'var(--text2)', lineHeight: 1.5,
+              }}>
+                💡 Ещё <strong style={{ color: 'var(--accent)' }} className="numeric">{Number(data.next_tier_remaining).toLocaleString('ru-RU')} сом</strong> покупок — и вы <strong style={{ color: 'var(--text)' }}>{data.next_tier_name}</strong>
+              </div>
+            )}
+            <button className="btn btn-secondary" onClick={() => setTierSheet(false)}>Понятно</button>
+          </div>
+        </>
+      )}
+
+      {/* ── Transaction Detail Sheet ── */}
+      {txDetail && (
+        <>
+          <div className="sheet-backdrop" onClick={() => setTxDetail(null)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            {(() => {
+              const meta = TX_META[txDetail.type] || { label: txDetail.type, color: '#8899aa', sign: '+' as const };
+              return (
+                <>
+                  <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                    <div style={{
+                      width: 56, height: 56, borderRadius: 18, margin: '0 auto 10px',
+                      background: `${meta.color}18`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Receipt size={26} color={meta.color} />
+                    </div>
+                    <div className="numeric" style={{ fontSize: 30, fontWeight: 800, color: meta.color }}>
+                      {meta.sign}{Math.abs(Number(txDetail.amount)).toLocaleString('ru-RU')} сом
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>{meta.label}</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: '4px 14px', marginBottom: 14 }}>
+                    {txDetail.purchase_amount != null && Number(txDetail.purchase_amount) > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13 }}>
+                        <span style={{ color: 'var(--text3)' }}>Сумма покупки</span>
+                        <span className="numeric" style={{ fontWeight: 600 }}>{Number(txDetail.purchase_amount).toLocaleString('ru-RU')} сом</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: txDetail.note ? '1px solid rgba(255,255,255,0.05)' : 'none', fontSize: 13 }}>
+                      <span style={{ color: 'var(--text3)' }}>Дата и время</span>
+                      <span style={{ fontWeight: 600 }}>
+                        {new Date(txDetail.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {txDetail.note && (
+                      <div style={{ padding: '11px 0', fontSize: 13 }}>
+                        <div style={{ color: 'var(--text3)', marginBottom: 4 }}>Комментарий</div>
+                        <div style={{ lineHeight: 1.5 }}>{txDetail.note}</div>
+                      </div>
+                    )}
+                  </div>
+                  <button className="btn btn-secondary" onClick={() => setTxDetail(null)}>Закрыть</button>
+                </>
+              );
+            })()}
+          </div>
+        </>
       )}
 
       {/* PWA Install Banner — не показываем в нативном приложении */}

@@ -49,6 +49,7 @@ from app.services.smart_notifications import (
     run_churn_prevention,
     run_birthday_pre_reminder,
     run_expiry_personal_alert,
+    run_post_purchase_followup,
 )
 from app.api.v1.business_intelligence import send_pnl_telegram_report
 
@@ -222,6 +223,15 @@ async def lifespan(app: FastAPI):
         run_auto_coupon,
         CronTrigger(day_of_week="thu", hour=11, minute=0),
         id="auto_coupon",
+        replace_existing=True,
+    )
+
+    # Cron: Post-Purchase Follow-up — каждый день 11:10
+    # «Всё ли нравится? Мы готовы помочь» за вчерашние покупки без возврата (RU+KG)
+    scheduler.add_job(
+        run_post_purchase_followup,
+        CronTrigger(hour=11, minute=10),
+        id="post_purchase_followup",
         replace_existing=True,
     )
 

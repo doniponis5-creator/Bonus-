@@ -405,6 +405,153 @@ async def send_post_purchase_thanks(customer_id, purchase_amount: float, bonus_e
 
 
 # ═══════════════════════════════════════════
+# 4b. POST-PURCHASE FOLLOW-UP (забота о клиенте)
+# ═══════════════════════════════════════════
+
+POST_PURCHASE_DEFAULT_TEMPLATE = (
+    "👋 {name}, здравствуйте! Это Смарт Центр.\n\n"
+    "Вчера вы сделали у нас покупку на {amount} сом. "
+    "Всё ли работает? Вам нравится? 😊\n"
+    "Если есть вопрос или какая-то проблема — мы всегда готовы помочь: "
+    "📞 0557 100 505\n\n"
+    "— — —\n"
+    "👋 {name}, саламатсызбы! Бул Смарт Центр.\n\n"
+    "Кечээ бизден {amount} сомго соода кылдыңыз. "
+    "Баары иштеп жатабы? Сизге жактыбы? 😊\n"
+    "Суроо же кандайдыр бир көйгөй болсо — биз дайыма жардамга даярбыз: "
+    "📞 0557 100 505\n\n"
+    "🔗 Кабинет: {link}"
+)
+
+
+async def run_post_purchase_followup():
+    """
+    Ежедневно в 11:10: находим вчерашние покупки (EARN), у которых НЕ было
+    возврата, и отправляем заботливое сообщение «всё ли нравится, мы готовы
+    помочь» (RU + KG). Один клиент — максимум 1 сообщение за 7 дней.
+
+    Settings:
+      POST_PURCHASE_FOLLOWUP_ENABLED   — "true"/"false" (default false)
+      POST_PURCHASE_MIN_AMOUNT         — мин. сумма покупки (default 3000)
+      POST_PURCHASE_MAX_PER_RUN        — макс. сообщений за запуск (default 50)
+      POST_PURCHASE_FOLLOWUP_TEMPLATE  — шаблон ({name}, {amount}, {link})
+    """
+    import asyncio as _asyncio
+    from datetime import timezone as _tz
+
+    async with async_session() as db:
+        # Конфиг
+        result = await db.execute(
+            select(Setting).where(Setting.key.in_([
+                "POST_PURCHASE_FOLLOWUP_ENABLED",
+                "POST_PURCHASE_MIN_AMOUNT",
+                "POST_PURCHASE_MAX_PER_RUN",
+                "POST_PURCHASE_FOLLOWUP_TEMPLATE",
+                "WA_MESSAGE_INTERVAL",
+            ]))
+        )
+        cfg = {s.key: s.value for s in result.scalars().all()}
+
+        if (cfg.get("POST_PURCHASE_FOLLOWUP_ENABLED") or "false").lower() != "true":
+            logger.info("Post-purchase followup: disabled")
+            return
+
+        wa_cfg = await _get_wa_config(db)
+        if not wa_cfg:
+            logger.warning("Post-purchase followup: WhatsApp not configured")
+            return
+
+        try:
+            min_amount = Decimal(cfg.get("POST_PURCHASE_MIN_AMOUNT") or "3000")
+        except Exception:
+            min_amount = Decimal("3000")
+        try:
+            max_per_run = int(cfg.get("POST_PURCHASE_MAX_PER_RUN") or "50")
+        except Exception:
+            max_per_run = 50
+        try:
+            wa_interval = float(cfg.get("WA_MESSAGE_INTERVAL") or "3")
+        except Exception:
+            wa_interval = 3.0
+        template = cfg.get("POST_PURCHASE_FOLLOWUP_TEMPLATE") or POST_PURCHASE_DEFAULT_TEMPLATE
+
+        # Вчерашний день по Бишкеку (UTC+6)
+        bishkek = _tz(timedelta(hours=6))
+        now_local = datetime.now(bishkek)
+        day_start = (now_local - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+
+        # Вчерашние покупки (EARN) выше минимума, активные клиенты
+        txn_result = await db.execute(
+            select(Transaction)
+            .join(Customer, Customer.id == Transaction.customer_id)
+            .where(
+                Transaction.type == TransactionType.EARN,
+                Transaction.created_at >= day_start,
+                Transaction.created_at < day_end,
+                Transaction.purchase_amount >= min_amount,
+                Customer.is_active == True,
+            )
+            .order_by(Transaction.purchase_amount.desc())
+        )
+        txns = txn_result.scalars().all()
+        if not txns:
+            logger.info("Post-purchase followup: no qualifying purchases yesterday")
+            return
+
+        # Один клиент = одна (самая крупная) покупка
+        by_customer = {}
+        for t in txns:
+            if t.customer_id not in by_customer:
+                by_customer[t.customer_id] = t
+
+        # Чеки с возвратом (REFUND-{receipt}) — исключаем
+        receipts = [t.receipt_number for t in by_customer.values() if t.receipt_number]
+        refunded = set()
+        if receipts:
+            refund_result = await db.execute(
+                select(Transaction.receipt_number).where(
+                    Transaction.type == TransactionType.REFUND,
+                    Transaction.receipt_number.in_([f"REFUND-{r}" for r in receipts]),
+                )
+            )
+            refunded = {r[0].replace("REFUND-", "", 1) for r in refund_result.all()}
+
+        sent = 0
+        for customer_id, txn in by_customer.items():
+            if sent >= max_per_run:
+                break
+            if txn.receipt_number and txn.receipt_number in refunded:
+                continue
+            if await _was_recently_notified(db, customer_id, "post_purchase_followup", days=7):
+                continue
+
+            customer = (await db.execute(
+                select(Customer).where(Customer.id == customer_id)
+            )).scalar_one_or_none()
+            if not customer or not customer.phone:
+                continue
+
+            name = (customer.full_name or "").split()[0] if customer.full_name else ""
+            link = await _generate_magic_link(db, customer_id)
+            message = (
+                template
+                .replace("{name}", name or "клиент")
+                .replace("{amount}", str(int(txn.purchase_amount or 0)))
+                .replace("{link}", link)
+            )
+
+            ok = await _send_and_log(
+                db, customer_id, customer.phone, message, "post_purchase_followup", wa_cfg
+            )
+            if ok:
+                sent += 1
+                await _asyncio.sleep(wa_interval)
+
+        logger.info(f"Post-purchase followup: sent {sent} (qualifying customers: {len(by_customer)})")
+
+
+# ═══════════════════════════════════════════
 # 5. MILESTONE CELEBRATION
 # ═══════════════════════════════════════════
 

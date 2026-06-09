@@ -247,6 +247,11 @@ class SettingsUpdateRequest(BaseModel):
     AUTO_COUPON_MAX_PER_RUN: Optional[str] = None      # default 50
     AUTO_COUPON_COOLDOWN_DAYS: Optional[str] = None    # default 30
     AUTO_COUPON_MIN_PURCHASES: Optional[str] = None    # default 3
+    # ─── Post-Purchase Follow-up (забота после покупки) ───
+    POST_PURCHASE_FOLLOWUP_ENABLED: Optional[str] = None
+    POST_PURCHASE_MIN_AMOUNT: Optional[str] = None        # default 3000
+    POST_PURCHASE_MAX_PER_RUN: Optional[str] = None       # default 50
+    POST_PURCHASE_FOLLOWUP_TEMPLATE: Optional[str] = None # {name}, {amount}, {link}
 
 
 class AdminCustomerUpdateRequest(BaseModel):
@@ -392,6 +397,9 @@ class CustomerCabinetMe(BaseModel):
 
     debt_amount: Decimal = Field(default=Decimal("0"), description="Задолженность из 1С (0 если нет долга)")
     debt_updated_at: Optional[datetime] = None
+
+    expiring_amount: Decimal = Field(default=Decimal("0"), description="Сумма бонусов, сгорающих в ближайшее время")
+    expiring_date: Optional[date] = Field(default=None, description="Дата сгорания ближайших бонусов")
 
     recent_transactions: list[CustomerCabinetTransaction] = []
 

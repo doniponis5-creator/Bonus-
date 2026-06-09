@@ -73,6 +73,10 @@ export default function SettingsPage() {
     AUTO_COUPON_MAX_PER_RUN: "50",
     AUTO_COUPON_COOLDOWN_DAYS: "30",
     AUTO_COUPON_MIN_PURCHASES: "3",
+    POST_PURCHASE_FOLLOWUP_ENABLED: "false",
+    POST_PURCHASE_MIN_AMOUNT: "3000",
+    POST_PURCHASE_MAX_PER_RUN: "50",
+    POST_PURCHASE_FOLLOWUP_TEMPLATE: "",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
@@ -892,6 +896,45 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Post-Purchase Follow-up */}
+        <div style={{ padding: "16px", background: "rgba(16,185,129,0.05)", borderRadius: "12px", border: "1px solid rgba(16,185,129,0.15)", marginTop: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text }}>Забота после покупки (ежедневно 11:10)</div>
+            <button
+              onClick={() => toggleBoolean("POST_PURCHASE_FOLLOWUP_ENABLED")}
+              style={{ padding: "6px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
+                background: settings.POST_PURCHASE_FOLLOWUP_ENABLED === "true" ? "linear-gradient(135deg, #22c55e, #16a34a)" : "#1c2a3a",
+                color: settings.POST_PURCHASE_FOLLOWUP_ENABLED === "true" ? "#fff" : "#8899aa" }}
+            >
+              {settings.POST_PURCHASE_FOLLOWUP_ENABLED === "true" ? "Включено" : "Выключено"}
+            </button>
+          </div>
+          <div style={{ fontSize: "12px", color: colors.textMuted, marginBottom: "12px" }}>
+            На следующий день после покупки (без возврата) клиент получает WhatsApp: «Всё ли вам нравится? Если проблема — мы готовы помочь» (RU + KG). Переменные шаблона: {"{name}"}, {"{amount}"}, {"{link}"}.
+          </div>
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "12px" }}>
+            <div>
+              <label style={{ fontSize: "12px", color: colors.textMuted, display: "block", marginBottom: "6px" }}>Мин. сумма покупки (сом)</label>
+              <input style={{ ...styles.input, maxWidth: "140px" }} type="number"
+                value={settings.POST_PURCHASE_MIN_AMOUNT}
+                onChange={(e) => handleChange("POST_PURCHASE_MIN_AMOUNT", e.target.value)} placeholder="3000" />
+            </div>
+            <div>
+              <label style={{ fontSize: "12px", color: colors.textMuted, display: "block", marginBottom: "6px" }}>Макс. сообщений за запуск</label>
+              <input style={{ ...styles.input, maxWidth: "140px" }} type="number"
+                value={settings.POST_PURCHASE_MAX_PER_RUN}
+                onChange={(e) => handleChange("POST_PURCHASE_MAX_PER_RUN", e.target.value)} placeholder="50" />
+            </div>
+          </div>
+          <label style={{ fontSize: "12px", color: colors.textMuted, display: "block", marginBottom: "6px" }}>Шаблон сообщения (пусто = стандартный RU+KG)</label>
+          <textarea
+            style={{ ...styles.input, width: "100%", minHeight: "90px", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+            value={settings.POST_PURCHASE_FOLLOWUP_TEMPLATE}
+            onChange={(e) => handleChange("POST_PURCHASE_FOLLOWUP_TEMPLATE", e.target.value)}
+            placeholder={"👋 {name}, здравствуйте! Это Смарт Центр.\nВчера вы сделали у нас покупку на {amount} сом. Всё ли работает? ..."}
+          />
         </div>
       </div>
 

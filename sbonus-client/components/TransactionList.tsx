@@ -13,14 +13,26 @@ const TX_META: Record<string, { label: string; color: string; Icon: typeof PlusC
 
 interface Props {
   items: CabinetTransaction[];
+  onShowAll?: () => void;
+  onSelect?: (t: CabinetTransaction) => void;
 }
 
-export default function TransactionList({ items }: Props) {
+export default function TransactionList({ items, onShowAll, onSelect }: Props) {
   return (
     <div className="card">
-      <h2 className="h2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <History size={16} /> Последние операции
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h2 className="h2" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 0 }}>
+          <History size={16} /> Последние операции
+        </h2>
+        {onShowAll && items.length > 0 && (
+          <button onClick={onShowAll} className="tap" style={{
+            background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+            color: 'var(--accent)', fontSize: 13, fontWeight: 600, padding: '4px 0',
+          }}>
+            Все →
+          </button>
+        )}
+      </div>
       {items.length === 0 ? (
         <p className="muted" style={{ textAlign: 'center', padding: 16 }}>
           Операций пока нет
@@ -32,7 +44,8 @@ export default function TransactionList({ items }: Props) {
             const Icon = meta.Icon;
             const amount = Math.abs(Number(t.amount));
             return (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div key={t.id} onClick={() => onSelect?.(t)} className={onSelect ? 'tap' : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: onSelect ? 'pointer' : 'default' }}>
                 <div
                   style={{
                     width: 36,

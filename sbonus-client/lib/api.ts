@@ -56,6 +56,8 @@ export interface CabinetMe {
   tier_progress_percent: string | number;
   debt_amount: string | number;
   debt_updated_at?: string | null;
+  expiring_amount?: string | number;
+  expiring_date?: string | null;
   recent_transactions: CabinetTransaction[];
 }
 
@@ -94,6 +96,8 @@ export const customerAPI = {
     api.get(`/api/v1/customer/leaderboard?period=${period}`),
   coupons: () =>
     api.get('/api/v1/customer/coupons'),
+  tiers: () =>
+    api.get<{ tiers: { name: string; min_total: number; bonus_percent: number; max_spend_pct: number }[] }>('/api/v1/customer/tiers'),
   activateCoupon: (code: string) =>
     api.post(`/api/v1/customer/coupons/${encodeURIComponent(code)}/activate`),
   submitReview: (platform: string, review_link: string) =>
