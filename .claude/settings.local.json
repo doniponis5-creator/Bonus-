@@ -21,7 +21,26 @@
       "Bash(grep -E \"^\\\\.env$|/\\\\.env$|\\\\.env\\\\.local$|\\\\.env\\\\.production$\")",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git commit -m 'fix\\(admin/customers\\): validate bonus adjustment client-side *)"
+      "Bash(git commit -m 'fix\\(admin/customers\\): validate bonus adjustment client-side *)",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('app/models/__init__.py'\\).read\\(\\)\\); print\\('✅ models syntax OK'\\)\")",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('migrations/versions/0009_gamification_v2.py'\\).read\\(\\)\\); print\\('✅ migration 0009 syntax OK'\\)\")",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('app/services/gamification.py'\\).read\\(\\)\\); print\\('✅ engine syntax OK'\\)\")",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('app/seeds/gamification.py'\\).read\\(\\)\\); print\\('✅ seed syntax OK'\\)\")",
+      "Bash(which docker *)",
+      "Bash(ls -d sbonus-client/node_modules)",
+      "Bash(ls -d sbonus-admin/node_modules)",
+      "Bash(docker ps *)",
+      "Bash(python3 -c \"import sqlalchemy, fastapi, pydantic; print\\('deps OK'\\)\")",
+      "Bash(cd \"/Users/doniyorabduganiev/.claude/projects/-Users-doniyorabduganiev----------Bonus-/memory/\")",
+      "Bash(ls MEMORY.md)",
+      "Bash(lsof -iTCP -sTCP:LISTEN -P)",
+      "Bash(awk '{print $1, $9}')",
+      "Bash(docker compose exec -T api python -c ' *)",
+      "Bash(xargs -r docker compose exec -T redis redis-cli DEL)",
+      "Bash(python3 -c \"import secrets; print\\(secrets.token_urlsafe\\(32\\)[:64]\\)\")",
+      "Bash(open http://localhost:3001/?token=__TRACKED_VAR__)",
+      "Bash(awk '{print $1}')",
+      "Bash(file assets/icon.png assets/adaptive-icon.png assets/splash.png assets/images/*)"
     ]
   }
 }

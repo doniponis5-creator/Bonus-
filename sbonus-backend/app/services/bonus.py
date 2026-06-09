@@ -765,12 +765,32 @@ class BonusService:
         if not tmpl_row or not tmpl_row.value:
             return
 
+        # ── Magic-link: уникальный auto-login для каждого клиента ──
+        cabinet_link = "https://cabinet.smartcentr.store"
+        if customer_id:
+            try:
+                import secrets
+                from datetime import datetime, timedelta, timezone
+                from app.models import CustomerAuthToken
+
+                token_value = secrets.token_urlsafe(32)[:64]
+                auth_token = CustomerAuthToken(
+                    customer_id=customer_id,
+                    token=token_value,
+                    expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+                )
+                self.db.add(auth_token)
+                await self.db.flush()
+                cabinet_link = f"https://cabinet.smartcentr.store?token={token_value}"
+            except Exception:
+                pass  # fallback to plain link
+
         msg = (
             tmpl_row.value
             .replace("{amount}", str(amount))
             .replace("{balance}", str(balance))
             .replace("{name}", customer_name or "")
-            .replace("{link}", "https://cabinet.smartcentr.store")
+            .replace("{link}", cabinet_link)
         )
 
         # Используем tracked отправку если есть customer_id

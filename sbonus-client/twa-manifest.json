@@ -1,0 +1,45 @@
+{
+  "packageId": "store.smartcentr.bonus",
+  "host": "cabinet.smartcentr.store",
+  "name": "S Bonus",
+  "launcherName": "S Bonus",
+  "display": "standalone",
+  "themeColor": "#07080d",
+  "themeColorDark": "#07080d",
+  "navigationColor": "#07080d",
+  "navigationColorDark": "#07080d",
+  "navigationDividerColor": "#07080d",
+  "navigationDividerColorDark": "#07080d",
+  "backgroundColor": "#0a0f1a",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://cabinet.smartcentr.store/icon-512.png",
+  "maskableIconUrl": "https://cabinet.smartcentr.store/icon-maskable-512.png",
+  "monochromeIconUrl": "https://cabinet.smartcentr.store/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Колесо удачи",
+      "shortName": "Колесо",
+      "url": "/wheel",
+      "chosenIconUrl": "https://cabinet.smartcentr.store/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://cabinet.smartcentr.store/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://cabinet.smartcentr.store/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": ["https://api.smartcentr.store"]
+}
