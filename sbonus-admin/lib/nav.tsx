@@ -49,6 +49,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Аналитика',
     items: [
       { href: '/biz-report', icon: ClipboardCheck, label: 'Бизнес-отчёт', desc: 'План действий недели' },
+      { href: '/profit-lab', icon: FlaskConical, label: 'Прибыль Lab', desc: 'Скидки, комбо, ROI' },
       { href: '/analytics', icon: BarChart3, label: 'Аналитика', desc: 'Обзор метрик' },
       { href: '/product-analytics', icon: Package, label: 'Товары', desc: 'Продажи товаров' },
       { href: '/financials', icon: Wallet, label: 'P&L Финансы', desc: 'Прибыль/убыток' },

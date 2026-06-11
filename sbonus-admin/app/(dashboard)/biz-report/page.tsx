@@ -4,7 +4,7 @@
  * Одна страница = что произошло + что КОНКРЕТНО сделать на этой неделе.
  * Использует только существующие API (1С-данные: товары, чеки, клиенты).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   TrendingUp, TrendingDown, Printer, ShoppingCart, PackageX, Flame,
@@ -14,6 +14,27 @@ import {
 import { analyticsProAPI, productAPI } from '@/lib/api';
 
 const fmt = (n: any) => Number(n || 0).toLocaleString('ru-RU');
+
+// ── Count-up анимация чисел ──
+function useCountUp(target: number, dur = 600): number {
+  const [v, setV] = useState(0);
+  const prev = useRef(0);
+  useEffect(() => {
+    const from = prev.current;
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      prev.current = target; setV(target); return;
+    }
+    let raf = 0; const t0 = performance.now();
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / dur);
+      setV(Math.round(from + (target - from) * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(tick); else prev.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, dur]);
+  return v;
+}
 
 // ── Дельта к прошлому периоду ──
 function Delta({ cur, prev }: { cur: number; prev: number }) {
@@ -29,13 +50,14 @@ function Delta({ cur, prev }: { cur: number; prev: number }) {
 }
 
 function Stat({ label, value, unit, cur, prev, icon: Icon }: any) {
+  const animated = useCountUp(Number(cur || 0));
   return (
-    <div className="stat-card">
+    <div className="stat-card fade-up">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <span className="stat-label" style={{ marginBottom: 0 }}>{label}</span>
         <Icon size={15} color="var(--text3)" />
       </div>
-      <div className="stat-value">{value}{unit && <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text3)', marginLeft: 5 }}>{unit}</span>}</div>
+      <div className="stat-value numeric">{fmt(animated)}{unit && <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text3)', marginLeft: 5 }}>{unit}</span>}</div>
       <div style={{ marginTop: 4 }}><Delta cur={cur} prev={prev} /></div>
     </div>
   );
