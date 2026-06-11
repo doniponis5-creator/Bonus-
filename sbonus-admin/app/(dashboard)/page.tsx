@@ -1,11 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import StatsCard from '@/components/StatsCard';
 import ExportButton from '@/components/ExportButton';
-import { adminAPI } from '@/lib/api';
+import { adminAPI, analyticsProAPI } from '@/lib/api';
 import {
-  LayoutDashboard, Users, Coins, CreditCard, Landmark, Calendar,
+  Users, Coins, CreditCard, Landmark, Calendar, UserPlus,
   Trophy, Loader2, XCircle, TrendingUp, BarChart3, Bell, ShoppingCart,
+  ClipboardCheck, FlaskConical, Megaphone, ChevronRight, Activity,
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
@@ -67,12 +69,14 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState(30);
 
   const [notifStats, setNotifStats] = useState<any>(null);
+  const [realtime, setRealtime] = useState<any>(null);
 
   const loadAll = () => {
     Promise.all([
       adminAPI.stats().then(r => setStats(r.data)),
       adminAPI.trends(period).then(r => setTrends(r.data)),
       adminAPI.notificationStats(7).then(r => setNotifStats(r.data)).catch(() => {}),
+      analyticsProAPI.realtime().then(r => setRealtime(r.data)).catch(() => {}),
     ]).catch(() => {}).finally(() => setLoading(false));
   };
 
@@ -102,33 +106,82 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="h1" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <LayoutDashboard size={24} /> Дашборд
+          <h1 className="h1">
+            {(() => { const h = new Date().getHours(); return h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер'; })()}, DonLee
           </h1>
-          <p style={{ color: 'var(--text2)', fontSize: 14, marginTop: 4 }}>Смарт Центр • S Bonus</p>
+          <p className="caption" style={{ marginTop: 4 }}>
+            {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })} · Смарт Центр · S Bonus
+          </p>
         </div>
         <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {/* Period selector */}
-          <div className="period-selector" style={{ display: 'flex', gap: 4, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: 3 }}>
+          <div className="seg period-selector">
             {PERIOD_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setPeriod(opt.value)}
-                style={{
-                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
-                  background: period === opt.value ? 'var(--accent)' : 'transparent',
-                  color: period === opt.value ? 'var(--on-accent)' : 'var(--text2)',
-                  transition: 'all 0.2s',
-                }}
-              >
+              <button key={opt.value} onClick={() => setPeriod(opt.value)}
+                className={`seg-item ${period === opt.value ? 'active' : ''}`}>
                 {opt.label}
               </button>
             ))}
           </div>
           <ExportButton />
         </div>
+      </div>
+
+      {/* ── Сейчас в магазине (live) ── */}
+      {realtime?.today && (
+        <div className="card card-accent fade-up" style={{ marginBottom: 16, padding: '16px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ position: 'relative', display: 'inline-flex', width: 8, height: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }} />
+            </span>
+            <span className="h3">Сегодня сейчас</span>
+            <span className="caption" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Activity size={13} /> обновляется каждую минуту
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+            {[
+              { label: 'Выручка', v: `${Number(realtime.today.revenue || 0).toLocaleString('ru-RU')} сом`, c: 'var(--accent)' },
+              { label: 'Чеков', v: String(realtime.today.tx_count || 0), c: 'var(--text)' },
+              { label: 'Средний чек', v: `${Number(realtime.today.avg_check || 0).toLocaleString('ru-RU')} сом`, c: 'var(--text)' },
+              { label: 'Покупателей', v: String(realtime.today.active_customers || 0), c: 'var(--text)' },
+              { label: 'Новых клиентов', v: String(realtime.today.new_registrations || 0), c: 'var(--success)' },
+            ].map(t => (
+              <div key={t.label} style={{ background: 'var(--bg2)', borderRadius: 10, padding: '10px 14px' }}>
+                <div className="caption">{t.label}</div>
+                <div className="numeric" style={{ fontSize: 18, fontWeight: 700, color: t.c, marginTop: 2 }}>{t.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Быстрые действия ── */}
+      <div className="fade-up" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, marginBottom: 20, animationDelay: '40ms' }}>
+        {[
+          { href: '/biz-report', icon: ClipboardCheck, title: 'Бизнес-отчёт', desc: 'План действий недели' },
+          { href: '/profit-lab', icon: FlaskConical, title: 'Прибыль Lab', desc: 'Скидки · комбо · ROI' },
+          { href: '/campaigns', icon: Megaphone, title: 'Кампании', desc: 'Запустить рассылку' },
+          { href: '/customers', icon: Users, title: 'Клиенты', desc: 'Поиск и база' },
+        ].map(a => {
+          const Icon = a.icon;
+          return (
+            <Link key={a.href} href={a.href} className="card" style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', marginBottom: 0,
+              cursor: 'pointer', textDecoration: 'none',
+            }}>
+              <div className="icon-tile" style={{ background: 'var(--accent-dim)' }}>
+                <Icon size={17} color="var(--accent)" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{a.title}</div>
+                <div className="caption" style={{ marginTop: 1 }}>{a.desc}</div>
+              </div>
+              <ChevronRight size={15} color="var(--text3)" />
+            </Link>
+          );
+        })}
       </div>
 
       {/* Main Stats Cards */}
@@ -144,7 +197,7 @@ export default function DashboardPage() {
         <StatsCard icon={<Calendar size={20} />} label="Сегодня" value={stats.transactions_today} sub="транзакций" />
         <StatsCard icon={<BarChart3 size={20} />} label="За месяц" value={stats.transactions_month} sub="транзакций" />
         <StatsCard icon={<ShoppingCart size={20} />} label="Средний чек" value={trends ? fmt(trends.average_check) : '—'} color="var(--accent)" />
-        <StatsCard icon={<TrendingUp size={20} />} label="Период" value={`${period} дн.`} sub={`${trends?.daily?.length || 0} точек данных`} />
+        <StatsCard icon={<UserPlus size={20} />} label="Новых клиентов" value={trends?.daily ? trends.daily.reduce((s, d) => s + (d.new_customers || 0), 0) : 0} sub={`за ${period} дн.`} color="var(--success)" />
       </div>
 
       {/* Notification Stats */}

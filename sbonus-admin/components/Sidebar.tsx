@@ -87,33 +87,58 @@ function DesktopSidebar({ path }: { path: string }) {
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-        {/* Хаб всех разделов */}
-        <Link href="/menu" style={{
-          display: 'flex', alignItems: 'center', gap: 10, height: 40, padding: '0 12px', marginBottom: 10,
+        {/* Дашборд — всегда сверху */}
+        <Link href="/" style={{
+          display: 'flex', alignItems: 'center', gap: 10, height: 38, padding: '0 12px',
           borderRadius: 10, fontSize: 13, fontWeight: 600,
-          color: path === '/menu' ? 'var(--accent)' : 'var(--text)',
-          background: path === '/menu' ? 'var(--accent-dim)' : 'var(--bg3)',
-          border: `1px solid ${path === '/menu' ? 'var(--accent-border)' : 'var(--border)'}`,
+          color: path === '/' ? 'var(--accent)' : 'var(--text2)',
+          background: path === '/' ? 'var(--accent-dim)' : 'transparent',
+          transition: 'background 0.15s, color 0.15s',
+        }}>
+          <LayoutDashboard size={18} /> Дашборд
+        </Link>
+        <Link href="/menu" style={{
+          display: 'flex', alignItems: 'center', gap: 10, height: 38, padding: '0 12px', marginBottom: 8,
+          borderRadius: 10, fontSize: 13, fontWeight: 600,
+          color: path === '/menu' ? 'var(--accent)' : 'var(--text2)',
+          background: path === '/menu' ? 'var(--accent-dim)' : 'transparent',
+          transition: 'background 0.15s, color 0.15s',
         }}>
           <LayoutGrid size={18} /> Все разделы
         </Link>
-        {/* Быстрый доступ — часто используемое. Остальное — в «Все разделы». */}
-        <div className="label" style={{ padding: '6px 12px', marginTop: 4 }}>
-          Быстрый доступ
-        </div>
-        {QUICK_NAV.map(n => {
-          const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
-          const Icon = n.icon;
+
+        {/* Полная навигация по группам (сворачиваемые секции) */}
+        {NAV_GROUPS.map(group => {
+          const items = group.items.filter(n => n.href !== '/');
+          const isCollapsed = !!collapsed[group.title];
+          const hasActive = items.some(n => path === n.href || (n.href !== '/' && path.startsWith(n.href)));
           return (
-            <Link key={n.href} href={n.href} style={{
-              display: 'flex', alignItems: 'center', gap: 10, height: 38, padding: '0 12px',
-              borderRadius: 10, fontSize: 13, fontWeight: 600,
-              color: active ? 'var(--accent)' : 'var(--text2)',
-              background: active ? 'var(--accent-dim)' : 'transparent',
-              transition: 'background 0.15s, color 0.15s',
-            }}>
-              <Icon size={18} />{n.label}
-            </Link>
+            <div key={group.title} style={{ marginBottom: 2 }}>
+              <button onClick={() => toggle(group.title)} style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px 4px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                <span className="label" style={{ color: hasActive ? 'var(--accent)' : undefined }}>{group.title}</span>
+                <ChevronDown size={13} color="var(--text3)" style={{
+                  transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s',
+                }} />
+              </button>
+              {!isCollapsed && items.map(n => {
+                const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
+                const Icon = n.icon;
+                return (
+                  <Link key={n.href} href={n.href} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 12px',
+                    borderRadius: 10, fontSize: 13, fontWeight: 600,
+                    color: active ? 'var(--accent)' : 'var(--text2)',
+                    background: active ? 'var(--accent-dim)' : 'transparent',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}>
+                    <Icon size={16} />{n.label}
+                  </Link>
+                );
+              })}
+            </div>
           );
         })}
       </nav>

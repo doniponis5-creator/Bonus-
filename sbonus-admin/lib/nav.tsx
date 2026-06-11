@@ -82,6 +82,8 @@ export const NAV_GROUPS: NavGroup[] = [
 // Быстрый доступ в сайдбаре (часто используемые). Остальное — в хабе «Все разделы».
 export const QUICK_NAV: NavItem[] = [
   { href: '/', icon: LayoutDashboard, label: 'Дашборд' },
+  { href: '/biz-report', icon: ClipboardCheck, label: 'Бизнес-отчёт' },
+  { href: '/profit-lab', icon: FlaskConical, label: 'Прибыль Lab' },
   { href: '/customers', icon: Users, label: 'Клиенты' },
   { href: '/transactions', icon: CreditCard, label: 'Транзакции' },
   { href: '/campaigns', icon: Gift, label: 'Кампании' },
