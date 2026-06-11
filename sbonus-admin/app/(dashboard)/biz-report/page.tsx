@@ -10,6 +10,7 @@ import {
   TrendingUp, TrendingDown, Printer, ShoppingCart, PackageX, Flame,
   Users, Sparkles, ChevronRight, AlertTriangle, Package, Trophy,
   Megaphone, Layers, RefreshCw, Loader2, Wallet, Receipt, UserCheck,
+  ClipboardList, Copy, Check,
 } from 'lucide-react';
 import { analyticsProAPI, productAPI } from '@/lib/api';
 
@@ -98,6 +99,8 @@ export default function BizReportPage() {
   const [topSellers, setTopSellers] = useState<any[]>([]);
   const [recos, setRecos] = useState<any>(null);
   const [rfm, setRfm] = useState<any>(null);
+  const [priceByName, setPriceByName] = useState<Record<string, number>>({});
+  const [copied, setCopied] = useState(false);
 
   const load = (d = days) => {
     setLoading(true);
@@ -109,7 +112,8 @@ export default function BizReportPage() {
       productAPI.topSellers(d, 5),
       productAPI.smartRecommendations(90),
       analyticsProAPI.rfm(),
-    ]).then(([b, s, ls, ds, ts, rc, rf]) => {
+      productAPI.margins(90, 200, 'revenue_desc'),
+    ]).then(([b, s, ls, ds, ts, rc, rf, mg]) => {
       if (b.status === 'fulfilled') setBiz(b.value.data);
       if (s.status === 'fulfilled') setSummary(s.value.data);
       if (ls.status === 'fulfilled') setLowStock(ls.value.data?.alerts || ls.value.data?.items || []);
@@ -117,8 +121,33 @@ export default function BizReportPage() {
       if (ts.status === 'fulfilled') setTopSellers(ts.value.data?.items || ts.value.data?.products || []);
       if (rc.status === 'fulfilled') setRecos(rc.value.data);
       if (rf.status === 'fulfilled') setRfm(rf.value.data);
+      if (mg.status === 'fulfilled') {
+        const map: Record<string, number> = {};
+        (mg.value.data?.items || []).forEach((m: any) => { if (m.name) map[m.name] = Number(m.price || 0); });
+        setPriceByName(map);
+      }
       setLoading(false);
     });
+  };
+
+  // Пустые полки: упущенная выручка в день = Σ (скорость продаж × цена)
+  const stockoutLossDaily = useMemo(() => {
+    return lowStock
+      .filter((a: any) => Number(a.current_stock) <= 0 && Number(a.avg_daily_sales) > 0)
+      .reduce((sum: number, a: any) => sum + Number(a.avg_daily_sales) * (priceByName[a.name] || 0), 0);
+  }, [lowStock, priceByName]);
+
+  // Список закупки для поставщика (копирование в буфер)
+  const copyOrderList = () => {
+    const lines = lowStock
+      .filter((a: any) => Number(a.recommended_order) > 0)
+      .slice(0, 30)
+      .map((a: any) => `• ${a.name} — ${Math.ceil(Number(a.recommended_order))} шт`);
+    const text = `Заказ поставщику (${new Date().toLocaleDateString('ru-RU')}):\n${lines.join('\n')}`;
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
   };
 
   useEffect(() => { load(days); }, [days]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -126,6 +155,16 @@ export default function BizReportPage() {
   // ── План действий недели (генерируется из данных) ──
   const actions = useMemo(() => {
     const out: any[] = [];
+    // Пустые полки — теряем деньги КАЖДЫЙ день
+    if (stockoutLossDaily > 0) {
+      out.push({
+        icon: AlertTriangle, tone: 'danger',
+        title: `Пустые полки: ~${fmt(Math.round(stockoutLossDaily))} сом/день мимо кассы`,
+        reason: `Хиты с нулевым остатком продолжают спрашивать — каждый день без товара это упущенная выручка`,
+        impact: `~${fmt(Math.round(stockoutLossDaily * 7))} сом за неделю, если не закупить`,
+        href: '/product-analytics', cta: 'Что кончилось',
+      });
+    }
     const critical = lowStock.filter((a: any) => (a.urgency === 'critical') || (a.days_until_stockout != null && a.days_until_stockout <= 3));
     if (critical.length > 0) {
       out.push({
@@ -178,7 +217,7 @@ export default function BizReportPage() {
       });
     }
     return out;
-  }, [lowStock, deadStock, rfm, recos, days]);
+  }, [lowStock, deadStock, rfm, recos, days, stockoutLossDaily]);
 
   // ── RFM сегменты для блока «Клиенты» ──
   const RFM_META: Record<string, { label: string; tone: string; idea: string }> = {
@@ -293,6 +332,59 @@ export default function BizReportPage() {
           <p className="caption" style={{ marginTop: 10 }}>Скидка 20-30% лучше, чем мёртвый склад.</p>
         </div>
       </div>
+
+      {/* ── 3b. Закупка на неделю (готовый заказ поставщику) ── */}
+      {lowStock.filter((a: any) => Number(a.recommended_order) > 0).length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            <h2 className="h2" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 0 }}>
+              <ClipboardList size={17} color="var(--accent)" /> Закупка на неделю
+            </h2>
+            <button className="btn btn-secondary no-print" onClick={copyOrderList} style={{ width: 'auto', padding: '8px 14px', fontSize: 12 }}>
+              {copied ? <><Check size={14} color="var(--success)" /> Скопировано</> : <><Copy size={14} /> Скопировать для поставщика</>}
+            </button>
+          </div>
+          <p className="caption" style={{ margin: '4px 0 10px' }}>
+            Количество рассчитано из скорости продаж — чтобы хватило до следующей поставки
+          </p>
+          <div className="table-scroll-wrap">
+            <table className="table no-scroll" style={{ minWidth: 0 }}>
+              <thead>
+                <tr>
+                  <th>Товар</th>
+                  <th style={{ textAlign: 'right' }}>Остаток</th>
+                  <th style={{ textAlign: 'right' }}>Продажи/день</th>
+                  <th style={{ textAlign: 'right' }}>Хватит на</th>
+                  <th style={{ textAlign: 'right' }}>Заказать</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lowStock
+                  .filter((a: any) => Number(a.recommended_order) > 0)
+                  .sort((a: any, b: any) => (a.days_until_stockout ?? 999) - (b.days_until_stockout ?? 999))
+                  .slice(0, 10)
+                  .map((a: any, i: number) => (
+                    <tr key={i}>
+                      <td style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</td>
+                      <td className="numeric" style={{ textAlign: 'right', color: Number(a.current_stock) <= 0 ? 'var(--danger)' : 'var(--text)' }}>
+                        {fmt(a.current_stock)} шт
+                      </td>
+                      <td className="numeric" style={{ textAlign: 'right', color: 'var(--text2)' }}>{Number(a.avg_daily_sales || 0).toFixed(1)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {a.days_until_stockout != null
+                          ? <span className={`badge ${a.days_until_stockout <= 3 ? 'badge-red' : a.days_until_stockout <= 7 ? 'badge-yellow' : 'badge-gray'}`}>{a.days_until_stockout} дн</span>
+                          : <span className="badge badge-gray">—</span>}
+                      </td>
+                      <td className="numeric" style={{ textAlign: 'right', fontWeight: 700, color: 'var(--accent)' }}>
+                        {Math.ceil(Number(a.recommended_order))} шт
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ── 4. Клиенты (RFM) + готовые кампании ── */}
       {rfm?.segments && (

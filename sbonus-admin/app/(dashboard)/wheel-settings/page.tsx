@@ -114,6 +114,33 @@ export default function WheelSettingsPage() {
     toast("success", "Вероятности выровнены");
   };
 
+  // Пропорционально привести сумму вероятностей к 100% (сохраняя соотношения)
+  const normalizeTo100 = () => {
+    const total = segments.reduce((s, seg) => s + (seg.probability || 0), 0);
+    if (total <= 0) { toast("error", "Сначала задайте вероятности"); return; }
+    let acc = 0;
+    const normalized = segments.map((s, i) => {
+      if (i === segments.length - 1) return { ...s, probability: +(1 - acc).toFixed(4) };
+      const p = +((s.probability || 0) / total).toFixed(4);
+      acc += p;
+      return { ...s, probability: p };
+    });
+    setSegments(normalized);
+    toast("success", "Приведено к 100% с сохранением пропорций");
+  };
+
+  // ── Экономика колеса ──
+  // Средняя стоимость 1 вращения = Σ (вероятность × бонус)
+  const evPerSpin = segments.reduce(
+    (s, seg) => s + (seg.prize_type === "bonus" ? (seg.probability || 0) * (Number(seg.value) || 0) : 0), 0
+  );
+  // Шанс выиграть хоть что-то
+  const winChance = segments.reduce(
+    (s, seg) => s + (seg.prize_type !== "none" ? (seg.probability || 0) : 0), 0
+  );
+  // Самый дорогой риск: max бонус × его вероятность
+  const maxPrize = segments.reduce((m, seg) => seg.prize_type === "bonus" ? Math.max(m, Number(seg.value) || 0) : m, 0);
+
   // ─── Styles ───
   const colors = {
     bg: "var(--bg)", cardBg: "var(--bg2)", border: "var(--bg3)",
@@ -159,6 +186,11 @@ export default function WheelSettingsPage() {
               <button onClick={autoBalance} style={btnStyle("var(--bg3)", colors.text)}>
                 Авто-баланс
               </button>
+              {Math.abs(totalProbability - 1.0) >= 0.01 && (
+                <button onClick={normalizeTo100} style={btnStyle("rgba(255,230,0,0.12)", colors.accent)}>
+                  Привести к 100%
+                </button>
+              )}
               <button onClick={handleReset} style={btnStyle("var(--bg3)", colors.textMuted)}>
                 <RotateCcw size={14} /> Сброс
               </button>
@@ -192,6 +224,46 @@ export default function WheelSettingsPage() {
                   transition: "width 0.3s",
                 }} />
               ))}
+            </div>
+          </div>
+
+          {/* ── Экономика колеса: сколько это стоит магазину ── */}
+          <div style={{
+            background: colors.cardBg, border: "1px solid var(--accent-border)", borderRadius: 10,
+            padding: 16, marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: colors.text }}>
+              Экономика колеса (считается из ваших настроек)
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+              <div style={{ background: "var(--bg)", borderRadius: 10, padding: "10px 14px" }}>
+                <div style={{ fontSize: 11, color: colors.textMuted }}>Среднее за 1 вращение</div>
+                <div className="numeric" style={{ fontSize: 18, fontWeight: 700, color: colors.accent, marginTop: 2 }}>
+                  {evPerSpin.toFixed(1)} сом
+                </div>
+              </div>
+              <div style={{ background: "var(--bg)", borderRadius: 10, padding: "10px 14px" }}>
+                <div style={{ fontSize: 11, color: colors.textMuted }}>100 вращений ≈</div>
+                <div className="numeric" style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+                  {Math.round(evPerSpin * 100).toLocaleString("ru-RU")} сом
+                </div>
+              </div>
+              <div style={{ background: "var(--bg)", borderRadius: 10, padding: "10px 14px" }}>
+                <div style={{ fontSize: 11, color: colors.textMuted }}>Шанс выигрыша</div>
+                <div className="numeric" style={{ fontSize: 18, fontWeight: 700, color: winChance >= 0.5 ? colors.success : colors.text, marginTop: 2 }}>
+                  {(winChance * 100).toFixed(0)}%
+                </div>
+              </div>
+              <div style={{ background: "var(--bg)", borderRadius: 10, padding: "10px 14px" }}>
+                <div style={{ fontSize: 11, color: colors.textMuted }}>Макс. приз</div>
+                <div className="numeric" style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+                  {maxPrize.toLocaleString("ru-RU")} сом
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: colors.textMuted, marginTop: 10, lineHeight: 1.5 }}>
+              Ориентир: среднее за вращение 10–30 сом — щедро и безопасно. Шанс выигрыша 60%+ держит интерес клиентов,
+              «пустые» сегменты выше 40% разочаровывают.
             </div>
           </div>
 

@@ -226,6 +226,15 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
+    # Cron: Напоминания о платежах по рассрочке — каждый день 10:40
+    from app.tasks.debt_reminders import run_debt_reminders
+    scheduler.add_job(
+        run_debt_reminders,
+        CronTrigger(hour=10, minute=40),
+        id="debt_reminders",
+        replace_existing=True,
+    )
+
     # Cron: Post-Purchase Follow-up — каждый день 11:10
     # «Всё ли нравится? Мы готовы помочь» за вчерашние покупки без возврата (RU+KG)
     scheduler.add_job(

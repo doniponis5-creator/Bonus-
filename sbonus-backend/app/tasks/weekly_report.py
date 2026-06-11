@@ -15,6 +15,7 @@ from app.core.database import async_session
 from app.models import (
     BonusAccount,
     Customer,
+    Product,
     Setting,
     Transaction,
     TransactionType,
@@ -122,6 +123,40 @@ async def send_weekly_report() -> None:
             for i, row in enumerate(top_rows, 1):
                 msg += f"   {i}. {row.full_name} — {int(row.total):,} KGS\n"
             msg += "\n"
+
+        # ── План действий (товары) ──
+        try:
+            low_q = await db.execute(
+                select(Product.name).where(
+                    Product.is_active == True,  # noqa: E712
+                    Product.current_stock <= Product.min_stock_level,
+                ).limit(50)
+            )
+            low_names = [r[0] for r in low_q.all()]
+
+            dead_cutoff = now - timedelta(days=30)
+            frozen_q = await db.execute(
+                select(func.coalesce(func.sum(
+                    func.coalesce(Product.cost_price, Product.price) * Product.current_stock
+                ), 0)).where(
+                    Product.is_active == True,  # noqa: E712
+                    Product.current_stock > 0,
+                    (Product.last_sold_at.is_(None)) | (Product.last_sold_at < dead_cutoff),
+                )
+            )
+            frozen = float(frozen_q.scalar() or 0)
+
+            if low_names or frozen > 0:
+                msg += "✅ *План действий:*\n"
+                if low_names:
+                    preview = ", ".join(low_names[:3])
+                    more = f" и ещё {len(low_names) - 3}" if len(low_names) > 3 else ""
+                    msg += f"   🛒 Закупить: {preview}{more}\n"
+                if frozen > 0:
+                    msg += f"   📦 Заморожено в неликвиде: {int(frozen):,} KGS — пора на распродажу\n"
+                msg += "   Подробно: admin.smartcentr.store/biz-report\n\n"
+        except Exception:
+            pass
 
         msg += f"━━━━━━━━━━━━━━━━━━\n🛒 Смарт Центр • S Bonus"
 

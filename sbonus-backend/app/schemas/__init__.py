@@ -230,6 +230,13 @@ class SettingsUpdateRequest(BaseModel):
     CAMPAIGN_BATCH_PAUSE: Optional[str] = None
     BONUS_EXPIRATION_DAYS: Optional[str] = None
     BONUS_EXPIRATION_WARNING_DAYS: Optional[str] = None
+    DEBT_REMINDER_ENABLED: Optional[str] = None
+    DEBT_REMINDER_DAYS_BEFORE: Optional[str] = None
+    DEBT_REMINDER_MAX_PER_RUN: Optional[str] = None
+    DEBT_REMINDER_TEMPLATE_UPCOMING: Optional[str] = None
+    DEBT_REMINDER_TEMPLATE_DUE: Optional[str] = None
+    DEBT_REMINDER_TEMPLATE_OVERDUE: Optional[str] = None
+    AUTO_COUPON_MAX_BONUS: Optional[str] = None
     WHEEL_FREE_SPINS_ON_REGISTER: Optional[str] = None
     REFERRAL_DAILY_LIMIT: Optional[str] = None
     REFERRAL_MILESTONES: Optional[str] = None  # JSON: [{referrals_needed, reward_amount, title}]

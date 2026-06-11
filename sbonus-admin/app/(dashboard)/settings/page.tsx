@@ -77,6 +77,9 @@ export default function SettingsPage() {
     POST_PURCHASE_MIN_AMOUNT: "3000",
     POST_PURCHASE_MAX_PER_RUN: "50",
     POST_PURCHASE_FOLLOWUP_TEMPLATE: "",
+    DEBT_REMINDER_ENABLED: "false",
+    DEBT_REMINDER_DAYS_BEFORE: "3",
+    DEBT_REMINDER_MAX_PER_RUN: "50",
   });
 
   const [testPhone, setTestPhone] = useState("+996");
@@ -935,6 +938,53 @@ export default function SettingsPage() {
             onChange={(e) => handleChange("POST_PURCHASE_FOLLOWUP_TEMPLATE", e.target.value)}
             placeholder={"👋 {name}, здравствуйте! Это Смарт Центр.\nВчера вы сделали у нас покупку на {amount} сом. Всё ли работает? ..."}
           />
+        </div>
+
+        {/* Напоминания о рассрочке (1С) */}
+        <div style={{ padding: "16px", background: "rgba(59,130,246,0.05)", borderRadius: "10px", border: "1px solid rgba(59,130,246,0.15)", marginTop: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text }}>Напоминания о рассрочке (ежедневно 10:40)</div>
+            <button
+              onClick={() => toggleBoolean("DEBT_REMINDER_ENABLED")}
+              style={{ padding: "6px 16px", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
+                background: settings.DEBT_REMINDER_ENABLED === "true" ? "var(--success)" : "var(--bg3)",
+                color: settings.DEBT_REMINDER_ENABLED === "true" ? "#fff" : "var(--text2)" }}
+            >
+              {settings.DEBT_REMINDER_ENABLED === "true" ? "Включено" : "Выключено"}
+            </button>
+          </div>
+          <div style={{ fontSize: "12px", color: colors.textMuted, marginBottom: "12px" }}>
+            WhatsApp клиентам по графику из 1С: за N дней до платежа, в день платежа и при просрочке
+            (просрочка — не чаще 1 раза в 7 дней). RU + KG, с magic-link в кабинет. Меньше просрочек — быстрее деньги.
+          </div>
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div>
+              <label style={{ fontSize: "12px", color: colors.textMuted, display: "block", marginBottom: "6px" }}>За сколько дней напоминать</label>
+              <input style={{ ...styles.input, maxWidth: "140px" }} type="number"
+                value={settings.DEBT_REMINDER_DAYS_BEFORE}
+                onChange={(e) => handleChange("DEBT_REMINDER_DAYS_BEFORE", e.target.value)} placeholder="3" />
+            </div>
+            <div>
+              <label style={{ fontSize: "12px", color: colors.textMuted, display: "block", marginBottom: "6px" }}>Макс. сообщений за запуск</label>
+              <input style={{ ...styles.input, maxWidth: "140px" }} type="number"
+                value={settings.DEBT_REMINDER_MAX_PER_RUN}
+                onChange={(e) => handleChange("DEBT_REMINDER_MAX_PER_RUN", e.target.value)} placeholder="50" />
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  await api.post("/api/v1/admin/notifications/debt-reminders/run");
+                  toast("success", "Напоминания запущены в фоне");
+                } catch {
+                  toast("error", "Не удалось запустить");
+                }
+              }}
+              style={{ padding: "10px 18px", borderRadius: "10px", border: "1px solid var(--border)", cursor: "pointer",
+                fontWeight: 600, fontSize: "13px", background: "var(--bg3)", color: "var(--text)" }}
+            >
+              Запустить сейчас
+            </button>
+          </div>
         </div>
       </div>
 

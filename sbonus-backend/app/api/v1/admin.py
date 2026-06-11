@@ -1742,6 +1742,18 @@ async def run_post_purchase_now() -> dict:
     return {"success": True, "message": "Post-Purchase Follow-up запущен в фоновом режиме"}
 
 
+@router.post(
+    "/notifications/debt-reminders/run",
+    dependencies=[Depends(require_role(UserRole.SUPER_ADMIN))],
+)
+async def run_debt_reminders_now() -> dict:
+    """Запустить напоминания о платежах по рассрочке вручную (вместо cron 10:40)."""
+    import asyncio
+    from app.tasks.debt_reminders import run_debt_reminders
+    asyncio.create_task(run_debt_reminders())
+    return {"success": True, "message": "Напоминания о рассрочке запущены в фоновом режиме"}
+
+
 class CouponCreateRequest(BaseModel):
     customer_id: str | None = None  # None = доступен всем
     title: str
