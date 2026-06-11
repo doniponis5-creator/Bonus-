@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { AlertCircle } from 'lucide-react';
 import BonusWheel from '@/components/BonusWheel';
 import { isTokenValid, getToken, setToken } from '@/lib/auth';
 import { customerAuthAPI } from '@/lib/api';
@@ -58,19 +59,17 @@ function WheelInner() {
   if (verifying) {
     return (
       <div style={{
-        minHeight: '100dvh', background: '#0a0f1a',
+        minHeight: '100dvh', background: 'var(--bg)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        gap: 16, color: '#8899aa',
+        gap: 16, color: 'var(--text-2)',
       }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%',
-          border: '3px solid rgba(255,230,0,0.15)',
-          borderTopColor: '#FFE600',
-          animation: 'spin 0.8s linear infinite',
+        <div className="spinner" style={{
+          width: 40, height: 40, borderRadius: 999,
+          border: '3px solid var(--border-strong)',
+          borderTopColor: 'var(--accent)',
         }} />
         <div style={{ fontSize: 14 }}>Входим...</div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -79,22 +78,19 @@ function WheelInner() {
   if (error) {
     return (
       <div style={{
-        minHeight: '100dvh', background: '#0a0f1a',
+        minHeight: '100dvh', background: 'var(--bg)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         gap: 16, padding: 32, textAlign: 'center',
       }}>
-        <div style={{ fontSize: 48 }}>😔</div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: '#ef4444' }}>{error}</div>
+        <div className="icon-tile" style={{ width: 56, height: 56, borderRadius: 16 }}>
+          <AlertCircle size={28} color="var(--danger)" />
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{error}</div>
         <button
           onClick={() => router.replace('/login?redirect=/wheel')}
-          style={{
-            marginTop: 8, padding: '12px 24px',
-            borderRadius: 10, border: 'none',
-            background: 'rgba(255,255,255,0.08)',
-            color: '#8899aa', fontSize: 14, fontWeight: 600,
-            cursor: 'pointer',
-          }}
+          className="btn btn-primary"
+          style={{ marginTop: 8, maxWidth: 280 }}
         >
           Войти по номеру телефона
         </button>
@@ -107,7 +103,7 @@ function WheelInner() {
   return (
     <div style={{
       minHeight: '100dvh',
-      background: '#0a0f1a',
+      background: 'var(--bg)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -123,9 +119,9 @@ export default function WheelPage() {
   return (
     <Suspense fallback={
       <div style={{
-        minHeight: '100dvh', background: '#0a0f1a',
+        minHeight: '100dvh', background: 'var(--bg)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#8899aa',
+        color: 'var(--text-2)',
       }}>
         Загрузка...
       </div>

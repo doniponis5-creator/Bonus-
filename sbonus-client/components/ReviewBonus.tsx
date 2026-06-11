@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Star } from 'lucide-react';
+import { Star, X } from 'lucide-react';
 import { customerAPI } from '@/lib/api';
 
 interface Review {
@@ -14,10 +14,10 @@ interface Review {
   created_at: string;
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'На проверке', color: '#f59e0b' },
-  approved: { label: 'Одобрен', color: '#22c55e' },
-  rejected: { label: 'Отклонён', color: '#ff4d4d' },
+const STATUS_LABELS: Record<string, { label: string; badge: string }> = {
+  pending: { label: 'На проверке', badge: 'badge badge-warn' },
+  approved: { label: 'Одобрен', badge: 'badge badge-success' },
+  rejected: { label: 'Отклонён', badge: 'badge badge-danger' },
 };
 
 export default function ReviewBonus({ onBalanceChange }: { onBalanceChange?: () => void }) {
@@ -68,19 +68,19 @@ export default function ReviewBonus({ onBalanceChange }: { onBalanceChange?: () 
 
   return (
     <div style={{ padding: '20px 0' }}>
-      <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Star size={20} color="#FFE600" /> Бонус за отзыв
+      <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.022em', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Star size={20} color="var(--accent)" /> Бонус за отзыв
       </h2>
-      <p style={{ fontSize: 13, color: '#8899aa', margin: '0 0 16px', lineHeight: 1.5 }}>
-        Оставьте отзыв о Смарт Центр на Google Maps или 2GIS и получите бонус!
+      <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '0 0 16px', lineHeight: 1.5 }}>
+        Оставьте отзыв о Смарт Центр на Google Maps или 2GIS — бонус будет начислен после проверки
       </p>
 
       {/* How it works */}
       <div style={{
-        background: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 16, marginBottom: 16,
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--card)', borderRadius: 16, padding: 16, marginBottom: 16,
+        border: '1px solid var(--border)',
       }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#e2eaf6', marginBottom: 10 }}>Как получить бонус:</div>
+        <div className="h3" style={{ marginBottom: 10 }}>Как получить бонус</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { num: '1', text: 'Оставьте отзыв на Google Maps или 2GIS' },
@@ -90,62 +90,56 @@ export default function ReviewBonus({ onBalanceChange }: { onBalanceChange?: () 
           ].map(step => (
             <div key={step.num} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
-                width: 24, height: 24, borderRadius: 8, flexShrink: 0,
-                background: 'rgba(255,230,0,0.12)', color: '#FFE600',
+                width: 24, height: 24, borderRadius: 12, flexShrink: 0,
+                background: 'var(--accent-dim)', color: 'var(--accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 800,
+                fontSize: 12, fontWeight: 700,
               }}>{step.num}</div>
-              <span style={{ fontSize: 13, color: '#8899aa' }}>{step.text}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{step.text}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Result toast */}
+      {/* Result banner */}
       {result && (
         <div style={{
-          padding: '14px 18px', borderRadius: 12, marginBottom: 16,
-          background: result.ok ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-          border: result.ok ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(239,68,68,0.3)',
+          padding: '14px 16px', borderRadius: 12, marginBottom: 16,
+          background: 'var(--bg-2)',
+          border: '1px solid var(--border-strong)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ fontSize: 13, color: result.ok ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+          <span style={{ fontSize: 13, color: result.ok ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
             {result.message}
           </span>
-          <button onClick={() => setResult(null)} style={{
-            background: 'none', border: 'none', color: '#64748b', fontSize: 18, cursor: 'pointer', padding: '0 0 0 12px',
-          }}>×</button>
+          <button onClick={() => setResult(null)} aria-label="Закрыть" style={{
+            background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '0 0 0 12px', display: 'flex',
+          }}><X size={17} /></button>
         </div>
       )}
 
       {/* Submit form */}
       {(canGoogle || can2gis) && (
-        <div style={{
-          borderRadius: 14, padding: 16, marginBottom: 16,
-          background: 'linear-gradient(135deg, rgba(255,230,0,0.08), rgba(255,230,0,0.02))',
-          border: '1px solid rgba(255,230,0,0.15)',
-        }}>
+        <div className="card card-accent" style={{ marginBottom: 16 }}>
           {/* Platform selector */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <button onClick={() => setPlatform('google')} disabled={!canGoogle}
+              className="btn btn-secondary"
               style={{
-                flex: 1, padding: '12px 0', borderRadius: 10, border: 'none', cursor: canGoogle ? 'pointer' : 'not-allowed',
-                fontSize: 13, fontWeight: 700,
-                background: platform === 'google' ? '#4285F4' : 'rgba(255,255,255,0.06)',
-                color: platform === 'google' ? '#fff' : canGoogle ? '#8899aa' : '#475569',
-                opacity: canGoogle ? 1 : 0.4,
-                transition: 'all 0.2s',
+                flex: 1, width: 'auto', padding: '12px 0', fontSize: 13,
+                borderColor: platform === 'google' ? 'var(--accent-border)' : 'var(--border)',
+                background: platform === 'google' ? 'var(--accent-dim)' : 'var(--card-strong)',
+                color: platform === 'google' ? 'var(--accent)' : 'var(--text-2)',
               }}>
               Google Maps
             </button>
             <button onClick={() => setPlatform('2gis')} disabled={!can2gis}
+              className="btn btn-secondary"
               style={{
-                flex: 1, padding: '12px 0', borderRadius: 10, border: 'none', cursor: can2gis ? 'pointer' : 'not-allowed',
-                fontSize: 13, fontWeight: 700,
-                background: platform === '2gis' ? '#2DB600' : 'rgba(255,255,255,0.06)',
-                color: platform === '2gis' ? '#fff' : can2gis ? '#8899aa' : '#475569',
-                opacity: can2gis ? 1 : 0.4,
-                transition: 'all 0.2s',
+                flex: 1, width: 'auto', padding: '12px 0', fontSize: 13,
+                borderColor: platform === '2gis' ? 'var(--accent-border)' : 'var(--border)',
+                background: platform === '2gis' ? 'var(--accent-dim)' : 'var(--card-strong)',
+                color: platform === '2gis' ? 'var(--accent)' : 'var(--text-2)',
               }}>
               2GIS
             </button>
@@ -157,28 +151,20 @@ export default function ReviewBonus({ onBalanceChange }: { onBalanceChange?: () 
                 value={link}
                 onChange={e => setLink(e.target.value)}
                 placeholder="https://maps.google.com/... или https://2gis.kg/..."
-                style={{
-                  width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(0,0,0,0.3)', color: '#e2eaf6', fontSize: 13, outline: 'none',
-                  marginBottom: 12, boxSizing: 'border-box',
-                }}
+                className="input"
+                style={{ marginBottom: 12 }}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
               />
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !link.trim()}
-                style={{
-                  width: '100%', padding: '14px 0', borderRadius: 10, border: 'none',
-                  fontSize: 14, fontWeight: 700, cursor: submitting ? 'wait' : 'pointer',
-                  background: submitting ? 'rgba(255,230,0,0.3)' : 'linear-gradient(135deg, #FFE600, #f59e0b)',
-                  color: '#0a0f1a', transition: 'all 0.2s',
-                  opacity: !link.trim() ? 0.5 : 1,
-                }}>
+                className="btn btn-primary"
+                style={{ fontSize: 14 }}>
                 {submitting ? 'Отправка...' : 'Отправить на проверку'}
               </button>
             </>
           ) : (
-            <div style={{ textAlign: 'center', padding: '12px 0', color: '#64748b', fontSize: 13 }}>
+            <div style={{ textAlign: 'center', padding: '12px 0', color: 'var(--text-3)', fontSize: 13 }}>
               Вы уже отправили отзыв для этой платформы
             </div>
           )}
@@ -187,40 +173,37 @@ export default function ReviewBonus({ onBalanceChange }: { onBalanceChange?: () 
 
       {/* My reviews history */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 20, color: '#8899aa' }}>Загрузка...</div>
+        <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-2)', fontSize: 14 }}>Загрузка...</div>
       ) : reviews.length > 0 && (
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#e2eaf6', marginBottom: 10 }}>Мои заявки</div>
+          <div className="h3" style={{ marginBottom: 10 }}>Мои заявки</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {reviews.map(r => {
               const st = STATUS_LABELS[r.status] || STATUS_LABELS.pending;
               return (
                 <div key={r.id} style={{
                   padding: '14px 16px', borderRadius: 12,
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#e2eaf6' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
                       {r.platform === 'google' ? 'Google Maps' : '2GIS'}
                     </div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                    <div className="caption" style={{ marginTop: 2 }}>
                       {new Date(r.created_at).toLocaleDateString('ru-RU')}
                     </div>
                     {r.admin_note && r.status === 'rejected' && (
-                      <div style={{ fontSize: 12, color: '#ff4d4d', marginTop: 4 }}>{r.admin_note}</div>
+                      <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4 }}>{r.admin_note}</div>
                     )}
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <span style={{
-                      fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 100,
-                      background: `${st.color}18`, color: st.color,
-                    }}>
+                    <span className={st.badge}>
                       {st.label}
                     </span>
                     {r.status === 'approved' && (
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#22c55e', marginTop: 4 }}>
+                      <div className="numeric" style={{ fontSize: 14, fontWeight: 700, color: 'var(--success)', marginTop: 4 }}>
                         +{r.bonus_amount} сом
                       </div>
                     )}

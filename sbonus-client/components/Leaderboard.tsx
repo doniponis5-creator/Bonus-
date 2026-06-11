@@ -12,7 +12,7 @@ interface Leader {
   is_me: boolean;
 }
 
-const MEDAL_COLORS = ['#FFE600', '#c0c0c0', '#cd7f32'];
+const MEDAL_COLORS = ['var(--gold)', 'var(--silver)', 'var(--bronze)'];
 const PERIODS = [
   { id: 'week' as const, label: 'Неделя' },
   { id: 'month' as const, label: 'Месяц' },
@@ -43,24 +43,18 @@ export default function Leaderboard() {
   return (
     <div style={{ padding: '20px 0' }}>
       {/* Title */}
-      <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Trophy size={20} color="#FFE600" /> Рейтинг покупателей
+      <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.022em', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Trophy size={20} color="var(--accent)" /> Рейтинг покупателей
       </h2>
-      <p style={{ fontSize: 13, color: '#8899aa', margin: '0 0 16px' }}>
-        Войдите в TOP-10 и получите бонус!
+      <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '0 0 16px' }}>
+        Топ-10 покупателей месяца получают бонус
       </p>
 
       {/* Period tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+      <div className="seg" style={{ marginBottom: 20 }}>
         {PERIODS.map(p => (
           <button key={p.id} onClick={() => setPeriod(p.id)}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              background: period === p.id ? '#FFE600' : 'rgba(255,255,255,0.06)',
-              color: period === p.id ? '#0a0f1a' : '#8899aa',
-              transition: 'all 0.2s',
-            }}>
+            className={`seg-item${period === p.id ? ' active' : ''}`}>
             {p.label}
           </button>
         ))}
@@ -68,18 +62,18 @@ export default function Leaderboard() {
 
       {/* My position card */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(255,230,0,0.12), rgba(255,230,0,0.04))',
-        border: '1px solid rgba(255,230,0,0.2)',
-        borderRadius: 14, padding: 16, marginBottom: 16,
+        background: 'var(--accent-dim)',
+        border: '1px solid var(--accent-border)',
+        borderRadius: 16, padding: 16, marginBottom: 16,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <div>
-          <div style={{ fontSize: 12, color: '#8899aa' }}>Ваша позиция</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#FFE600' }}>#{myRank}</div>
+          <div className="caption">Ваша позиция</div>
+          <div className="numeric" style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent)' }}>#{myRank}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 12, color: '#8899aa' }}>Покупки</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#e2eaf6' }}>
+          <div className="caption">Покупки</div>
+          <div className="numeric" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>
             {myTotal.toLocaleString()} сом
           </div>
         </div>
@@ -87,10 +81,10 @@ export default function Leaderboard() {
 
       {/* Leaders list */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 30, color: '#8899aa' }}>Загрузка...</div>
+        <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-2)', fontSize: 14 }}>Загрузка...</div>
       ) : leaders.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 30, color: '#64748b' }}>
-          Пока нет данных. Будьте первым!
+        <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-3)', fontSize: 14 }}>
+          Пока нет данных
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -99,66 +93,54 @@ export default function Leaderboard() {
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '14px 16px', borderRadius: 12,
               background: l.is_me
-                ? 'rgba(255,230,0,0.1)'
-                : 'rgba(255,255,255,0.03)',
+                ? 'var(--accent-dim)'
+                : 'var(--card)',
               border: l.is_me
-                ? '1px solid rgba(255,230,0,0.3)'
-                : '1px solid rgba(255,255,255,0.04)',
-              transition: 'all 0.2s',
+                ? '1px solid var(--accent-border)'
+                : '1px solid var(--border)',
+              transition: 'border-color 0.2s',
             }}>
               {/* Rank */}
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: l.rank <= 3 ? 20 : 14,
-                fontWeight: 800,
-                background: l.rank === 1
-                  ? 'linear-gradient(135deg, #FFE600, #f59e0b)'
-                  : l.rank === 2
-                    ? 'linear-gradient(135deg, #c0c0c0, #9ca3af)'
-                    : l.rank === 3
-                      ? 'linear-gradient(135deg, #cd7f32, #b45309)'
-                      : 'rgba(255,255,255,0.06)',
-                color: l.rank <= 3 ? '#0a0f1a' : '#8899aa',
-                flexShrink: 0,
+              <div className="icon-tile numeric" style={{
+                fontSize: 13, fontWeight: 600, color: 'var(--text-2)',
               }}>
-                {l.rank <= 3 ? <Medal size={18} color={MEDAL_COLORS[l.rank - 1]} /> : l.rank}
+                {l.rank <= 3 ? <Medal size={17} color={MEDAL_COLORS[l.rank - 1]} /> : l.rank}
               </div>
 
               {/* Name */}
               <div style={{ flex: 1 }}>
                 <div style={{
-                  fontSize: 15, fontWeight: l.is_me ? 700 : 500,
-                  color: l.is_me ? '#FFE600' : '#e2eaf6',
+                  fontSize: 15, fontWeight: l.is_me ? 600 : 400,
+                  color: l.is_me ? 'var(--accent)' : 'var(--text)',
                 }}>
                   {l.name} {l.is_me && '(Вы)'}
                 </div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                   {l.txn_count} покупок
                 </div>
               </div>
 
               {/* Total */}
-              <div style={{
-                fontSize: 15, fontWeight: 700, color: '#e2eaf6',
+              <div className="numeric" style={{
+                fontSize: 15, fontWeight: 600, color: 'var(--text)',
                 textAlign: 'right',
               }}>
-                {l.total_purchases.toLocaleString()} <span style={{ fontSize: 11, color: '#8899aa' }}>сом</span>
+                {l.total_purchases.toLocaleString()} <span style={{ fontSize: 11, color: 'var(--text-2)' }}>сом</span>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Motivational text */}
+      {/* Hint */}
       {myRank > 10 && (
         <div style={{
           textAlign: 'center', marginTop: 20, padding: '14px 20px',
-          background: 'rgba(255,255,255,0.03)', borderRadius: 12,
-          fontSize: 13, color: '#8899aa', lineHeight: 1.6,
+          background: 'var(--bg-2)', border: '1px solid var(--border-strong)', borderRadius: 12,
+          fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6,
         }}>
-          До TOP-10 осталось совсем немного! <TrendingUp size={14} style={{ display: 'inline', verticalAlign: 'middle' }} color="#FFE600" /><br />
-          Делайте покупки и поднимайтесь в рейтинге!
+          <TrendingUp size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} color="var(--accent)" />
+          Совершайте покупки, чтобы подняться в рейтинге
         </div>
       )}
     </div>

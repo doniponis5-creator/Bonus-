@@ -24,16 +24,19 @@ interface SpinResult {
 
 /* ── constants ─────────────────────────────── */
 const WHEEL_SIZE = 300;
-const GOLD = '#FFE600';
-const BG = '#0a0f1a';
 
-/* ── color helpers ─────────────────────────── */
-function shadeColor(hex: string, pct: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const r = Math.min(255, Math.max(0, ((num >> 16) & 0xff) + Math.round(255 * pct)));
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + Math.round(255 * pct)));
-  const b = Math.min(255, Math.max(0, (num & 0xff) + Math.round(255 * pct)));
-  return `rgb(${r},${g},${b})`;
+/* Canvas-only palette (canvas cannot read CSS vars) — curated v2 set */
+const ACCENT = '#FFE600';
+const ON_ACCENT = '#111111';
+const NEUTRAL_A = '#262B36';
+const NEUTRAL_B = '#1B202B';
+const NEUTRAL_C = '#3A4150';
+
+/* ── segment fill: alternating deep neutrals, accent for top prize ── */
+function segmentFill(i: number, seg: Segment, maxValue: number, count: number): string {
+  if (maxValue > 0 && seg.value === maxValue) return ACCENT;
+  if (count % 2 === 1 && i === count - 1) return NEUTRAL_C;
+  return i % 2 === 0 ? NEUTRAL_A : NEUTRAL_B;
 }
 
 /* ── confetti particle system ──────────────── */
@@ -41,7 +44,7 @@ function createConfetti(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!;
   const W = canvas.width;
   const H = canvas.height;
-  const colors = ['#FFE600', '#22c55e', '#3b82f6', '#a855f7', '#f97316', '#ec4899', '#fff'];
+  const colors = [ACCENT, '#FFFFFF', '#34d399'];
   const particles: Array<{
     x: number; y: number; w: number; h: number;
     color: string; vx: number; vy: number; rot: number; vr: number;
@@ -144,6 +147,7 @@ export default function BonusWheel() {
     const center = WHEEL_SIZE / 2;
     const radius = center - 4;
     const arc = (2 * Math.PI) / segments.length;
+    const maxValue = Math.max(...segments.map(s => s.value));
 
     ctx.clearRect(0, 0, WHEEL_SIZE, WHEEL_SIZE);
 
@@ -152,33 +156,15 @@ export default function BonusWheel() {
 
     segments.forEach((seg, i) => {
       const angle = arc * i;
+      const fill = segmentFill(i, seg, maxValue, segments.length);
 
+      // Flat segment fill
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.arc(0, 0, radius, angle, angle + arc);
       ctx.closePath();
-
-      const grad = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
-      grad.addColorStop(0, shadeColor(seg.color, 0.18));
-      grad.addColorStop(0.55, seg.color);
-      grad.addColorStop(1, shadeColor(seg.color, -0.15));
-      ctx.fillStyle = grad;
+      ctx.fillStyle = fill;
       ctx.fill();
-
-      // Subtle inner highlight
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, radius, angle, angle + arc);
-      ctx.closePath();
-      ctx.clip();
-      const hl = ctx.createLinearGradient(0, -radius, 0, radius);
-      hl.addColorStop(0, 'rgba(255,255,255,0.07)');
-      hl.addColorStop(0.5, 'transparent');
-      hl.addColorStop(1, 'rgba(0,0,0,0.1)');
-      ctx.fillStyle = hl;
-      ctx.fill();
-      ctx.restore();
 
       // Divider line
       ctx.save();
@@ -186,60 +172,46 @@ export default function BonusWheel() {
       ctx.beginPath();
       ctx.moveTo(radius * 0.18, 0);
       ctx.lineTo(radius, 0);
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+      ctx.lineWidth = 1;
       ctx.stroke();
       ctx.restore();
 
-      // Label text
+      // Label text — dark on accent, white on neutrals
       ctx.save();
       ctx.rotate(angle + arc / 2);
-      ctx.fillStyle = '#fff';
-      ctx.shadowColor = 'rgba(0,0,0,0.8)';
-      ctx.shadowBlur = 3;
-      ctx.font = `bold 13px "Inter", system-ui, -apple-system, sans-serif`;
+      ctx.fillStyle = fill === ACCENT ? ON_ACCENT : '#FFFFFF';
+      ctx.font = `600 13px Inter, system-ui, -apple-system, sans-serif`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       ctx.fillText(seg.label, radius - 14, 0);
-      ctx.shadowBlur = 0;
       ctx.restore();
     });
 
     ctx.restore();
 
-    // Center hub
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 10;
+    // Center hub — flat neutral with accent ring
     ctx.beginPath();
     ctx.arc(center, center, 26, 0, 2 * Math.PI);
-    ctx.fillStyle = '#111';
-    ctx.fill();
-    ctx.restore();
-
-    const hubGrad = ctx.createRadialGradient(center - 4, center - 4, 2, center, center, 26);
-    hubGrad.addColorStop(0, '#2a2a2a');
-    hubGrad.addColorStop(1, '#0d0d0d');
-    ctx.beginPath();
-    ctx.arc(center, center, 24, 0, 2 * Math.PI);
-    ctx.fillStyle = hubGrad;
+    ctx.fillStyle = NEUTRAL_B;
     ctx.fill();
 
     ctx.beginPath();
     ctx.arc(center, center, 24, 0, 2 * Math.PI);
-    ctx.strokeStyle = GOLD;
+    ctx.strokeStyle = ACCENT;
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    ctx.fillStyle = GOLD;
-    ctx.font = `bold 11px "Inter", system-ui, sans-serif`;
+    ctx.fillStyle = ACCENT;
+    ctx.font = `600 11px Inter, system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('SPIN', center, center);
 
+    // Outer rim — quiet hairline
     ctx.beginPath();
     ctx.arc(center, center, radius, 0, 2 * Math.PI);
-    ctx.strokeStyle = 'rgba(255,230,0,0.3)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -349,19 +321,19 @@ export default function BonusWheel() {
   /* ── POST-SPIN: Balance & History View ───── */
   if (showHistory) {
     return (
-      <div style={{
+      <div className="fade-up" style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         gap: 16, padding: '20px 16px', width: '100%', maxWidth: 400, margin: '0 auto',
-        animation: 'fadeSlideUp 0.5s ease-out',
       }}>
         {/* Back button */}
         <button onClick={backToSpinner} style={{
           alignSelf: 'flex-start',
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 10, padding: '8px 16px',
-          color: '#8899aa', fontSize: 13, fontWeight: 600,
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          borderRadius: 12, padding: '8px 16px',
+          color: 'var(--text-2)', fontSize: 13, fontWeight: 600,
           cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+          fontFamily: 'inherit',
         }}>
           <Disc3 size={14} /> Крутить ещё
         </button>
@@ -369,18 +341,18 @@ export default function BonusWheel() {
         {/* Balance Card */}
         <div style={{
           width: '100%',
-          background: 'linear-gradient(135deg, rgba(255,230,0,0.08), rgba(255,230,0,0.02))',
-          border: '1px solid rgba(255,230,0,0.15)',
+          background: 'var(--card-strong)',
+          border: '1px solid var(--accent-border)',
           borderRadius: 16, padding: 20, textAlign: 'center',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-            <Wallet size={20} color={GOLD} />
-            <span style={{ fontSize: 13, color: '#8899aa', fontWeight: 600 }}>Ваш баланс</span>
+            <Wallet size={20} color="var(--accent)" />
+            <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>Ваш баланс</span>
           </div>
           {loadingHistory ? (
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#64748b' }}>...</div>
+            <div className="display numeric" style={{ color: 'var(--text-3)' }}>...</div>
           ) : (
-            <div style={{ fontSize: 32, fontWeight: 800, color: GOLD }}>
+            <div className="display numeric" style={{ color: 'var(--accent)' }}>
               {balance !== null ? `${balance.toLocaleString('ru-RU')} сом` : '—'}
             </div>
           )}
@@ -390,18 +362,18 @@ export default function BonusWheel() {
         {result && isWin && (
           <div style={{
             width: '100%', padding: '12px 16px', borderRadius: 12,
-            background: isPhysical
-              ? 'rgba(168,85,247,0.08)'
-              : 'rgba(34,197,94,0.08)',
-            border: `1px solid ${isPhysical ? 'rgba(168,85,247,0.2)' : 'rgba(34,197,94,0.2)'}`,
+            background: 'var(--card)',
+            border: '1px solid var(--border-strong)',
             display: 'flex', alignItems: 'center', gap: 12,
           }}>
-            {isPhysical ? <Package size={24} color="#a855f7" /> : <Gift size={24} color="#22c55e" />}
+            <div className="icon-tile" style={{ background: 'var(--accent-dim)' }}>
+              {isPhysical ? <Package size={17} color="var(--accent)" /> : <Gift size={17} color="var(--accent)" />}
+            </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: isPhysical ? '#a855f7' : '#22c55e' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: isPhysical ? 'var(--text)' : 'var(--success)' }}>
                 {isPhysical ? `Приз: ${result.label}` : `+${result.value} сом`}
               </div>
-              <div style={{ fontSize: 11, color: '#8899aa' }}>Только что выиграно</div>
+              <div style={{ fontSize: 11, color: 'var(--text-2)' }}>Только что выиграно</div>
             </div>
           </div>
         )}
@@ -409,16 +381,16 @@ export default function BonusWheel() {
         {/* Transactions */}
         <div style={{ width: '100%' }}>
           <div style={{
-            fontSize: 14, fontWeight: 700, color: '#ccd6e0',
+            fontSize: 14, fontWeight: 700, color: 'var(--text)',
             marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
           }}>
             <ChevronDown size={16} /> Последние операции
           </div>
 
           {loadingHistory ? (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: 20 }}>Загрузка...</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: 20 }}>Загрузка...</div>
           ) : transactions.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: 20, fontSize: 13 }}>
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: 20, fontSize: 13 }}>
               Нет операций
             </div>
           ) : (
@@ -429,35 +401,31 @@ export default function BonusWheel() {
                 return (
                   <div key={tx.id} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 10, padding: '10px 14px',
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12, padding: '10px 14px',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: isEarn ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
+                      <div className="icon-tile">
                         {isEarn
-                          ? <ArrowDownRight size={16} color="#22c55e" />
-                          : <ArrowUpRight size={16} color="#ef4444" />
+                          ? <ArrowDownRight size={17} color="var(--success)" />
+                          : <ArrowUpRight size={17} color="var(--danger)" />
                         }
                       </div>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#ccd6e0' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
                           {tx.note || (tx.type === 'earn' ? 'Начисление' : tx.type === 'spend' ? 'Списание' : tx.type)}
                         </div>
-                        <div style={{ fontSize: 10, color: '#64748b' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
                           {new Date(tx.created_at).toLocaleDateString('ru-RU', {
                             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                           })}
                         </div>
                       </div>
                     </div>
-                    <div style={{
+                    <div className="numeric" style={{
                       fontSize: 14, fontWeight: 700,
-                      color: isEarn ? '#22c55e' : '#ef4444',
+                      color: isEarn ? 'var(--success)' : 'var(--danger)',
                     }}>
                       {isEarn ? '+' : '-'}{Math.abs(amt).toLocaleString('ru-RU')} сом
                     </div>
@@ -468,16 +436,9 @@ export default function BonusWheel() {
           )}
         </div>
 
-        <div style={{ fontSize: 11, color: '#64748b', textAlign: 'center', padding: '8px 0' }}>
-          Каждая покупка даёт 1 попытку крутить колесо
+        <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center', padding: '8px 0' }}>
+          Каждая покупка даёт одну попытку
         </div>
-
-        <style>{`
-          @keyframes fadeSlideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
       </div>
     );
   }
@@ -487,25 +448,25 @@ export default function BonusWheel() {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '16px 16px 0' }}>
       {/* Title */}
       <div style={{ textAlign: 'center' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <Disc3 size={20} /> Колесо Удачи
+        <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <Disc3 size={20} color="var(--accent)" /> Колесо удачи
         </h2>
-        <p style={{ fontSize: 12, color: '#8899aa', margin: '4px 0 0' }}>
-          Каждая покупка = 1 попытка!
+        <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '4px 0 0' }}>
+          Одна покупка — одна попытка
         </p>
       </div>
 
       {/* Spins counter */}
       <div style={{
-        background: spins > 0 ? 'rgba(255,230,0,0.1)' : 'rgba(100,116,139,0.1)',
-        borderRadius: 10, padding: '8px 20px',
+        background: spins > 0 ? 'var(--accent-dim)' : 'var(--card)',
+        borderRadius: 12, padding: '8px 20px',
         display: 'flex', alignItems: 'center', gap: 8,
-        border: spins > 0 ? '1px solid rgba(255,230,0,0.15)' : '1px solid transparent',
+        border: spins > 0 ? '1px solid var(--accent-border)' : '1px solid var(--border)',
       }}>
-        <Ticket size={20} color={spins > 0 ? GOLD : '#64748b'} />
+        <Ticket size={20} color={spins > 0 ? 'var(--accent)' : 'var(--text-3)'} />
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: spins > 0 ? GOLD : '#64748b' }}>{spins}</div>
-          <div style={{ fontSize: 10, color: '#8899aa' }}>попыток</div>
+          <div className="numeric" style={{ fontSize: 17, fontWeight: 700, color: spins > 0 ? 'var(--accent)' : 'var(--text-3)' }}>{spins}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-2)' }}>попыток</div>
         </div>
       </div>
 
@@ -518,17 +479,13 @@ export default function BonusWheel() {
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {/* Outer decorative ring with pegs */}
+        {/* Outer decorative ring */}
         <div style={{
           position: 'absolute',
           width: WHEEL_SIZE + 28,
           height: WHEEL_SIZE + 28,
-          borderRadius: '50%',
-          border: '3px solid rgba(255,230,0,0.15)',
-          boxShadow: spinning
-            ? '0 0 30px rgba(255,230,0,0.15), inset 0 0 20px rgba(255,230,0,0.05)'
-            : '0 0 15px rgba(0,0,0,0.3)',
-          transition: 'box-shadow 0.5s',
+          borderRadius: 999,
+          border: '1px solid var(--border-strong)',
         }} />
 
         {/* Pegs */}
@@ -541,17 +498,13 @@ export default function BonusWheel() {
           return (
             <div key={i} style={{
               position: 'absolute',
-              left: x - 4,
-              top: y - 4,
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: spinning
-                ? (i % 2 === 0 ? GOLD : '#fff')
-                : 'rgba(255,230,0,0.3)',
-              boxShadow: spinning ? `0 0 6px ${i % 2 === 0 ? 'rgba(255,230,0,0.5)' : 'rgba(255,255,255,0.3)'}` : 'none',
-              transition: 'all 0.3s',
-              animation: spinning ? `pegBlink 0.6s ease-in-out ${i * 0.03}s infinite alternate` : 'none',
+              left: x - 3,
+              top: y - 3,
+              width: 6,
+              height: 6,
+              borderRadius: 999,
+              background: spinning ? 'var(--accent)' : 'var(--border-strong)',
+              transition: 'background 0.3s',
             }} />
           );
         })}
@@ -566,8 +519,7 @@ export default function BonusWheel() {
           width: 0, height: 0,
           borderLeft: '12px solid transparent',
           borderRight: '12px solid transparent',
-          borderTop: `22px solid ${GOLD}`,
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
+          borderTop: '22px solid var(--accent)',
         }} />
 
         {/* Canvas — drawn ONCE, rotated via CSS transform (GPU) */}
@@ -592,46 +544,32 @@ export default function BonusWheel() {
       <button
         onClick={handleSpin}
         disabled={spinning || spins <= 0}
-        style={{
-          width: '100%', maxWidth: 280,
-          padding: '14px 0',
-          borderRadius: 12,
-          border: 'none',
-          fontSize: 16, fontWeight: 800,
-          cursor: spinning || spins <= 0 ? 'not-allowed' : 'pointer',
-          background: spins > 0 ? `linear-gradient(135deg, ${GOLD}, #f59e0b)` : '#1c2a3a',
-          color: spins > 0 ? BG : '#64748b',
-          opacity: spinning ? 0.6 : 1,
-          transition: 'opacity 0.3s',
-          boxShadow: spins > 0 ? '0 4px 20px rgba(255,230,0,0.3)' : 'none',
-          letterSpacing: spins > 0 ? 1 : 0,
-        }}
+        className="btn btn-primary"
+        style={{ maxWidth: 280 }}
       >
         {spinning
           ? 'Крутится...'
           : spins > 0
-            ? (<><Disc3 size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> КРУТИТЬ!</>)
-            : (<><ShoppingCart size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> Сделайте покупку</>)
+            ? (<><Disc3 size={17} /> Крутить</>)
+            : (<><ShoppingCart size={17} /> Сделайте покупку</>)
         }
       </button>
 
       {/* Info */}
-      <div style={{ fontSize: 11, color: '#64748b', textAlign: 'center', padding: '0 20px', lineHeight: 1.5 }}>
-        Каждая покупка даёт 1 попытку крутить колесо.
-        Выигрыш начисляется мгновенно на ваш бонусный счёт!
+      <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center', padding: '0 20px', lineHeight: 1.5 }}>
+        Каждая покупка даёт одну попытку.
+        Выигрыш сразу зачисляется на бонусный счёт.
       </div>
 
       {/* ══════ WIN OVERLAY ══════ */}
       {showOverlay && result && (
         <div
+          className="modal-backdrop"
           onClick={() => dismissOverlay()}
           style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: overlayVisible ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0)',
-            backdropFilter: overlayVisible ? 'blur(12px)' : 'blur(0px)',
-            WebkitBackdropFilter: overlayVisible ? 'blur(12px)' : 'blur(0px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.4s ease-out',
+            zIndex: 1000,
+            opacity: overlayVisible ? 1 : 0,
+            transition: 'opacity 0.3s var(--ease-out)',
             cursor: 'pointer',
           }}
         >
@@ -642,98 +580,69 @@ export default function BonusWheel() {
 
           {/* Prize card */}
           <div
+            className="modal"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'relative', zIndex: 2,
-              transform: overlayVisible ? 'scale(1) translateY(0)' : 'scale(0.5) translateY(40px)',
-              opacity: overlayVisible ? 1 : 0,
-              transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              background: isPhysical
-                ? 'linear-gradient(145deg, rgba(168,85,247,0.15), rgba(10,15,26,0.95))'
-                : isWin
-                  ? 'linear-gradient(145deg, rgba(34,197,94,0.12), rgba(10,15,26,0.95))'
-                  : 'linear-gradient(145deg, rgba(100,116,139,0.1), rgba(10,15,26,0.95))',
-              border: `2px solid ${isPhysical ? 'rgba(168,85,247,0.4)' : isWin ? 'rgba(255,230,0,0.3)' : 'rgba(100,116,139,0.2)'}`,
-              borderRadius: 24, padding: '36px 32px',
-              textAlign: 'center', maxWidth: 320, width: '85vw',
-              boxShadow: isWin
-                ? '0 0 60px rgba(255,230,0,0.15), 0 20px 60px rgba(0,0,0,0.5)'
-                : '0 20px 60px rgba(0,0,0,0.5)',
-            }}
+            style={{ position: 'relative', zIndex: 2, cursor: 'default' }}
           >
-            {/* Close hint */}
+            {/* Close */}
             <div style={{
               position: 'absolute', top: 12, right: 14,
-              color: '#64748b', cursor: 'pointer',
+              color: 'var(--text-3)', cursor: 'pointer',
             }} onClick={() => dismissOverlay()}>
               <X size={20} />
             </div>
 
             {/* Icon */}
-            <div style={{
-              width: 72, height: 72, borderRadius: '50%', margin: '0 auto 16px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: isPhysical
-                ? 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.05))'
-                : isWin
-                  ? 'linear-gradient(135deg, rgba(255,230,0,0.15), rgba(34,197,94,0.08))'
-                  : 'rgba(100,116,139,0.1)',
-              border: `2px solid ${isPhysical ? 'rgba(168,85,247,0.3)' : isWin ? 'rgba(255,230,0,0.2)' : 'rgba(100,116,139,0.15)'}`,
-              animation: isWin ? 'iconPulse 2s ease-in-out infinite' : 'none',
+            <div className="modal-icon" style={{
+              background: isWin ? 'var(--accent-dim)' : 'var(--card-strong)',
+              border: isWin ? '1px solid var(--accent-border)' : '1px solid var(--border)',
             }}>
               {isPhysical
-                ? <Package size={36} color="#a855f7" />
+                ? <Package size={32} color="var(--accent)" />
                 : isWin
-                  ? <Gift size={36} color={GOLD} />
-                  : <Meh size={36} color="#8899aa" />
+                  ? <Gift size={32} color="var(--accent)" />
+                  : <Meh size={32} color="var(--text-2)" />
               }
             </div>
 
             {/* Title */}
             <div style={{
-              fontSize: 16, fontWeight: 600,
-              color: isPhysical ? '#c084fc' : isWin ? '#86efac' : '#94a3b8',
+              fontSize: 15, fontWeight: 600,
+              color: isWin ? 'var(--text)' : 'var(--text-2)',
               marginBottom: 8,
             }}>
-              {isPhysical ? 'Невероятно!' : isWin ? 'Поздравляем!' : 'Не повезло...'}
+              {isPhysical ? 'Главный приз' : isWin ? 'Поздравляем' : 'В этот раз без приза'}
             </div>
 
             {/* Prize amount / label */}
             {isPhysical ? (
               <>
-                <div style={{ fontSize: 14, color: '#8899aa', marginBottom: 6 }}>Вы выиграли приз</div>
-                <div style={{
-                  fontSize: 28, fontWeight: 800, color: '#a855f7',
-                  textShadow: '0 0 20px rgba(168,85,247,0.4)',
-                }}>
+                <div style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 6 }}>Вы выиграли приз</div>
+                <div className="h1" style={{ color: 'var(--accent)' }}>
                   {result.label}
                 </div>
-                <div style={{ fontSize: 12, color: '#8899aa', marginTop: 10, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 10, lineHeight: 1.5 }}>
                   Обратитесь к кассиру для получения приза
                 </div>
               </>
             ) : isWin ? (
               <>
-                <div style={{
-                  fontSize: 44, fontWeight: 900, color: GOLD,
-                  textShadow: '0 0 30px rgba(255,230,0,0.3)',
-                  lineHeight: 1.1,
-                }}>
+                <div className="display numeric" style={{ color: 'var(--accent)' }}>
                   +{result.value}
                 </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,230,0,0.7)', marginTop: 2 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-2)', marginTop: 2 }}>
                   сом
                 </div>
-                <div style={{
-                  fontSize: 13, color: '#8899aa', marginTop: 12,
-                  background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '6px 12px',
+                <div className="numeric" style={{
+                  fontSize: 13, color: 'var(--text-2)', marginTop: 12,
+                  background: 'var(--card-strong)', borderRadius: 12, padding: '6px 12px',
                   display: 'inline-block',
                 }}>
-                  Баланс: <b style={{ color: GOLD }}>{result.new_balance.toLocaleString('ru-RU')} сом</b>
+                  Баланс: <b style={{ color: 'var(--accent)', fontWeight: 700 }}>{result.new_balance.toLocaleString('ru-RU')} сом</b>
                 </div>
               </>
             ) : (
-              <div style={{ fontSize: 14, color: '#8899aa', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.5 }}>
                 {result.message}
               </div>
             )}
@@ -741,30 +650,16 @@ export default function BonusWheel() {
             {/* CTA */}
             <button
               onClick={() => dismissOverlay()}
-              style={{
-                marginTop: 20, width: '100%', padding: '12px 0',
-                borderRadius: 12, border: 'none',
-                fontSize: 14, fontWeight: 700,
-                cursor: 'pointer',
-                background: isWin
-                  ? `linear-gradient(135deg, ${GOLD}, #f59e0b)`
-                  : 'rgba(255,255,255,0.08)',
-                color: isWin ? BG : '#ccc',
-              }}
+              className={isWin ? 'btn btn-primary' : 'btn btn-secondary'}
+              style={{ marginTop: 20 }}
             >
-              {spins > 0 ? 'Крутить ещё!' : 'Посмотреть баланс'}
+              {spins > 0 ? 'Крутить ещё' : 'Посмотреть баланс'}
             </button>
             {spins > 0 && (
               <button
                 onClick={() => dismissOverlay(true)}
-                style={{
-                  marginTop: 8, width: '100%', padding: '10px 0',
-                  borderRadius: 10, border: 'none',
-                  fontSize: 12, fontWeight: 600,
-                  cursor: 'pointer',
-                  background: 'transparent',
-                  color: '#64748b',
-                }}
+                className="btn btn-ghost"
+                style={{ marginTop: 8, fontSize: 12, padding: '10px 0' }}
               >
                 Посмотреть баланс
               </button>
@@ -772,21 +667,6 @@ export default function BonusWheel() {
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes pegBlink {
-          from { opacity: 0.4; }
-          to { opacity: 1; }
-        }
-        @keyframes resultIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes iconPulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.08); }
-        }
-      `}</style>
     </div>
   );
 }

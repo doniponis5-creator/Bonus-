@@ -3,16 +3,14 @@
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  LogOut, QrCode, Loader2, RefreshCw, Home, History, User, Gift,
-  PlusCircle, MinusCircle, Clock, Users, Ticket, RefreshCcw,
-  Pencil, Share2, Copy, Check, ChevronLeft, ChevronRight, Disc3, Trophy,
-  CheckCircle2, XCircle, Smartphone, Link2, Target, Lightbulb,
-  Flame, Crown, Receipt,
+  LogOut, Loader2, RefreshCw, Home, History, User, Gift,
+  Clock, Ticket, ChevronLeft, ChevronRight, ArrowLeft, Disc3, Trophy,
+  CheckCircle2, XCircle, Crown, Receipt, CreditCard, Flame,
 } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import DebtCard from '@/components/DebtCard';
 import QRModal from '@/components/QRModal';
-import TransactionList from '@/components/TransactionList';
+import TransactionList, { TX_META, txAmountColor } from '@/components/TransactionList';
 import BonusWheel from '@/components/BonusWheel';
 import Leaderboard from '@/components/Leaderboard';
 import MyCoupons from '@/components/MyCoupons';
@@ -24,18 +22,29 @@ import { customerAPI, customerAuthAPI, wheelAPI, type CabinetMe } from '@/lib/ap
 import { clearToken, getToken, isTokenValid, setToken } from '@/lib/auth';
 import { isNativeShell, syncNativeTab, onNativeTabChange } from '@/lib/nativeBridge';
 
-type Tab = 'home' | 'history' | 'wheel' | 'promo' | 'rank' | 'profile' | 'game';
+type Tab = 'home' | 'history' | 'club' | 'promo' | 'profile';
+type ClubSeg = 'goals' | 'wheel' | 'rank';
 
-const TX_META: Record<string, { label: string; color: string; sign: '+' | '-' }> = {
-  earn:     { label: 'Начисление',    color: '#FFE600', sign: '+' },
-  spend:    { label: 'Списание',      color: '#ff4d4d', sign: '-' },
-  birthday: { label: 'День рождения', color: '#ffd700', sign: '+' },
-  referral: { label: 'Реферал',       color: '#60a5fa', sign: '+' },
-  promo:    { label: 'Промокод',      color: '#c084fc', sign: '+' },
-  expire:   { label: 'Истёк',         color: '#8899aa', sign: '-' },
-  refund:   { label: 'Возврат',       color: '#fb923c', sign: '+' },
-  campaign: { label: 'Кампания',      color: '#22c55e', sign: '+' },
-};
+/** Маппинг старых значений вкладок (URL ?tab=, нативный мост) на новую структуру. */
+function normalizeTab(raw: string | null): { tab: Tab; seg: ClubSeg | null } {
+  switch (raw) {
+    case 'home': case 'history': case 'promo': case 'profile':
+      return { tab: raw, seg: null };
+    case 'club':
+      return { tab: 'club', seg: null };
+    case 'game':  return { tab: 'club', seg: 'goals' };
+    case 'wheel': return { tab: 'club', seg: 'wheel' };
+    case 'rank':  return { tab: 'club', seg: 'rank' };
+    default:
+      return { tab: 'home', seg: null };
+  }
+}
+
+/** Обратный маппинг для нативной оболочки (она знает старые id вкладок). */
+function legacyTab(tab: Tab, seg: ClubSeg): string {
+  if (tab !== 'club') return tab;
+  return seg === 'goals' ? 'game' : seg === 'wheel' ? 'wheel' : 'rank';
+}
 
 function pluralSpins(n: number): string {
   const n10 = n % 10, n100 = n % 100;
@@ -46,7 +55,7 @@ function pluralSpins(n: number): string {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>Загрузка...</div>}>
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: 40, color: 'var(--text-2)' }}>Загрузка...</div>}>
       <DashboardPage />
     </Suspense>
   );
@@ -55,14 +64,13 @@ export default function Page() {
 function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = (['home', 'history', 'wheel', 'promo', 'rank', 'profile', 'game'] as Tab[]).includes(searchParams.get('tab') as Tab)
-    ? (searchParams.get('tab') as Tab)
-    : 'home';
+  const initial = normalizeTab(searchParams.get('tab'));
   const [data, setData] = useState<CabinetMe | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<Tab>(initialTab);
+  const [tab, setTab] = useState<Tab>(initial.tab);
+  const [clubSeg, setClubSeg] = useState<ClubSeg>(initial.seg || 'goals');
 
   // Transaction history
   const [txns, setTxns] = useState<any[]>([]);
@@ -86,10 +94,7 @@ function DashboardPage() {
   const [promoMsg, setPromoMsg] = useState('');
   const [promoLoading, setPromoLoading] = useState(false);
 
-  // Referral
-  const [copied, setCopied] = useState(false);
-
-  // Spin prompt (показать «у вас есть вращение» при входе)
+  // Spin banner («у вас есть вращение» при входе)
   const [spinPrompt, setSpinPrompt] = useState(0);
   const spinCheckedRef = useRef(false);
 
@@ -135,18 +140,20 @@ function DashboardPage() {
       .catch(() => {});
   }, [data]);
 
-  const goToWheel = () => { setSpinPrompt(0); setTab('wheel'); };
+  const goToWheel = () => { setSpinPrompt(0); setTab('club'); setClubSeg('wheel'); };
 
-  // ── Native iOS shell (Liquid Glass) integration ──
+  // ── Native iOS shell integration ──
   const [native, setNative] = useState(false);
   useEffect(() => {
     setNative(isNativeShell());
-    // Слушаем смену вкладки из нативного tab bar
-    const off = onNativeTabChange((t) => setTab(t as Tab));
+    const off = onNativeTabChange((t) => {
+      const m = normalizeTab(t);
+      setTab(m.tab);
+      if (m.seg) setClubSeg(m.seg);
+    });
     return off;
   }, []);
-  // Синхронизируем текущую вкладку с нативной оболочкой
-  useEffect(() => { syncNativeTab(tab); }, [tab]);
+  useEffect(() => { syncNativeTab(legacyTab(tab, clubSeg)); }, [tab, clubSeg]);
 
   const fetchData = () => {
     if (!isTokenValid(getToken())) { router.replace('/login'); return; }
@@ -169,7 +176,6 @@ function DashboardPage() {
           fetchData();
         })
         .catch(() => {
-          // Token invalid/expired — try existing JWT
           if (isTokenValid(getToken())) {
             window.history.replaceState({}, '', '/');
             fetchData();
@@ -213,7 +219,7 @@ function DashboardPage() {
     setSaving(true); setSaveMsg('');
     try {
       await customerAPI.updateProfile({ full_name: editName, birth_date: editBirth || null });
-      setSaveMsg('Профиль сохранён!');
+      setSaveMsg('Профиль сохранён');
       fetchData();
     } catch (err: any) {
       setSaveMsg(err?.response?.data?.detail?.message || 'Ошибка сохранения');
@@ -246,15 +252,6 @@ function DashboardPage() {
     } finally { setPromoLoading(false); }
   };
 
-  const copyRef = () => {
-    if (data?.referral_code) {
-      const link = `${window.location.origin}/register?ref=${data.referral_code}`;
-      navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   if (error) return (
     <div className="center">
       <p className="muted" style={{ marginBottom: 16 }}>{error}</p>
@@ -268,13 +265,9 @@ function DashboardPage() {
         <div className="skeleton" style={{ width: 90, height: 24 }} />
         <div className="skeleton" style={{ width: 40, height: 24, borderRadius: 999 }} />
       </div>
-      <div className="skeleton" style={{ height: 180, marginBottom: 12, borderRadius: 16 }} />
-      <div className="skeleton" style={{ height: 48, marginBottom: 12, borderRadius: 12 }} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-        <div className="skeleton" style={{ height: 76, borderRadius: 12 }} />
-        <div className="skeleton" style={{ height: 76, borderRadius: 12 }} />
-      </div>
-      <div className="skeleton" style={{ height: 220, borderRadius: 16 }} />
+      <div className="skeleton" style={{ height: 240, marginBottom: 12, borderRadius: 16 }} />
+      <div className="skeleton" style={{ height: 56, marginBottom: 12, borderRadius: 16 }} />
+      <div className="skeleton" style={{ height: 240, borderRadius: 16 }} />
     </div>
   );
 
@@ -284,19 +277,17 @@ function DashboardPage() {
     <div className="app">
       {/* Header */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px 12px' }}>
-        <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <img src="/icon-32.png" alt="S" width={24} height={24} style={{ borderRadius: 4 }} />
+        <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/icon-32.png" alt="S" width={24} height={24} style={{ borderRadius: 6 }} />
           S Bonus
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <button onClick={fetchData} disabled={refreshing} aria-label="Обновить"
-            style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer', width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: refreshing ? 0.4 : 1, animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>
-            <RefreshCw size={18} />
-          </button>
-        </div>
+        <button onClick={fetchData} disabled={refreshing} aria-label="Обновить"
+          style={{ background: 'transparent', border: 'none', color: 'var(--text-2)', cursor: 'pointer', width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: refreshing ? 0.4 : 1 }}>
+          <RefreshCw size={18} className={refreshing ? 'spinner' : undefined} />
+        </button>
       </header>
 
-      {/* Tab Content */}
+      {/* ── Главная ── */}
       {tab === 'home' && (
         <>
           <BalanceCard
@@ -308,82 +299,80 @@ function DashboardPage() {
             nextTierRemaining={data.next_tier_remaining != null ? Number(data.next_tier_remaining) : null}
             progressPercent={Number(data.tier_progress_percent)}
             onTierClick={openTierSheet}
+            onQrClick={() => setQrOpen(true)}
           />
+
+          {/* Доступны вращения колеса — спокойный баннер вместо модалки */}
+          {spinPrompt > 0 && (
+            <button
+              onClick={goToWheel}
+              className="card tap fade-up full"
+              style={{
+                animationDelay: '40ms', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '13px 15px', cursor: 'pointer', textAlign: 'left',
+                borderColor: 'var(--accent-border)', fontFamily: 'inherit',
+              }}
+            >
+              <div className="icon-tile" style={{ background: 'var(--accent-dim)' }}>
+                <Disc3 size={17} color="var(--accent)" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                  Доступно колесо удачи
+                </div>
+                <div className="caption" style={{ marginTop: 1 }}>
+                  {spinPrompt} {pluralSpins(spinPrompt)} — крутите и выигрывайте
+                </div>
+              </div>
+              <ChevronRight size={16} color="var(--text-3)" />
+            </button>
+          )}
 
           {/* Сгорающие бонусы */}
           {Number(data.expiring_amount || 0) > 0 && data.expiring_date && (
             <div className="card fade-up" style={{
-              animationDelay: '60ms',
-              borderColor: 'rgba(251,191,36,0.3)',
-              background: 'linear-gradient(135deg, rgba(251,191,36,0.08), rgba(251,191,36,0.01)), var(--card)',
-              display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px',
+              animationDelay: '60ms', display: 'flex', alignItems: 'center', gap: 12,
+              padding: '13px 15px', borderColor: 'rgba(251,191,36,0.25)',
             }}>
-              <div style={{
-                width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-                background: 'rgba(251,191,36,0.13)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Flame size={19} color="var(--warn)" />
+              <div className="icon-tile" style={{ background: 'rgba(251,191,36,0.12)' }}>
+                <Flame size={17} color="var(--warn)" />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--warn)' }} className="numeric">
+                <div style={{ fontSize: 14, fontWeight: 600 }} className="numeric">
                   {Number(data.expiring_amount).toLocaleString('ru-RU')} сом сгорит {new Date(data.expiring_date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 1 }}>
-                  Успейте использовать бонусы в Смарт Центр
-                </div>
+                <div className="caption" style={{ marginTop: 1 }}>Успейте использовать бонусы</div>
               </div>
             </div>
           )}
 
-          <DebtCard amount={Number(data.debt_amount)} updatedAt={data.debt_updated_at} />
-          <button className="btn btn-secondary fade-up" style={{ marginBottom: 12, animationDelay: '100ms' }} onClick={() => setQrOpen(true)}>
-            <QrCode size={18} /> Показать QR кассиру
-          </button>
-
-          {/* Quick stats */}
-          <div className="fade-up" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12, animationDelay: '140ms' }}>
-            <div className="card" style={{ padding: '12px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>Получено</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#22c55e' }}>{Number(data.total_earned).toLocaleString('ru-RU')}</div>
-              <div style={{ fontSize: 10, color: 'var(--text3)' }}>сом</div>
-            </div>
-            <div className="card" style={{ padding: '12px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>Потрачено</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#f97316' }}>{Number(data.total_spent).toLocaleString('ru-RU')}</div>
-              <div style={{ fontSize: 10, color: 'var(--text3)' }}>сом</div>
-            </div>
+          <div className="fade-up" style={{ animationDelay: '80ms' }}>
+            <DebtCard amount={Number(data.debt_amount)} updatedAt={data.debt_updated_at} />
           </div>
 
-          <div className="fade-up" style={{ animationDelay: '180ms' }}>
+          <div className="fade-up" style={{ animationDelay: '120ms' }}>
             <TransactionList
               items={data.recent_transactions}
               onShowAll={() => setTab('history')}
               onSelect={(t) => setTxDetail(t)}
             />
           </div>
-
-          {/* Referral code */}
-          <div className="card fade-up" style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', animationDelay: '220ms' }}>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>Ваш реферальный код</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)', letterSpacing: 2 }}>{data.referral_code}</div>
-            </div>
-            <button onClick={copyRef} style={{ background: 'none', border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-              {copied ? <><Check size={14} /> Скопировано</> : <><Copy size={14} /> Копировать</>}
-            </button>
-          </div>
         </>
       )}
 
+      {/* ── История ── */}
       {tab === 'history' && (
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <History size={18} /> История операций
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <button onClick={() => setTab('home')} aria-label="Назад" className="tap"
+              style={{ background: 'var(--card-strong)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer', width: 36, height: 36, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ArrowLeft size={17} />
+            </button>
+            <h1 className="h1" style={{ fontSize: 20 }}>История операций</h1>
+          </div>
 
           {/* Type filter */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', paddingBottom: 4 }} className="hide-scroll">
             {[
               { value: '', label: 'Все' },
               { value: 'earn', label: 'Начисления' },
@@ -392,11 +381,7 @@ function DashboardPage() {
               { value: 'referral', label: 'Реферал' },
             ].map(f => (
               <button key={f.value} onClick={() => { setTxType(f.value); setTxPage(1); }}
-                style={{
-                  padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-                  background: txType === f.value ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
-                  color: txType === f.value ? '#000' : 'var(--text2)',
-                }}>
+                className={`chip ${txType === f.value ? 'active' : ''}`}>
                 {f.label}
               </button>
             ))}
@@ -409,20 +394,21 @@ function DashboardPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {txns.map(t => {
-                const meta = TX_META[t.type] || { label: t.type, color: '#8899aa', sign: '+' };
+                const meta = TX_META[t.type] || { label: t.type, Icon: Clock, sign: '+' as const };
+                const Icon = meta.Icon;
                 return (
-                  <div key={t.id} className="card tap" onClick={() => setTxDetail(t)} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${meta.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color }} />
+                  <div key={t.id} className="card tap" onClick={() => setTxDetail(t)} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 0 }}>
+                    <div className="icon-tile">
+                      <Icon size={17} color="var(--text-2)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{meta.label}</div>
-                      {t.note && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.note}</div>}
-                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{meta.label}</div>
+                      {t.note && <div className="caption" style={{ marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.note}</div>}
+                      <div className="caption" style={{ marginTop: 2 }}>
                         {new Date(t.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: meta.color, whiteSpace: 'nowrap' }}>
+                    <div className="numeric" style={{ fontSize: 14, fontWeight: 600, color: txAmountColor(meta.sign), whiteSpace: 'nowrap' }}>
                       {meta.sign}{Math.abs(t.amount).toLocaleString('ru-RU')} сом
                     </div>
                   </div>
@@ -434,98 +420,145 @@ function DashboardPage() {
           {/* Pagination */}
           {txTotalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 16 }}>
-              <button onClick={() => setTxPage(p => Math.max(1, p - 1))} disabled={txPage <= 1}
-                style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 8, cursor: 'pointer', color: 'var(--text2)', opacity: txPage <= 1 ? 0.3 : 1 }}>
-                <ChevronLeft size={16} />
+              <button onClick={() => setTxPage(p => Math.max(1, p - 1))} disabled={txPage <= 1} aria-label="Назад"
+                style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-2)', opacity: txPage <= 1 ? 0.35 : 1 }}>
+                <ChevronLeft size={18} />
               </button>
-              <span style={{ fontSize: 13, color: 'var(--text2)' }}>{txPage} / {txTotalPages}</span>
-              <button onClick={() => setTxPage(p => Math.min(txTotalPages, p + 1))} disabled={txPage >= txTotalPages}
-                style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 8, cursor: 'pointer', color: 'var(--text2)', opacity: txPage >= txTotalPages ? 0.3 : 1 }}>
-                <ChevronRight size={16} />
+              <span className="numeric" style={{ fontSize: 13, color: 'var(--text-2)' }}>{txPage} / {txTotalPages}</span>
+              <button onClick={() => setTxPage(p => Math.min(txTotalPages, p + 1))} disabled={txPage >= txTotalPages} aria-label="Вперёд"
+                style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-2)', opacity: txPage >= txTotalPages ? 0.35 : 1 }}>
+                <ChevronRight size={18} />
               </button>
             </div>
           )}
         </div>
       )}
 
+      {/* ── Клуб: Цели · Колесо · Рейтинг ── */}
+      {tab === 'club' && (
+        <div>
+          <h1 className="h1" style={{ fontSize: 20, marginBottom: 14 }}>Клуб</h1>
+          <div className="seg">
+            {([
+              { id: 'goals', label: 'Цели' },
+              { id: 'wheel', label: 'Колесо' },
+              { id: 'rank', label: 'Рейтинг' },
+            ] as { id: ClubSeg; label: string }[]).map(s => (
+              <button key={s.id} onClick={() => setClubSeg(s.id)}
+                className={`seg-item ${clubSeg === s.id ? 'active' : ''}`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+          {clubSeg === 'goals' && <Gamification />}
+          {clubSeg === 'wheel' && <BonusWheel />}
+          {clubSeg === 'rank' && <Leaderboard />}
+        </div>
+      )}
+
+      {/* ── Бонусы ── */}
+      {tab === 'promo' && (
+        <div>
+          <h1 className="h1" style={{ fontSize: 20, marginBottom: 16 }}>Бонусы</h1>
+
+          {/* Promo code */}
+          <div className="card">
+            <h3 className="h3" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Ticket size={15} color="var(--text-2)" /> Промокод
+            </h3>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+              <input className="input" style={{ flex: 1, minWidth: 0, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 600, fontSize: 16 }}
+                value={promoCode} onChange={e => setPromoCode(e.target.value)}
+                placeholder="PROMO2024" maxLength={30}
+                onKeyDown={e => e.key === 'Enter' && handlePromo()} />
+              <button className="btn btn-primary" style={{ width: 'auto', flexShrink: 0, padding: '14px 20px' }} onClick={handlePromo} disabled={promoLoading || !promoCode.trim()}>
+                {promoLoading ? '...' : 'Применить'}
+              </button>
+            </div>
+            {promoMsg && (
+              <p style={{ fontSize: 13, marginTop: 10, color: promoMsg.startsWith('[ok]') ? 'var(--success)' : 'var(--danger)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                {promoMsg.startsWith('[ok]') ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                {promoMsg.replace(/^\[(ok|err)\]/, '')}
+              </p>
+            )}
+          </div>
+
+          {/* Coupons */}
+          <MyCoupons onBalanceChange={fetchData} />
+
+          {/* Referral — приглашай друзей */}
+          <Referral referralCode={data.referral_code} onBalanceChange={fetchData} />
+
+          {/* Review bonus */}
+          <ReviewBonus onBalanceChange={fetchData} />
+        </div>
+      )}
+
+      {/* ── Профиль ── */}
       {tab === 'profile' && (
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <User size={18} /> Мой профиль
-          </h2>
-          <div className="card" style={{ marginBottom: 12 }}>
+          <h1 className="h1" style={{ fontSize: 20, marginBottom: 16 }}>Профиль</h1>
+          <div className="card">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>ФИО</label>
-                <input className="input" style={{ width: '100%' }} value={editName} onChange={e => setEditName(e.target.value)} />
+                <label className="caption" style={{ display: 'block', marginBottom: 6 }}>ФИО</label>
+                <input className="input" value={editName} onChange={e => setEditName(e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>Телефон</label>
-                <input className="input" style={{ width: '100%', opacity: 0.5 }} value={data.phone} disabled />
-                <span style={{ fontSize: 11, color: 'var(--text3)' }}>Телефон нельзя изменить</span>
+                <label className="caption" style={{ display: 'block', marginBottom: 6 }}>Телефон</label>
+                <input className="input" style={{ opacity: 0.5 }} value={data.phone} disabled />
+                <span className="caption" style={{ marginTop: 4, display: 'inline-block' }}>Телефон нельзя изменить</span>
               </div>
               <button className="btn btn-primary" onClick={handleSaveProfile} disabled={saving}>
                 {saving ? (<><Loader2 size={16} className="spinner" /> Сохранение...</>) : 'Сохранить'}
               </button>
-              {saveMsg && <p style={{ fontSize: 13, color: saveMsg.startsWith('Профиль') ? '#22c55e' : '#ff4d4d', textAlign: 'center' }}>{saveMsg}</p>}
+              {saveMsg && <p style={{ fontSize: 13, color: saveMsg.startsWith('Профиль') ? 'var(--success)' : 'var(--danger)', textAlign: 'center' }}>{saveMsg}</p>}
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Статистика */}
           <div className="card">
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--text2)' }}>Статистика</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <h3 className="h3" style={{ marginBottom: 8, color: 'var(--text-2)' }}>Статистика</h3>
+            <div>
               {[
-                { label: 'Уровень', value: `${data.tier_name} (${Number(data.tier_percent)}%)`, color: 'var(--accent)' },
-                { label: 'Баланс', value: `${Number(data.balance).toLocaleString('ru-RU')} сом`, color: 'var(--accent)' },
-                { label: 'Получено всего', value: `${Number(data.total_earned).toLocaleString('ru-RU')} сом`, color: '#22c55e' },
-                { label: 'Потрачено', value: `${Number(data.total_spent).toLocaleString('ru-RU')} сом`, color: '#f97316' },
-                { label: 'QR код', value: data.qr_code, color: 'var(--text2)' },
+                { label: 'Уровень', value: `${data.tier_name} · ${Number(data.tier_percent)}%` },
+                { label: 'Баланс', value: `${Number(data.balance).toLocaleString('ru-RU')} сом` },
+                { label: 'Получено всего', value: `${Number(data.total_earned).toLocaleString('ru-RU')} сом` },
+                { label: 'Потрачено', value: `${Number(data.total_spent).toLocaleString('ru-RU')} сом` },
+                { label: 'Реферальный код', value: data.referral_code },
+                { label: 'QR код', value: data.qr_code },
               ].map(item => (
-                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <span style={{ fontSize: 13, color: 'var(--text3)' }}>{item.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: item.color }}>{item.value}</span>
+                <div key={item.label} className="list-row" style={{ cursor: 'default' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{item.label}</span>
+                  <span className="numeric" style={{ fontSize: 13, fontWeight: 600 }}>{item.value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Конфиденциальность и аккаунт */}
-          <div className="card" style={{ marginTop: 12 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--text2)' }}>Конфиденциальность и аккаунт</h3>
-            <a
-              href="/privacy"
-              style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                color: 'var(--text2)', fontSize: 14, textDecoration: 'none',
-              }}
-            >
-              <span>Политика конфиденциальности</span>
-              <ChevronRight size={16} color="var(--text3)" />
+          {/* Рассрочка */}
+          <div className="card" style={{ padding: '4px 16px' }}>
+            <a href="/debts" className="list-row" style={{ textDecoration: 'none' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)' }}>
+                <CreditCard size={15} color="var(--text-2)" /> Мои рассрочки
+              </span>
+              <ChevronRight size={16} color="var(--text-3)" />
             </a>
-            <button
-              onClick={handleLogout}
-              style={{
-                width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--text2)', fontSize: 14, borderBottom: '1px solid rgba(255,255,255,0.05)',
-                fontFamily: 'inherit',
-              }}
-            >
+          </div>
+
+          {/* Конфиденциальность и аккаунт */}
+          <div className="card" style={{ padding: '4px 16px' }}>
+            <a href="/privacy" className="list-row" style={{ textDecoration: 'none', color: 'var(--text-2)' }}>
+              <span>Политика конфиденциальности</span>
+              <ChevronRight size={16} color="var(--text-3)" />
+            </a>
+            <button onClick={handleLogout} className="list-row" style={{ color: 'var(--text-2)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><LogOut size={15} /> Выйти из аккаунта</span>
-              <ChevronRight size={16} color="var(--text3)" />
+              <ChevronRight size={16} color="var(--text-3)" />
             </button>
-            <button
-              onClick={() => { setDeleteErr(''); setShowDeleteModal(true); }}
-              style={{
-                width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
-                color: '#ff4d4d', fontSize: 14, fontFamily: 'inherit',
-              }}
-            >
+            <button onClick={() => { setDeleteErr(''); setShowDeleteModal(true); }} className="list-row" style={{ color: 'var(--danger)' }}>
               <span>Удалить аккаунт</span>
-              <ChevronRight size={16} color="#ff4d4d" />
+              <ChevronRight size={16} color="var(--danger)" />
             </button>
           </div>
         </div>
@@ -533,41 +566,20 @@ function DashboardPage() {
 
       {/* Модалка удаления аккаунта */}
       {showDeleteModal && (
-        <div
-          onClick={() => !deleting && setShowDeleteModal(false)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(7,8,13,0.88)',
-            backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="float-up"
-            style={{
-              background: 'var(--bg-2)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: 24,
-              padding: '28px 24px 24px', textAlign: 'center', maxWidth: 360, width: '100%',
-            }}
-          >
-            <div style={{
-              width: 72, height: 72, borderRadius: 22, margin: '0 auto 16px',
-              background: 'rgba(255,77,77,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <XCircle size={38} color="#ff4d4d" />
+        <div className="modal-backdrop" onClick={() => !deleting && setShowDeleteModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-icon" style={{ background: 'rgba(248,113,113,0.12)' }}>
+              <XCircle size={32} color="var(--danger)" />
             </div>
-            <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 10 }}>Удалить аккаунт?</h3>
-            <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 19, fontWeight: 700, marginBottom: 10 }}>Удалить аккаунт?</h3>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 20 }}>
               Ваши персональные данные (имя, телефон, дата рождения) будут удалены без возможности восстановления.
               Бонусный баланс будет аннулирован. Это действие необратимо.
             </p>
             {deleteErr && (
-              <p style={{ fontSize: 13, color: '#ff4d4d', marginBottom: 14 }}>{deleteErr}</p>
+              <p style={{ fontSize: 13, color: 'var(--danger)', marginBottom: 14 }}>{deleteErr}</p>
             )}
-            <button
-              onClick={handleDeleteAccount}
-              disabled={deleting}
-              className="btn"
-              style={{ background: '#ff4d4d', color: '#fff', marginBottom: 8, width: '100%' }}
-            >
+            <button onClick={handleDeleteAccount} disabled={deleting} className="btn btn-danger" style={{ marginBottom: 8 }}>
               {deleting ? (<><Loader2 size={16} className="spinner" /> Удаление...</>) : 'Да, удалить навсегда'}
             </button>
             <button onClick={() => setShowDeleteModal(false)} disabled={deleting} className="btn btn-ghost">
@@ -577,151 +589,34 @@ function DashboardPage() {
         </div>
       )}
 
-      {tab === 'promo' && (
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Gift size={18} /> Бонусы и акции
-          </h2>
-
-          {/* Promo code */}
-          <div className="card" style={{ marginBottom: 12 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Ticket size={14} /> Ввести промокод
-            </h3>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-              <input className="input" style={{ flex: 1, minWidth: 0, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, fontSize: 16 }}
-                value={promoCode} onChange={e => setPromoCode(e.target.value)}
-                placeholder="PROMO2024" maxLength={30}
-                onKeyDown={e => e.key === 'Enter' && handlePromo()} />
-              <button className="btn btn-primary" style={{ width: 'auto', flexShrink: 0, padding: '14px 20px' }} onClick={handlePromo} disabled={promoLoading || !promoCode.trim()}>
-                {promoLoading ? '...' : 'Применить'}
-              </button>
-            </div>
-            {promoMsg && (
-              <p style={{ fontSize: 13, marginTop: 8, color: promoMsg.startsWith('[ok]') ? '#22c55e' : '#ff4d4d', display: 'flex', alignItems: 'center', gap: 4 }}>
-                {promoMsg.startsWith('[ok]') ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                {promoMsg.replace(/^\[(ok|err)\]/, '')}
-              </p>
-            )}
-          </div>
-
-          {/* Referral — приглашай друзей */}
-          <Referral referralCode={data.referral_code} onBalanceChange={fetchData} />
-
-          {/* Coupons */}
-          <MyCoupons onBalanceChange={fetchData} />
-
-          {/* Review bonus */}
-          <ReviewBonus onBalanceChange={fetchData} />
-        </div>
-      )}
-
-      {tab === 'wheel' && <BonusWheel />}
-
-      {tab === 'rank' && <Leaderboard />}
-
-      {tab === 'game' && <Gamification />}
-
-      {/* Spin prompt — «у вас есть вращение!» при входе */}
-      {spinPrompt > 0 && (
-        <div
-          onClick={() => setSpinPrompt(0)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(7,8,13,0.88)',
-            backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="float-up"
-            style={{
-              background: 'var(--bg-2)', border: '1px solid rgba(255,230,0,0.3)', borderRadius: 24,
-              padding: '32px 24px 24px', textAlign: 'center', maxWidth: 340, width: '100%', position: 'relative',
-            }}
-          >
-            <div
-              className="pulse"
-              style={{
-                width: 92, height: 92, borderRadius: 26, margin: '0 auto 18px',
-                background: 'linear-gradient(135deg, #FFE600, #f59e0b)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 0 44px rgba(255,230,0,0.5)',
-              }}
-            >
-              <Disc3 size={46} color="#0a0a0a" />
-            </div>
-            <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Вас ждёт удача!</h3>
-            <p style={{ fontSize: 15, color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 22 }}>
-              У вас <b style={{ color: '#FFE600' }}>{spinPrompt}</b> {pluralSpins(spinPrompt)} крутить Колесо Удачи!
-            </p>
-            <button onClick={goToWheel} className="btn btn-primary" style={{ marginBottom: 8 }}>
-              <Disc3 size={18} /> Крутить сейчас!
-            </button>
-            <button onClick={() => setSpinPrompt(0)} className="btn btn-ghost">
-              Позже
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* QR Modal */}
       <QRModal open={qrOpen} qrCode={data.qr_code} fullName={data.full_name} onClose={() => setQrOpen(false)} />
 
-      {/* Bottom Tab Bar — скрыт в нативной оболочке (там нативный iOS 26 Liquid Glass tab bar) */}
+      {/* Bottom Tab Bar — скрыт в нативной оболочке */}
       {!native && (
-      <nav style={{
-        position: 'fixed', left: 10, right: 10,
-        bottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
-        maxWidth: 460, margin: '0 auto',
-        background: 'rgba(14,16,22,0.72)',
-        backdropFilter: 'blur(36px) saturate(180%)', WebkitBackdropFilter: 'blur(36px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 26,
-        boxShadow: '0 16px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10)',
-        display: 'flex', alignItems: 'center', padding: 6, gap: 2,
-        zIndex: 100,
-      }}>
-        {([
-          { id: 'home', icon: Home, label: 'Главная' },
-          { id: 'game', icon: Target, label: 'Цели' },
-          { id: 'wheel', icon: Disc3, label: 'Удача' },
-          { id: 'rank', icon: Trophy, label: 'Рейтинг' },
-          { id: 'promo', icon: Gift, label: 'Бонусы' },
-          { id: 'profile', icon: User, label: 'Профиль' },
-        ] as const).map(t => {
-          const Icon = t.icon;
-          const active = tab === t.id;
-          return (
-            <button key={t.id} onClick={() => setTab(t.id)} aria-label={t.label} className="tap"
-              style={{
-                flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer',
-                position: 'relative', borderRadius: 16,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 0',
-                color: active ? 'var(--accent)' : 'var(--text-3)',
-                transition: 'color 0.25s var(--ease-out)',
-              }}>
-              {active && (
-                <span style={{
-                  position: 'absolute', inset: '2px 4px', borderRadius: 15, zIndex: 0,
-                  background: 'rgba(255,230,0,0.10)', border: '1px solid rgba(255,230,0,0.16)',
-                  boxShadow: '0 0 16px rgba(255,220,0,0.18)',
-                }} />
-              )}
-              <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex' }}>
-                <Icon size={21} strokeWidth={active ? 2.4 : 1.9} />
-                {t.id === 'promo' && hasNewCoupons && (
-                  <span style={{
-                    position: 'absolute', top: -2, right: -4, width: 8, height: 8,
-                    background: '#f87171', borderRadius: '50%',
-                    border: '2px solid rgba(20,23,32,1)',
-                  }} />
-                )}
-              </span>
-              <span style={{ fontSize: 9.5, fontWeight: active ? 800 : 500, letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative', zIndex: 1 }}>{t.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+        <nav className="tabbar">
+          {([
+            { id: 'home', icon: Home, label: 'Главная' },
+            { id: 'club', icon: Trophy, label: 'Клуб' },
+            { id: 'promo', icon: Gift, label: 'Бонусы' },
+            { id: 'profile', icon: User, label: 'Профиль' },
+          ] as { id: Tab; icon: typeof Home; label: string }[]).map(t => {
+            const Icon = t.icon;
+            const active = tab === t.id || (t.id === 'home' && tab === 'history');
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)} aria-label={t.label}
+                className={`tabbar-item ${active ? 'active' : ''}`}>
+                <span style={{ position: 'relative', display: 'inline-flex' }}>
+                  <Icon size={21} strokeWidth={2} />
+                  {t.id === 'promo' && hasNewCoupons && (
+                    <span style={{ position: 'absolute', top: -2, right: -4, width: 6, height: 6, background: 'var(--danger)', borderRadius: '50%' }} />
+                  )}
+                </span>
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       )}
 
       {/* ── Tier Benefits Sheet ── */}
@@ -730,10 +625,10 @@ function DashboardPage() {
           <div className="sheet-backdrop" onClick={() => setTierSheet(false)} />
           <div className="sheet">
             <div className="sheet-handle" />
-            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Crown size={18} color="var(--accent)" /> Уровни лояльности
             </h3>
-            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
               Чем больше покупок — тем выше уровень и процент бонуса
             </p>
             {tiersList.length === 0 ? (
@@ -746,32 +641,28 @@ function DashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {tiersList.map((t) => {
                   const isCurrent = t.name === data.tier_name;
-                  const tierColor = ({ Bronze: 'var(--bronze)', Silver: 'var(--silver)', Gold: 'var(--gold)', Platinum: 'var(--platinum)' } as Record<string, string>)[t.name] || 'var(--text2)';
+                  const tierColor = ({ Bronze: 'var(--bronze)', Silver: 'var(--silver)', Gold: 'var(--gold)', Platinum: 'var(--platinum)' } as Record<string, string>)[t.name] || 'var(--text-2)';
                   return (
                     <div key={t.name} style={{
                       display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-                      borderRadius: 14,
-                      background: isCurrent ? 'rgba(255,230,0,0.07)' : 'rgba(255,255,255,0.03)',
-                      border: isCurrent ? '1px solid rgba(255,230,0,0.3)' : '1px solid rgba(255,255,255,0.05)',
+                      borderRadius: 12,
+                      background: isCurrent ? 'var(--accent-dim)' : 'rgba(255,255,255,0.03)',
+                      border: isCurrent ? '1px solid var(--accent-border)' : '1px solid var(--border)',
                     }}>
-                      <div style={{
-                        width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-                        background: 'rgba(255,255,255,0.05)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Crown size={18} color={tierColor} />
+                      <div className="icon-tile">
+                        <Crown size={17} color={tierColor} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: tierColor }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: tierColor }}>
                           {t.name} {isCurrent && <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>— вы здесь</span>}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--text3)' }} className="numeric">
+                        <div className="caption numeric">
                           от {t.min_total.toLocaleString('ru-RU')} сом покупок
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: tierColor }} className="numeric">{t.bonus_percent}%</div>
-                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>бонус</div>
+                        <div className="numeric" style={{ fontSize: 16, fontWeight: 700, color: tierColor }}>{t.bonus_percent}%</div>
+                        <div className="caption" style={{ fontSize: 10 }}>бонус</div>
                       </div>
                     </div>
                   );
@@ -781,9 +672,9 @@ function DashboardPage() {
             {data.next_tier_name && data.next_tier_remaining != null && (
               <div style={{
                 padding: '11px 14px', borderRadius: 12, marginBottom: 12,
-                background: 'rgba(255,230,0,0.06)', fontSize: 13, color: 'var(--text2)', lineHeight: 1.5,
+                background: 'var(--accent-dim)', fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5,
               }}>
-                💡 Ещё <strong style={{ color: 'var(--accent)' }} className="numeric">{Number(data.next_tier_remaining).toLocaleString('ru-RU')} сом</strong> покупок — и вы <strong style={{ color: 'var(--text)' }}>{data.next_tier_name}</strong>
+                Ещё <strong style={{ color: 'var(--accent)', fontWeight: 600 }} className="numeric">{Number(data.next_tier_remaining).toLocaleString('ru-RU')} сом</strong> покупок — и вы <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{data.next_tier_name}</strong>
               </div>
             )}
             <button className="btn btn-secondary" onClick={() => setTierSheet(false)}>Понятно</button>
@@ -798,38 +689,34 @@ function DashboardPage() {
           <div className="sheet">
             <div className="sheet-handle" />
             {(() => {
-              const meta = TX_META[txDetail.type] || { label: txDetail.type, color: '#8899aa', sign: '+' as const };
+              const meta = TX_META[txDetail.type] || { label: txDetail.type, Icon: Clock, sign: '+' as const };
               return (
                 <>
                   <div style={{ textAlign: 'center', marginBottom: 18 }}>
-                    <div style={{
-                      width: 56, height: 56, borderRadius: 18, margin: '0 auto 10px',
-                      background: `${meta.color}18`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Receipt size={26} color={meta.color} />
+                    <div className="icon-tile" style={{ width: 52, height: 52, margin: '0 auto 10px' }}>
+                      <Receipt size={24} color="var(--text-2)" />
                     </div>
-                    <div className="numeric" style={{ fontSize: 30, fontWeight: 800, color: meta.color }}>
+                    <div className="numeric" style={{ fontSize: 30, fontWeight: 700, color: txAmountColor(meta.sign) }}>
                       {meta.sign}{Math.abs(Number(txDetail.amount)).toLocaleString('ru-RU')} сом
                     </div>
-                    <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>{meta.label}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>{meta.label}</div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: '4px 14px', marginBottom: 14 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '4px 14px', marginBottom: 14 }}>
                     {txDetail.purchase_amount != null && Number(txDetail.purchase_amount) > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13 }}>
-                        <span style={{ color: 'var(--text3)' }}>Сумма покупки</span>
+                      <div className="list-row" style={{ cursor: 'default', fontSize: 13 }}>
+                        <span style={{ color: 'var(--text-3)' }}>Сумма покупки</span>
                         <span className="numeric" style={{ fontWeight: 600 }}>{Number(txDetail.purchase_amount).toLocaleString('ru-RU')} сом</span>
                       </div>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: txDetail.note ? '1px solid rgba(255,255,255,0.05)' : 'none', fontSize: 13 }}>
-                      <span style={{ color: 'var(--text3)' }}>Дата и время</span>
+                    <div className="list-row" style={{ cursor: 'default', fontSize: 13 }}>
+                      <span style={{ color: 'var(--text-3)' }}>Дата и время</span>
                       <span style={{ fontWeight: 600 }}>
                         {new Date(txDetail.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                     {txDetail.note && (
                       <div style={{ padding: '11px 0', fontSize: 13 }}>
-                        <div style={{ color: 'var(--text3)', marginBottom: 4 }}>Комментарий</div>
+                        <div style={{ color: 'var(--text-3)', marginBottom: 4 }}>Комментарий</div>
                         <div style={{ lineHeight: 1.5 }}>{txDetail.note}</div>
                       </div>
                     )}

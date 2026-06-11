@@ -137,18 +137,19 @@ export default function LoginPage() {
       <div className="center">
         <div style={{ maxWidth: 360, width: '100%', textAlign: 'center' }}>
           <div style={{
-            width: 72, height: 72, borderRadius: '50%',
-            background: 'rgba(255,230,0,0.15)',
+            width: 64, height: 64, borderRadius: 16,
+            background: 'var(--accent-dim)',
+            border: '1px solid var(--accent-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 20px',
           }}>
-            <Lock size={32} color="var(--accent)" />
+            <Lock size={28} color="var(--accent)" />
           </div>
 
           <h1 className="h1" style={{ marginBottom: 8 }}>Введите код</h1>
           <p className="muted" style={{ fontSize: 14, lineHeight: 1.5, marginBottom: 24 }}>
             Код отправлен в WhatsApp на<br />
-            <strong style={{ color: 'var(--text)' }}>{phone}</strong>
+            <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{phone}</strong>
           </p>
 
           {/* 4-digit code inputs */}
@@ -166,12 +167,14 @@ export default function LoginPage() {
                 onChange={e => handleCodeChange(i, e.target.value)}
                 onKeyDown={e => handleKeyDown(i, e)}
                 onPaste={i === 0 ? handlePaste : undefined}
+                className="numeric"
                 style={{
                   width: 56, height: 64, textAlign: 'center',
-                  fontSize: 28, fontWeight: 800, letterSpacing: 2,
-                  background: 'var(--card)', border: `2px solid ${digit ? 'var(--accent)' : 'var(--card-border)'}`,
-                  borderRadius: 14, color: 'var(--text)', outline: 'none',
+                  fontSize: 22, fontWeight: 700,
+                  background: 'var(--card)', border: `1px solid ${digit ? 'var(--accent)' : 'var(--border)'}`,
+                  borderRadius: 12, color: 'var(--text)', outline: 'none',
                   transition: 'border-color 0.2s',
+                  fontFamily: 'inherit',
                 }}
                 autoComplete="one-time-code"
               />
@@ -191,7 +194,7 @@ export default function LoginPage() {
           {/* Resend */}
           <div style={{ marginBottom: 24 }}>
             {countdown > 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text3)' }}>
+              <p className="numeric" style={{ fontSize: 13, color: 'var(--text-3)' }}>
                 Повторная отправка через {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
               </p>
             ) : (
@@ -224,24 +227,24 @@ export default function LoginPage() {
     <div className="center">
       <div style={{ maxWidth: 360, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src="/icon-192.png" alt="S Bonus" width={72} height={72} style={{ borderRadius: 20, marginBottom: 12 }} />
-          <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--accent)', marginBottom: 8 }}>
+          <img src="/icon-192.png" alt="S Bonus" width={72} height={72} style={{ borderRadius: 16, marginBottom: 12 }} />
+          <div className="h1" style={{ color: 'var(--accent)', marginBottom: 8 }}>
             S Bonus
           </div>
           <p className="muted">Личный кабинет Смарт Центр</p>
         </div>
 
         {deleted && (
-          <div className="card" style={{ marginBottom: 16, borderColor: 'rgba(34,197,94,0.4)', textAlign: 'center' }}>
-            <p style={{ color: '#22c55e', fontSize: 14, margin: 0 }}>
-              Ваш аккаунт удалён. Спасибо, что были с нами!
+          <div className="card" style={{ marginBottom: 16, textAlign: 'center' }}>
+            <p style={{ color: 'var(--success)', fontSize: 14, margin: 0 }}>
+              Ваш аккаунт удалён. Спасибо, что были с нами.
             </p>
           </div>
         )}
 
         <form onSubmit={handleSendOtp} className="card" style={{ marginBottom: 16 }}>
           <h2 className="h2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Phone size={18} /> Вход по номеру
+            <Phone size={17} color="var(--text-2)" /> Вход по номеру
           </h2>
           <p className="muted" style={{ marginBottom: 16, fontSize: 13 }}>
             Введите номер — мы отправим 4-значный код в WhatsApp.
@@ -265,21 +268,21 @@ export default function LoginPage() {
 
           <button className="btn btn-primary" type="submit" disabled={loading || phone.length < 10}>
             {loading ? (
-              <><Loader2 className="spinner" size={18} /> Отправляем...</>
+              <><Loader2 className="spinner" size={17} /> Отправляем...</>
             ) : (
-              <><ShieldCheck size={18} /> Получить код</>
+              <><ShieldCheck size={17} /> Получить код</>
             )}
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)' }}>
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-3)' }}>
           Нет аккаунта?{' '}
           <a href="/register" style={{ color: 'var(--accent)', fontWeight: 600 }}>Зарегистрироваться</a>
         </p>
 
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text3)', marginTop: 16 }}>
+        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-3)', marginTop: 16 }}>
           Входя, вы принимаете{' '}
-          <a href="/privacy" style={{ color: 'var(--text2)' }}>Политику конфиденциальности</a>
+          <a href="/privacy" style={{ color: 'var(--text-2)' }}>Политику конфиденциальности</a>
         </p>
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Ticket, Clock } from 'lucide-react';
+import { Ticket, Clock, X } from 'lucide-react';
 import { customerAPI } from '@/lib/api';
 
 interface Coupon {
@@ -64,59 +64,55 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
 
   return (
     <div style={{ padding: '20px 0' }}>
-      <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Ticket size={20} color="#FFE600" /> Мои купоны
+      <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.022em', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Ticket size={20} color="var(--accent)" /> Мои купоны
       </h2>
-      <p style={{ fontSize: 13, color: '#8899aa', margin: '0 0 16px' }}>
-        Активируйте купон и получите бонус на счёт
+      <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '0 0 16px' }}>
+        Активируйте купон — бонус будет начислен на счёт
       </p>
 
-      {/* Result toast */}
+      {/* Result banner */}
       {result && (
         <div style={{
-          padding: '14px 18px', borderRadius: 12, marginBottom: 16,
-          background: result.amount > 0
-            ? 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.05))'
-            : 'rgba(239,68,68,0.1)',
-          border: result.amount > 0
-            ? '1px solid rgba(34,197,94,0.3)'
-            : '1px solid rgba(239,68,68,0.3)',
+          padding: '14px 16px', borderRadius: 12, marginBottom: 16,
+          background: 'var(--bg-2)',
+          border: '1px solid var(--border-strong)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ fontSize: 14, color: result.amount > 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+          <span style={{ fontSize: 14, color: result.amount > 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
             {result.message}
           </span>
-          <button onClick={() => setResult(null)} style={{
-            background: 'none', border: 'none', color: '#64748b', fontSize: 18, cursor: 'pointer', padding: '0 0 0 12px',
-          }}>×</button>
+          <button onClick={() => setResult(null)} aria-label="Закрыть" style={{
+            background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '0 0 0 12px', display: 'flex',
+          }}><X size={17} /></button>
         </div>
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>Загрузка...</div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-2)', fontSize: 14 }}>Загрузка...</div>
       ) : coupons.length === 0 ? (
         <div style={{
           textAlign: 'center', padding: '40px 20px',
-          background: 'rgba(255,255,255,0.03)', borderRadius: 16,
+          background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16,
         }}>
-          <div style={{ marginBottom: 12 }}><Ticket size={40} color="#64748b" /></div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
+          <div style={{ marginBottom: 12 }}><Ticket size={32} color="var(--text-3)" /></div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-2)', marginBottom: 4 }}>
             Нет доступных купонов
           </div>
-          <div style={{ fontSize: 13, color: '#475569' }}>
-            Следите за акциями — новые купоны появляются регулярно!
+          <div className="caption">
+            Новые купоны появляются в рамках акций
           </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {coupons.map((c) => (
             <div key={c.id} style={{
-              borderRadius: 14, overflow: 'hidden',
-              background: 'rgba(255,255,255,0.04)',
+              borderRadius: 16, overflow: 'hidden',
+              background: 'var(--card)',
               border: c.is_personal
-                ? '1px solid rgba(255,230,0,0.25)'
-                : '1px solid rgba(255,255,255,0.06)',
-              transition: 'all 0.2s',
+                ? '1px solid var(--accent-border)'
+                : '1px solid var(--border)',
+              transition: 'border-color 0.2s',
             }}>
               {/* Header */}
               <div style={{
@@ -124,18 +120,15 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
               }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#e2eaf6' }}>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
                       {c.title}
                     </span>
                     {c.is_personal && (
-                      <span style={{
-                        fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6,
-                        background: 'rgba(255,230,0,0.15)', color: '#FFE600',
-                      }}>Для вас</span>
+                      <span className="badge badge-accent">Для вас</span>
                     )}
                   </div>
                   {c.description && (
-                    <div style={{ fontSize: 12, color: '#8899aa', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
                       {c.description}
                     </div>
                   )}
@@ -143,10 +136,10 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
                 <div style={{
                   textAlign: 'right', flexShrink: 0, marginLeft: 12,
                 }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>
+                  <div className="numeric" style={{ fontSize: 20, fontWeight: 700, color: 'var(--success)' }}>
                     +{c.bonus_amount.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: 11, color: '#8899aa' }}>сом</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-2)' }}>сом</div>
                 </div>
               </div>
 
@@ -155,7 +148,7 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
                 padding: '0 16px 10px', display: 'flex', gap: 12, flexWrap: 'wrap',
               }}>
                 {c.min_purchase > 0 && (
-                  <span style={{ fontSize: 11, color: '#64748b' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
                     от {c.min_purchase.toLocaleString()} сом
                   </span>
                 )}
@@ -163,38 +156,30 @@ export default function MyCoupons({ onBalanceChange }: { onBalanceChange?: () =>
                   <span style={{
                     fontSize: 11, fontWeight: 600,
                     color: new Date(c.expires_at).getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000
-                      ? '#f59e0b' : '#64748b',
+                      ? 'var(--warn)' : 'var(--text-3)',
                   }}>
                     <Clock size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {formatExpiry(c.expires_at)}
                   </span>
                 )}
               </div>
 
-              {/* Dashed separator + activate */}
+              {/* Dashed perforation + activate */}
               <div style={{
-                borderTop: '1px dashed rgba(255,255,255,0.08)',
+                borderTop: '1px dashed var(--border-strong)',
                 padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
                 <code style={{
-                  fontSize: 13, fontWeight: 700, letterSpacing: 1.5,
-                  color: '#FFE600', background: 'rgba(255,230,0,0.08)',
-                  padding: '4px 10px', borderRadius: 6,
+                  fontSize: 13, fontWeight: 600, letterSpacing: 1.5,
+                  color: 'var(--accent)', background: 'var(--accent-dim)',
+                  padding: '4px 10px', borderRadius: 12,
                 }}>
                   {c.code}
                 </code>
                 <button
                   onClick={() => activate(c.code)}
                   disabled={activating === c.code}
-                  style={{
-                    padding: '10px 24px', borderRadius: 10, border: 'none',
-                    fontSize: 13, fontWeight: 700, cursor: activating === c.code ? 'wait' : 'pointer',
-                    background: activating === c.code
-                      ? 'rgba(255,230,0,0.3)'
-                      : 'linear-gradient(135deg, #FFE600, #f59e0b)',
-                    color: '#0a0f1a',
-                    transition: 'all 0.2s',
-                    opacity: activating === c.code ? 0.6 : 1,
-                  }}
+                  className="btn btn-primary"
+                  style={{ width: 'auto', padding: '10px 24px', fontSize: 13 }}
                 >
                   {activating === c.code ? 'Активация...' : 'Активировать'}
                 </button>

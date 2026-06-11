@@ -62,21 +62,21 @@ export default function DebtDetailPage() {
     <div style={{ padding: '0 0 40px', maxWidth: 480, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()} aria-label="Назад" style={{ background: 'var(--card-strong)', border: 'none', color: 'var(--text)', cursor: 'pointer', width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={() => router.back()} aria-label="Назад" style={{ background: 'var(--card-strong)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer', width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <ArrowLeft size={20} />
         </button>
-        <span style={{ fontSize: 16, fontWeight: 700 }}>Рассрочка</span>
+        <span style={{ fontSize: 17, fontWeight: 700 }}>Рассрочка</span>
       </div>
 
       {/* ── HERO: остаток + прогресс ── */}
       <div className="card" style={{ margin: '0 16px 12px', padding: 20, border: `1px solid ${isPaid ? 'rgba(52,211,153,0.25)' : isOverdue ? 'rgba(248,113,113,0.25)' : 'var(--border)'}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <CreditCard size={18} color={accent} />
+          <div className="icon-tile">
+            <CreditCard size={17} color={accent} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Открыта {fmtDate(debt.created_at || '', false)}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+            <div className="caption" style={{ fontSize: 11 }}>Открыта {fmtDate(debt.created_at || '', false)}</div>
           </div>
         </div>
 
@@ -85,13 +85,13 @@ export default function DebtDetailPage() {
           {isPaid ? (
             <>
               <CheckCircle2 size={40} color="var(--success)" style={{ marginBottom: 4 }} />
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--success)' }}>Полностью оплачено</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--success)' }}>Полностью оплачено</div>
             </>
           ) : (
             <>
               <div className="label" style={{ marginBottom: 4 }}>Остаток к оплате</div>
-              <div style={{ fontSize: 38, fontWeight: 800, color: accent, lineHeight: 1.1 }}>
-                {fmt(debt.amount)} <span style={{ fontSize: 18, color: 'var(--text-3)' }}>сом</span>
+              <div className="numeric" style={{ fontSize: 36, fontWeight: 700, color: accent, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                {fmt(debt.amount)} <span style={{ fontSize: 17, color: 'var(--text-3)', fontWeight: 600 }}>сом</span>
               </div>
             </>
           )}
@@ -112,18 +112,18 @@ export default function DebtDetailPage() {
       {debt.next_payment && !isPaid && (
         <div className="card" style={{
           margin: '0 16px 12px', padding: '16px 18px',
-          border: `1.5px solid ${isOverdue ? 'var(--danger)' : 'var(--accent)'}`,
-          background: isOverdue ? 'rgba(248,113,113,0.06)' : 'linear-gradient(135deg, rgba(255,230,0,0.06), rgba(255,230,0,0))',
+          border: `1px solid ${isOverdue ? 'rgba(248,113,113,0.4)' : 'var(--accent-border)'}`,
+          background: isOverdue ? 'rgba(248,113,113,0.06)' : 'var(--accent-dim)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
                 <Calendar size={13} /> Следующий платёж
               </div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>{fmtDate(debt.next_payment.date)}</div>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>{fmtDate(debt.next_payment.date)}</div>
               {nextInfo && <div style={{ fontSize: 12, fontWeight: 600, color: nextInfo.color, marginTop: 2 }}>{nextInfo.label}</div>}
             </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: isOverdue ? 'var(--danger)' : 'var(--accent)', whiteSpace: 'nowrap' }}>
+            <div className="numeric" style={{ fontSize: 22, fontWeight: 700, color: isOverdue ? 'var(--danger)' : 'var(--accent)', whiteSpace: 'nowrap' }}>
               {fmt(debt.next_payment.amount)} <span style={{ fontSize: 13, color: 'var(--text-3)' }}>сом</span>
             </div>
           </div>
@@ -157,9 +157,9 @@ export default function DebtDetailPage() {
                   <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '2px 0 16px' }}>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{fmtDate(item.date)}</div>
-                      <div style={{ fontSize: 11.5, fontWeight: 600, color, marginTop: 1 }}>{label}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color, marginTop: 1 }}>{label}</div>
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: paid ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', textDecoration: paid ? 'line-through' : 'none' }}>
+                    <div className="numeric" style={{ fontSize: 15, fontWeight: 600, color: paid ? 'var(--text-2)' : 'var(--text)', whiteSpace: 'nowrap', textDecoration: paid ? 'line-through' : 'none' }}>
                       {fmt(item.amount)} <span style={{ fontSize: 11, color: 'var(--text-3)' }}>сом</span>
                     </div>
                   </div>
@@ -175,9 +175,9 @@ export default function DebtDetailPage() {
         <div style={{ margin: '0 16px' }}>
           <button onClick={() => setShowHistory(v => !v)} style={{
             width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px 10px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-2)', fontFamily: 'inherit',
           }}>
-            <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Receipt size={15} /> История оплат ({history.length})
             </span>
             {showHistory ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -189,14 +189,14 @@ export default function DebtDetailPage() {
                   display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
                   borderBottom: i < history.length - 1 ? '1px solid var(--border)' : 'none',
                 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: 'rgba(52,211,153,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div className="icon-tile" style={{ background: 'rgba(52,211,153,0.12)' }}>
                     <Wallet size={16} color="var(--success)" />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>{fmtDate(p.date)}</div>
-                    {p.document && <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.document}</div>}
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{fmtDate(p.date)}</div>
+                    {p.document && <div className="caption" style={{ fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.document}</div>}
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--success)', whiteSpace: 'nowrap' }}>
+                  <div className="numeric" style={{ fontSize: 14, fontWeight: 600, color: 'var(--success)', whiteSpace: 'nowrap' }}>
                     +{fmt(p.amount)} <span style={{ fontSize: 11, color: 'var(--text-3)' }}>сом</span>
                   </div>
                 </div>
@@ -213,14 +213,14 @@ function Mini({ label, value, color }: { label: string; value: string; color?: s
   return (
     <div style={{ textAlign: 'center', flex: 1 }}>
       <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2, color: color || 'var(--text)' }}>{value}</div>
+      <div className="numeric" style={{ fontSize: 14, fontWeight: 600, marginTop: 2, color: color || 'var(--text)' }}>{value}</div>
     </div>
   );
 }
 
 function SectionTitle({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '4px 2px 8px', color: 'var(--text-2)', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '4px 2px 8px', color: 'var(--text-2)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
       {icon} {text}
     </div>
   );

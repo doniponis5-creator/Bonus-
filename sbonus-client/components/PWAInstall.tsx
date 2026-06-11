@@ -63,17 +63,17 @@ export default function PWAInstall() {
   // ─── Android banner ───
   if (showBanner) {
     return (
-      <div style={bannerStyle}>
+      <div className="fade-up" style={bannerStyle}>
         <div style={iconStyle}>
-          <Download size={22} color="#0a0f1a" />
+          <Download size={22} color="var(--on-accent)" />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#e2eaf6' }}>Установить S Bonus</div>
-          <div style={{ fontSize: 12, color: '#8899aa', marginTop: 2 }}>Быстрый доступ к бонусам</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Установить S Bonus</div>
+          <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>Быстрый доступ к бонусам</div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button onClick={handleDismiss} style={dismissBtnStyle}>Позже</button>
-          <button onClick={handleInstall} style={installBtnStyle}>Установить</button>
+          <button onClick={handleDismiss} className="btn btn-ghost" style={smallBtnStyle}>Позже</button>
+          <button onClick={handleInstall} className="btn btn-primary" style={smallBtnStyle}>Установить</button>
         </div>
       </div>
     );
@@ -82,31 +82,31 @@ export default function PWAInstall() {
   // ─── iOS guide ───
   if (showIOSGuide) {
     return (
-      <div style={bannerStyle}>
+      <div className="fade-up" style={bannerStyle}>
         <button onClick={handleDismiss} style={{
           position: 'absolute', top: 10, right: 10, background: 'none',
-          border: 'none', color: '#64748b', cursor: 'pointer', padding: 4,
+          border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4,
         }}>
           <X size={16} />
         </button>
         <div style={iconStyle}>
-          <Download size={22} color="#0a0f1a" />
+          <Download size={22} color="var(--on-accent)" />
         </div>
         <div style={{ flex: 1, paddingRight: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#e2eaf6', marginBottom: 6 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
             Установить S Bonus
           </div>
-          <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
             Нажмите{' '}
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 3,
-              background: 'rgba(255,255,255,0.1)', borderRadius: 6, padding: '2px 6px',
+              background: 'var(--card-strong)', borderRadius: 999, padding: '2px 8px',
               verticalAlign: 'middle',
             }}>
-              <Share size={12} color="#3b82f6" /> Поделиться
+              <Share size={12} color="var(--text-2)" /> Поделиться
             </span>
             {' '}→{' '}
-            <strong style={{ color: '#e2eaf6' }}>На экран «Домой»</strong>
+            <strong style={{ color: 'var(--text)', fontWeight: 600 }}>На экран «Домой»</strong>
           </div>
         </div>
       </div>
@@ -119,26 +119,19 @@ export default function PWAInstall() {
 // ─── Styles ───
 const bannerStyle: React.CSSProperties = {
   position: 'fixed', bottom: 70, left: 12, right: 12, zIndex: 200,
-  background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-  border: '1px solid rgba(255,230,0,0.2)',
+  background: 'var(--bg-2)',
+  border: '1px solid var(--border-strong)',
   borderRadius: 16, padding: '16px 18px',
   display: 'flex', alignItems: 'center', gap: 14,
-  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-  animation: 'slideUp 0.3s ease-out',
+  boxShadow: 'var(--shadow-2)',
 };
 
 const iconStyle: React.CSSProperties = {
   width: 44, height: 44, borderRadius: 12,
-  background: '#FFE600', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0,
 };
 
-const dismissBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#64748b',
-  fontSize: 12, cursor: 'pointer', padding: '6px 8px',
-};
-
-const installBtnStyle: React.CSSProperties = {
-  background: '#FFE600', color: '#0a0f1a', border: 'none',
-  borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+const smallBtnStyle: React.CSSProperties = {
+  width: 'auto', padding: '8px 14px', fontSize: 13,
 };

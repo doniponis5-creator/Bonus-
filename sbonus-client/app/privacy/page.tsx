@@ -15,19 +15,19 @@ export default function PrivacyPolicyPage() {
         maxWidth: 760,
         margin: '0 auto',
         padding: '32px 20px 80px',
-        color: '#e6e9ef',
+        color: 'var(--text)',
         lineHeight: 1.65,
         fontSize: 15,
       }}
     >
-      <Link href="/" style={{ color: '#FFE600', fontSize: 14, textDecoration: 'none' }}>
+      <Link href="/" style={{ color: 'var(--accent)', fontSize: 14, textDecoration: 'none' }}>
         ← На главную
       </Link>
 
-      <h1 style={{ fontSize: 26, fontWeight: 800, margin: '20px 0 6px' }}>
+      <h1 style={{ fontSize: 26, fontWeight: 700, margin: '20px 0 6px' }}>
         Политика конфиденциальности
       </h1>
-      <p style={{ color: '#8899aa', fontSize: 13, marginBottom: 24 }}>
+      <p style={{ color: 'var(--text-2)', fontSize: 13, marginBottom: 24 }}>
         Сервис «S Bonus» — бонусная программа магазина «Смарт Центр». Последнее обновление: {UPDATED}.
       </p>
 
@@ -91,7 +91,7 @@ export default function PrivacyPolicyPage() {
         <p>
           Вы можете удалить свой аккаунт в любой момент: откройте приложение →{' '}
           <b>Профиль</b> → <b>Удалить аккаунт</b>. Подробная инструкция доступна на странице{' '}
-          <Link href="/delete-account" style={{ color: '#FFE600' }}>удаления аккаунта</Link>.
+          <Link href="/delete-account" style={{ color: 'var(--accent)' }}>удаления аккаунта</Link>.
         </p>
         <p>
           При удалении ваши персональные данные (имя, номер телефона, дата рождения) удаляются
@@ -126,7 +126,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section style={{ marginBottom: 22 }}>
       <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>{title}</h2>
-      <div style={{ color: '#c4ccd8' }}>{children}</div>
+      <div style={{ color: 'var(--text-2)' }}>{children}</div>
     </section>
   );
 }

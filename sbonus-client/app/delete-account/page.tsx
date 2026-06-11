@@ -13,19 +13,19 @@ export default function DeleteAccountPage() {
         maxWidth: 760,
         margin: '0 auto',
         padding: '32px 20px 80px',
-        color: '#e6e9ef',
+        color: 'var(--text)',
         lineHeight: 1.65,
         fontSize: 15,
       }}
     >
-      <Link href="/" style={{ color: '#FFE600', fontSize: 14, textDecoration: 'none' }}>
+      <Link href="/" style={{ color: 'var(--accent)', fontSize: 14, textDecoration: 'none' }}>
         ← На главную
       </Link>
 
-      <h1 style={{ fontSize: 26, fontWeight: 800, margin: '20px 0 6px' }}>
+      <h1 style={{ fontSize: 26, fontWeight: 700, margin: '20px 0 6px' }}>
         Удаление аккаунта
       </h1>
-      <p style={{ color: '#8899aa', fontSize: 13, marginBottom: 24 }}>
+      <p style={{ color: 'var(--text-2)', fontSize: 13, marginBottom: 24 }}>
         Приложение «S Bonus» — бонусная программа магазина «Смарт Центр».
       </p>
 
@@ -71,7 +71,7 @@ export default function DeleteAccountPage() {
       <Section title="Контакты">
         <p>
           По вопросам удаления данных: doniponis5@gmail.com, тел. 0557 100 505.
-          См. также <Link href="/privacy" style={{ color: '#FFE600' }}>Политику конфиденциальности</Link>.
+          См. также <Link href="/privacy" style={{ color: 'var(--accent)' }}>Политику конфиденциальности</Link>.
         </p>
       </Section>
     </main>
@@ -85,7 +85,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section style={{ marginBottom: 22 }}>
       <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>{title}</h2>
-      <div style={{ color: '#c4ccd8' }}>{children}</div>
+      <div style={{ color: 'var(--text-2)' }}>{children}</div>
     </section>
   );
 }

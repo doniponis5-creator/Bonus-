@@ -45,8 +45,9 @@ function AuthInner() {
             style={{
               width: 64,
               height: 64,
-              borderRadius: '50%',
-              background: 'rgba(239,68,68,0.15)',
+              borderRadius: 16,
+              background: 'var(--card-strong)',
+              border: '1px solid var(--border-strong)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

@@ -1,5 +1,7 @@
 'use client';
 
+import { AlertCircle } from 'lucide-react';
+
 export default function Error({
   error,
   reset,
@@ -10,7 +12,7 @@ export default function Error({
   return (
     <div style={{
       minHeight: '100dvh',
-      background: '#0a0f1a',
+      background: 'var(--bg)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -19,25 +21,32 @@ export default function Error({
       padding: 32,
       textAlign: 'center',
     }}>
-      <div style={{ fontSize: 48 }}>😔</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: 16,
+        background: 'rgba(248,113,113,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <AlertCircle size={30} color="var(--danger)" />
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
         Что-то пошло не так
       </div>
-      <div style={{ fontSize: 14, color: '#64748b', maxWidth: 300 }}>
+      <div style={{ fontSize: 14, color: 'var(--text-2)', maxWidth: 300 }}>
         Произошла ошибка. Попробуйте обновить страницу.
       </div>
       <button
         onClick={reset}
         style={{
           marginTop: 8,
-          padding: '12px 28px',
+          padding: '13px 28px',
           borderRadius: 12,
           border: 'none',
-          background: 'linear-gradient(135deg, #FFE600, #f59e0b)',
-          color: '#0a0f1a',
+          background: 'var(--accent)',
+          color: '#111',
           fontSize: 15,
-          fontWeight: 700,
+          fontWeight: 600,
           cursor: 'pointer',
+          fontFamily: 'inherit',
         }}
       >
         Попробовать снова

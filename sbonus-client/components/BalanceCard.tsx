@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Wallet } from 'lucide-react';
+import { ChevronRight, QrCode } from 'lucide-react';
 
 const TIER_COLORS: Record<string, string> = {
   Bronze: 'var(--bronze)',
@@ -15,7 +15,6 @@ function useCountUp(target: number, duration = 700): number {
 
   useEffect(() => {
     if (firstRef.current) {
-      // Первый рендер: анимируем от 0
       firstRef.current = false;
       fromRef.current = 0;
     }
@@ -51,6 +50,7 @@ interface Props {
   nextTierRemaining?: number | null;
   progressPercent: number;
   onTierClick?: () => void;
+  onQrClick?: () => void;
 }
 
 export default function BalanceCard({
@@ -62,53 +62,59 @@ export default function BalanceCard({
   nextTierRemaining,
   progressPercent,
   onTierClick,
+  onQrClick,
 }: Props) {
   const tierColor = TIER_COLORS[tierName] || 'var(--bronze)';
   const animatedBalance = useCountUp(Math.round(balance));
 
   return (
-    <div className="card card-accent fade-up">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+    <div className="card card-accent fade-up" style={{ padding: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <p className="muted" style={{ fontSize: 13 }}>Здравствуйте,</p>
-          <p style={{ fontSize: 16, fontWeight: 700 }}>{fullName}</p>
+          <p className="caption">Здравствуйте,</p>
+          <p style={{ fontSize: 15, fontWeight: 600 }}>{fullName}</p>
         </div>
         <button
           onClick={onTierClick}
           className="tap"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
-            background: 'rgba(255,255,255,0.05)',
-            border: `1px solid ${tierColor}40`,
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid var(--border-strong)',
             color: tierColor,
-            padding: '4px 8px 4px 10px', borderRadius: 999,
-            fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+            padding: '5px 8px 5px 11px', borderRadius: 999,
+            fontSize: 11, fontWeight: 600, letterSpacing: '0.02em',
             cursor: onTierClick ? 'pointer' : 'default',
             fontFamily: 'inherit',
           }}
         >
-          {tierName} • {Number(tierPercent)}%
+          {tierName} · {Number(tierPercent)}%
           {onTierClick && <ChevronRight size={12} />}
         </button>
       </div>
 
-      <p className="label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <Wallet size={12} /> Ваш бонус
-      </p>
-      <div className="numeric" style={{ fontSize: 36, fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1 }}>
-        {animatedBalance.toLocaleString('ru-RU')} <span style={{ fontSize: 18, color: 'var(--text2)' }}>сом</span>
+      <p className="label" style={{ marginBottom: 4 }}>Бонусный баланс</p>
+      <div className="numeric display" style={{ color: 'var(--accent)' }}>
+        {animatedBalance.toLocaleString('ru-RU')}
+        <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-2)', marginLeft: 8, letterSpacing: 0 }}>сом</span>
       </div>
 
       {nextTierName && nextTierRemaining != null && (
         <div style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)' }}>
-            <span>До <strong style={{ color: 'var(--text)' }}>{nextTierName}</strong></span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-2)' }}>
+            <span>До уровня <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{nextTierName}</strong></span>
             <span className="numeric">{nextTierRemaining.toLocaleString('ru-RU')} сом</span>
           </div>
           <div className="progress">
             <div className="progress-bar" style={{ width: `${Math.min(100, Number(progressPercent))}%` }} />
           </div>
         </div>
+      )}
+
+      {onQrClick && (
+        <button className="btn btn-primary" style={{ marginTop: 18 }} onClick={onQrClick}>
+          <QrCode size={18} /> Показать QR кассиру
+        </button>
       )}
     </div>
   );

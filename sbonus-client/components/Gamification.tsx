@@ -28,12 +28,16 @@ const CAT_LABEL: Record<string, string> = {
   tiers: 'Уровни', streaks: 'Серии',
 };
 
+const GRADE_VARS: Record<string, string> = {
+  bronze: 'var(--bronze)', silver: 'var(--silver)', gold: 'var(--gold)', platinum: 'var(--platinum)',
+};
+
 const ONBOARDING_KEY = 'sbonus_game_onboarded_v1';
 const ONBOARDING_STEPS = [
-  { icon: Target, color: '#FFE600', title: 'Выполняйте миссии', text: 'Покупайте, тратьте бонусы и приглашайте друзей — получайте награды каждый день и каждую неделю.' },
-  { icon: Flame, color: '#f59e0b', title: 'Держите серию', text: 'Совершайте покупки несколько дней подряд. Ваша серия растёт — а вместе с ней и бонусы.' },
-  { icon: Award, color: '#FFE600', title: 'Открывайте достижения', text: 'За покупки, накопленные бонусы и активность вы получаете красивые бейджи и бонусы на счёт.' },
-  { icon: Zap, color: '#7C6FFF', title: 'Повышайте уровень', text: 'Каждое действие приносит XP. Копите опыт, поднимайтесь в уровне и станьте легендой магазина!' },
+  { icon: Target, title: 'Выполняйте миссии', text: 'Покупайте, тратьте бонусы и приглашайте друзей — за это начисляются награды.' },
+  { icon: Flame, title: 'Держите серию', text: 'Совершайте покупки несколько дней подряд — серия растёт, а вместе с ней и бонусы.' },
+  { icon: Award, title: 'Открывайте достижения', text: 'За покупки, накопленные бонусы и активность вы получаете бейджи и бонусы на счёт.' },
+  { icon: Zap, title: 'Повышайте уровень', text: 'Каждое действие приносит XP. Копите опыт и повышайте уровень.' },
 ];
 
 interface QuestItem {
@@ -132,11 +136,11 @@ export default function Gamification() {
     <div style={{ padding: '8px 0 20px' }}>
       {/* ── Title ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 16px' }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Target size={22} color="#FFE600" /> Цели
+        <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.022em', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Target size={20} color="var(--accent)" /> Цели
         </h2>
         <button onClick={openOnb} aria-label="Как это работает" className="tap" style={{
-          background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer',
+          background: 'var(--card-strong)', border: '1px solid var(--border)', cursor: 'pointer',
           width: 36, height: 36, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: 'var(--text-2)',
         }}>
@@ -148,16 +152,15 @@ export default function Gamification() {
       <div className="card card-accent" style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
-            width: 58, height: 58, borderRadius: 16, flexShrink: 0,
-            background: 'linear-gradient(135deg, #FFE600, #f59e0b)',
+            width: 56, height: 56, borderRadius: 16, flexShrink: 0,
+            background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 22px rgba(255,230,0,0.32)',
           }}>
-            <span style={{ fontSize: 24, fontWeight: 900, color: '#0a0a0a' }}>{data.level}</span>
+            <span className="numeric" style={{ fontSize: 20, fontWeight: 700, color: 'var(--on-accent)' }}>{data.level}</span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Уровень</div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>Геймер · {data.xp} XP</div>
+            <div className="label">Уровень</div>
+            <div className="numeric" style={{ fontSize: 17, fontWeight: 600 }}>{data.xp} XP</div>
             <div className="progress" style={{ marginTop: 8 }}>
               <div className="progress-bar" style={{ width: `${xpPct}%` }} />
             </div>
@@ -170,12 +173,12 @@ export default function Gamification() {
 
       {/* ── Подсказка для новичка ── */}
       {data.level === 1 && data.xp === 0 && (
-        <div className="card" style={{ margin: '0 0 12px', padding: 14, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid rgba(255,230,0,0.18)' }}>
-          <div style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: 'rgba(255,230,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Info size={20} color="#FFE600" />
+        <div className="card" style={{ margin: '0 0 12px', padding: 14, display: 'flex', alignItems: 'center', gap: 12, borderColor: 'var(--accent-border)' }}>
+          <div className="icon-tile" style={{ background: 'var(--accent-dim)' }}>
+            <Info size={17} color="var(--accent)" />
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.4 }}>
-            Совершите первую покупку, чтобы начать выполнять миссии и открывать достижения!
+            Совершите первую покупку, чтобы начать выполнять миссии и открывать достижения
           </div>
         </div>
       )}
@@ -183,17 +186,17 @@ export default function Gamification() {
       {/* ── STREAK + ACHIEVEMENTS COUNT ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
         <div className="card" style={{ margin: 0, textAlign: 'center', padding: 16 }}>
-          <Flame size={26} color={data.streak > 0 ? '#f59e0b' : 'var(--text-3)'} />
-          <div style={{ fontSize: 28, fontWeight: 900, color: data.streak > 0 ? '#FFE600' : 'var(--text-2)', lineHeight: 1.2 }}>{data.streak}</div>
+          <Flame size={24} color={data.streak > 0 ? 'var(--accent)' : 'var(--text-3)'} />
+          <div className="numeric" style={{ fontSize: 20, fontWeight: 700, color: data.streak > 0 ? 'var(--text)' : 'var(--text-2)', lineHeight: 1.2 }}>{data.streak}</div>
           <div style={{ fontSize: 12, color: 'var(--text-2)' }}>дней подряд</div>
           {data.longest_streak > 0 && (
-            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>рекорд: {data.longest_streak}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>рекорд: {data.longest_streak}</div>
           )}
         </div>
         <div className="card" style={{ margin: 0, textAlign: 'center', padding: 16 }}>
-          <Award size={26} color="#FFE600" />
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#FFE600', lineHeight: 1.2 }}>
-            {data.achievements_unlocked}<span style={{ fontSize: 16, color: 'var(--text-3)' }}>/{data.achievements_total}</span>
+          <Award size={24} color="var(--accent)" />
+          <div className="numeric" style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.2 }}>
+            {data.achievements_unlocked}<span style={{ fontSize: 13, color: 'var(--text-3)' }}>/{data.achievements_total}</span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-2)' }}>достижений</div>
         </div>
@@ -203,34 +206,27 @@ export default function Gamification() {
       {claimable.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <h3 className="h3" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <Gift size={16} color="#34d399" /> Заберите награду
+            <Gift size={16} color="var(--success)" /> Заберите награду
           </h3>
           {claimable.map(q => (
             <div key={q.code} className="card" style={{
               margin: '0 0 10px', padding: 14, display: 'flex', alignItems: 'center', gap: 12,
-              border: '1px solid rgba(52,211,153,0.35)',
-              background: 'linear-gradient(135deg, rgba(52,211,153,0.10), rgba(52,211,153,0))',
+              borderColor: 'var(--accent-border)',
             }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'rgba(52,211,153,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name={q.icon} size={20} color="#34d399" />
+              <div className="icon-tile" style={{ background: 'var(--accent-dim)' }}>
+                <Icon name={q.icon} size={17} color="var(--accent)" />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>{q.title}</div>
-                <div style={{ fontSize: 12, color: '#34d399', fontWeight: 600 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{q.title}</div>
+                <div className="numeric" style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600 }}>
                   +{q.reward_amount} сом · +{q.xp_reward} XP
                 </div>
               </div>
               <button
                 onClick={() => claim(q)}
                 disabled={claiming === q.progress_id}
-                className="tap"
-                style={{
-                  border: 'none', cursor: 'pointer', borderRadius: 10, padding: '9px 16px',
-                  fontWeight: 700, fontSize: 13, color: '#0a0a0a', flexShrink: 0,
-                  background: 'linear-gradient(135deg, #34d399, #10b981)',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  opacity: claiming === q.progress_id ? 0.6 : 1,
-                }}
+                className="btn btn-primary"
+                style={{ width: 'auto', padding: '9px 16px', fontSize: 13, flexShrink: 0 }}
               >
                 {claiming === q.progress_id ? <Loader2 size={14} className="spinner" /> : <Check size={14} />}
                 Забрать
@@ -244,26 +240,26 @@ export default function Gamification() {
       {activeQuests.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <h3 className="h3" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <Zap size={16} color="#FFE600" /> Активные миссии
+            <Zap size={16} color="var(--accent)" /> Активные миссии
           </h3>
           {activeQuests.map(q => {
             const pct = Math.round((q.progress || 0) * 100);
             return (
               <div key={q.code} className="card" style={{ margin: '0 0 10px', padding: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'rgba(255,230,0,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon name={q.icon} size={20} color="#FFE600" />
+                  <div className="icon-tile" style={{ background: 'var(--accent-dim)' }}>
+                    <Icon name={q.icon} size={17} color="var(--accent)" />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700 }}>{q.title}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>{q.title}</span>
                       <span className="badge badge-accent" style={{ flexShrink: 0 }}>+{q.reward_amount} сом</span>
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 1 }}>{q.description}</div>
                     <div className="progress" style={{ marginTop: 8 }}>
                       <div className="progress-bar" style={{ width: `${pct}%` }} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                    <div className="numeric" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
                       <span>{PERIOD_LABEL[q.period] || ''}</span>
                       <span>{Math.floor(q.current)} / {Math.floor(q.target)}</span>
                     </div>
@@ -277,18 +273,14 @@ export default function Gamification() {
 
       {/* ── ACHIEVEMENTS ── */}
       <h3 className="h3" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <Trophy size={16} color="#FFE600" /> Достижения
+        <Trophy size={16} color="var(--accent)" /> Достижения
       </h3>
       {/* Category filter */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 4 }}>
+      <div className="hide-scroll" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 4 }}>
         {cats.map(c => (
-          <button key={c} onClick={() => setAchFilter(c)} className="tap"
-            style={{
-              flexShrink: 0, padding: '7px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
-              fontSize: 12, fontWeight: 600,
-              background: achFilter === c ? '#FFE600' : 'rgba(255,255,255,0.06)',
-              color: achFilter === c ? '#0a0a0a' : 'var(--text-2)',
-            }}>
+          <button key={c} onClick={() => setAchFilter(c)}
+            className={`chip tap${achFilter === c ? ' active' : ''}`}
+            style={{ flexShrink: 0 }}>
             {c === 'all' ? 'Все' : (CAT_LABEL[c] || c)}
           </button>
         ))}
@@ -297,28 +289,27 @@ export default function Gamification() {
         {achList.map(a => (
           <div key={a.code} style={{
             borderRadius: 16, padding: '14px 8px', textAlign: 'center', position: 'relative',
-            background: a.unlocked ? `linear-gradient(135deg, ${a.grade_color}22, rgba(255,255,255,0.02))` : 'rgba(255,255,255,0.03)',
-            border: a.unlocked ? `1px solid ${a.grade_color}66` : '1px solid rgba(255,255,255,0.05)',
+            background: a.unlocked ? 'var(--card-strong)' : 'var(--card)',
+            border: a.unlocked ? '1px solid var(--accent-border)' : '1px solid var(--border)',
             opacity: a.unlocked ? 1 : 0.72,
           }}>
             <div style={{
-              width: 46, height: 46, borderRadius: 14, margin: '0 auto 8px',
+              width: 44, height: 44, borderRadius: 12, margin: '0 auto 8px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: a.unlocked ? a.grade_color : 'rgba(255,255,255,0.06)',
-              boxShadow: a.unlocked ? `0 4px 16px ${a.grade_color}55` : 'none',
+              background: a.unlocked ? 'var(--accent-dim)' : 'var(--card-strong)',
             }}>
               {a.unlocked
-                ? <Icon name={a.icon} size={22} color="#0a0a0a" />
-                : <Lock size={18} color="var(--text-3)" />}
+                ? <Icon name={a.icon} size={20} color="var(--accent)" />
+                : <Lock size={17} color="var(--text-3)" />}
             </div>
-            <div style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.2, color: a.unlocked ? 'var(--text)' : 'var(--text-2)' }}>{a.title}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.2, color: a.unlocked ? 'var(--text)' : 'var(--text-2)' }}>{a.title}</div>
             {!a.unlocked && a.progress > 0 && a.progress < 1 && (
               <div className="progress" style={{ marginTop: 6, height: 4 }}>
                 <div className="progress-bar" style={{ width: `${Math.round(a.progress * 100)}%` }} />
               </div>
             )}
             {a.unlocked && (
-              <div style={{ fontSize: 10, color: a.grade_color, fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+              <div style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600, marginTop: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                 <Check size={11} /> Получено
               </div>
             )}
@@ -330,15 +321,15 @@ export default function Gamification() {
       {toast && (
         <div className="float-up" style={{
           position: 'fixed', bottom: 96, left: 16, right: 16, maxWidth: 448, margin: '0 auto',
-          background: toast.error ? 'linear-gradient(135deg, #f87171, #ef4444)' : 'linear-gradient(135deg, #34d399, #10b981)',
-          color: toast.error ? '#fff' : '#0a0a0a',
-          borderRadius: 16, padding: '14px 18px', zIndex: 200,
-          display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+          background: 'var(--bg-2)', border: '1px solid var(--border-strong)',
+          color: 'var(--text)',
+          borderRadius: 12, padding: '14px 16px', zIndex: 200,
+          display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--shadow-2)',
         }}>
-          {toast.error ? <X size={22} /> : <Sparkles size={22} />}
+          {toast.error ? <X size={20} color="var(--danger)" /> : <Check size={20} color="var(--success)" />}
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>{toast.error ? 'Не получилось' : 'Награда получена!'}</div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{toast.error ? toast.msg : `${toast.msg} · +${toast.amount} сом`}</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{toast.error ? 'Не удалось' : 'Награда получена'}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{toast.error ? toast.msg : `${toast.msg} · +${toast.amount} сом`}</div>
           </div>
         </div>
       )}
@@ -349,33 +340,22 @@ export default function Gamification() {
         const StepIcon = step.icon;
         const isLast = onbStep === ONBOARDING_STEPS.length - 1;
         return (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(7,8,13,0.94)',
-            backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}>
-            <div className="float-up" style={{
-              background: 'var(--bg-2)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 28,
-              padding: '32px 24px 24px', maxWidth: 360, width: '100%', textAlign: 'center', position: 'relative',
-            }}>
-              <button onClick={finishOnb} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, fontWeight: 600 }}>
+          <div className="modal-backdrop">
+            <div className="modal" style={{ position: 'relative' }}>
+              <button onClick={finishOnb} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
                 Пропустить
               </button>
-              <div className="pulse" style={{
-                width: 96, height: 96, borderRadius: 28, margin: '8px auto 22px',
-                background: `linear-gradient(135deg, ${step.color}, ${step.color}99)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 0 44px ${step.color}66`,
-              }}>
-                <StepIcon size={46} color="#0a0a0a" />
+              <div className="modal-icon" style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent-border)' }}>
+                <StepIcon size={28} color="var(--accent)" />
               </div>
-              <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>{step.title}</h3>
-              <p style={{ fontSize: 15, color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 24, minHeight: 66 }}>{step.text}</p>
+              <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>{step.title}</h3>
+              <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 24, minHeight: 66 }}>{step.text}</p>
               {/* Dots */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 7, marginBottom: 22 }}>
                 {ONBOARDING_STEPS.map((_, i) => (
                   <div key={i} style={{
                     width: i === onbStep ? 22 : 7, height: 7, borderRadius: 999,
-                    background: i === onbStep ? '#FFE600' : 'rgba(255,255,255,0.18)',
+                    background: i === onbStep ? 'var(--accent)' : 'var(--border-strong)',
                     transition: 'all 0.3s var(--ease-out)',
                   }} />
                 ))}
@@ -384,7 +364,7 @@ export default function Gamification() {
                 onClick={() => isLast ? finishOnb() : setOnbStep(s => s + 1)}
                 className="btn btn-primary"
               >
-                {isLast ? 'Начать!' : 'Далее'} {!isLast && <ArrowRight size={18} />}
+                {isLast ? 'Начать' : 'Далее'} {!isLast && <ArrowRight size={17} />}
               </button>
             </div>
           </div>
@@ -393,37 +373,27 @@ export default function Gamification() {
 
       {/* ── ACHIEVEMENT CELEBRATION ── */}
       {celebrate.length > 0 && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(7,8,13,0.82)',
-          backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-        }} onClick={() => setCelebrate([])}>
-          <div className="float-up" style={{
-            background: 'var(--bg-2)', border: '1px solid rgba(255,230,0,0.3)', borderRadius: 24,
-            padding: '32px 24px', textAlign: 'center', maxWidth: 340, width: '100%', position: 'relative',
-          }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setCelebrate([])} style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}>
+        <div className="modal-backdrop" onClick={() => setCelebrate([])}>
+          <div className="modal" style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setCelebrate([])} aria-label="Закрыть" style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}>
               <X size={20} />
             </button>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#FFE600', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16 }}>
-              Новое достижение!
+            <div className="label" style={{ color: 'var(--accent)', marginBottom: 16 }}>
+              Новое достижение
             </div>
             {celebrate.slice(0, 3).map(u => {
-              const color = { bronze: '#cd7f32', silver: '#c0c0c0', gold: '#FFE600', platinum: '#e5e4e2' }[u.grade] || '#cd7f32';
+              const color = GRADE_VARS[u.grade] || 'var(--bronze)';
               return (
                 <div key={u.code} style={{ marginBottom: 16 }}>
-                  <div className="pulse" style={{
-                    width: 88, height: 88, borderRadius: 26, margin: '0 auto 10px',
-                    background: color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: `0 0 40px ${color}aa`,
-                  }}>
-                    <Icon name={u.icon} size={42} color="#0a0a0a" />
+                  <div className="modal-icon" style={{ background: color }}>
+                    <Icon name={u.icon} size={28} color="var(--on-accent)" />
                   </div>
-                  <div style={{ fontSize: 18, fontWeight: 800 }}>{u.title}</div>
+                  <div style={{ fontSize: 17, fontWeight: 600 }}>{u.title}</div>
                 </div>
               );
             })}
             <button onClick={() => setCelebrate([])} className="btn btn-primary" style={{ marginTop: 8 }}>
-              Отлично!
+              Понятно
             </button>
           </div>
         </div>
