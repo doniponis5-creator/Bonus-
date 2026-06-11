@@ -128,9 +128,27 @@ async def warn_expiring_bonuses() -> None:
         )
         accounts = accounts_result.scalars().all()
 
+        # ДЕДУП: кому уже отправляли предупреждение за последние 7 дней — пропускаем.
+        # Раньше клиент получал одно и то же сообщение 30 дней подряд.
+        from app.models import Notification
+        cooldown_cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        notified_result = await db.execute(
+            select(Notification.customer_id).where(
+                Notification.event_type == "expiry_warning",
+                Notification.created_at >= cooldown_cutoff,
+            )
+        )
+        recently_warned = {row[0] for row in notified_result.all()}
+
+        MAX_PER_RUN = 50  # лимит на запуск (анти-спам / анти-бан WhatsApp)
         warned_count = 0
 
         for account in accounts:
+            if warned_count >= MAX_PER_RUN:
+                print(f"  ⏸ Достигнут лимит {MAX_PER_RUN}/запуск, остальные — завтра")
+                break
+            if account.customer_id in recently_warned:
+                continue
             try:
                 # Сумма бонусов, которые истекут через 30 дней
                 will_expire = await _calculate_expirable(db, account.customer_id, warning_cutoff)
@@ -142,10 +160,15 @@ async def warn_expiring_bonuses() -> None:
 
                 about_to_expire = min(about_to_expire, account.balance)
 
-                await _notify_expiration_warning(
+                sent_ok = await _notify_expiration_warning(
                     db, account.customer_id, about_to_expire, account.balance, warn_days
                 )
-                warned_count += 1
+                if sent_ok:
+                    warned_count += 1
+                    await db.commit()
+                    # Интервал между сообщениями (защита от блокировки WhatsApp)
+                    import asyncio as _aio
+                    await _aio.sleep(3)
 
             except Exception as e:
                 print(f"  ❌ Ошибка предупреждения для клиента {account.customer_id}: {e}")
@@ -272,10 +295,18 @@ async def _notify_expiration_warning(db, customer_id, amount: Decimal, balance: 
         .replace("{name}", customer.full_name)
         .replace("{days}", str(warn_days))
     )
-    asyncio.create_task(send_whatsapp_message(
-        phone=customer.phone, message=msg,
-        instance_id=instance_id, api_token=api_token
-    ))
+    # Трекинг в Notification (event_type=expiry_warning) — основа дедупа.
+    # Отправка СИНХРОННАЯ: вызывающий код управляет интервалом.
+    from app.services.whatsapp import send_tracked_whatsapp
+    await send_tracked_whatsapp(
+        db,
+        customer_id=customer_id,
+        phone=customer.phone,
+        message=msg,
+        event_type="expiry_warning",
+        instance_id=instance_id,
+        api_token=api_token,
+    )
 
     # Push notification
     try:
@@ -286,3 +317,5 @@ async def _notify_expiration_warning(db, customer_id, amount: Decimal, balance: 
         ))
     except Exception:
         pass
+
+    return True

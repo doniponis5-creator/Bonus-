@@ -258,6 +258,7 @@ class BonusService:
         branch_id: uuid.UUID,
         cashier_id: Optional[uuid.UUID] = None,
         note: Optional[str] = None,
+        receipt_number: Optional[str] = None,
     ) -> BonusResult:
         """
         Списать бонус при оплате.
@@ -316,7 +317,7 @@ class BonusService:
             purchase_amount=purchase_amount,
             branch_id=branch_id,
             cashier_id=cashier_id,
-            receipt_number=f"SPEND-{uuid.uuid4().hex[:12].upper()}",
+            receipt_number=(receipt_number or f"SPEND-{uuid.uuid4().hex[:12].upper()}")[:50],
             note=note,
         )
         self.db.add(txn)

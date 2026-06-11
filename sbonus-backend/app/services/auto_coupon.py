@@ -70,6 +70,7 @@ async def _get_config(db: AsyncSession) -> dict:
         "bonus_percent": Decimal(str(_f("AUTO_COUPON_BONUS_PERCENT", 7))),
         "validity_days": int(_f("AUTO_COUPON_VALIDITY_DAYS", 7)),
         "max_per_run": int(_f("AUTO_COUPON_MAX_PER_RUN", 50)),
+        "max_bonus": Decimal(str(_f("AUTO_COUPON_MAX_BONUS", 1000))),
         "cooldown_days": int(_f("AUTO_COUPON_COOLDOWN_DAYS", 30)),
         "min_purchases": int(_f("AUTO_COUPON_MIN_PURCHASES", 3)),
         "template": cfg.get("AUTO_COUPON_MESSAGE_TEMPLATE") or DEFAULT_MESSAGE,
@@ -162,6 +163,9 @@ async def run_auto_coupon():
             bonus = _round_to(min_purchase * cfg["bonus_percent"] / 100, 10)
             if bonus < 20:
                 bonus = Decimal("20")
+            # Потолок: клиент с чеком 200к не должен получить купон на 18 200 сом
+            if bonus > cfg["max_bonus"]:
+                bonus = cfg["max_bonus"]
 
             expires_at = now + timedelta(days=cfg["validity_days"])
             code = f"AUTO-{secrets.token_hex(4).upper()}"

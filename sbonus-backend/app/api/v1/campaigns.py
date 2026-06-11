@@ -199,18 +199,13 @@ async def _run_campaign_in_background(campaign_id: uuid.UUID):
         except Exception as e:
             await db.rollback()
             logger.error(f"Ошибка фоновой отправки кампании {campaign_id}: {e}")
-            # Попытка вернуть статус кампании
-            try:
-                async with async_session() as db2:
-                    r = await db2.execute(
-                        select(BonusCampaign).where(BonusCampaign.id == campaign_id)
-                    )
-                    c = r.scalar_one_or_none()
-                    if c and c.status == CampaignStatus.PROCESSING:
-                        c.status = CampaignStatus.PENDING
-                    await db2.commit()
-            except Exception:
-                pass
+            # НЕ возвращаем в PENDING (раньше это вызывало авто-переотправку утром).
+            # Кампания остаётся PROCESSING; отправленные получатели уже закоммичены,
+            # cron-восстановление продолжит с места остановки (только не-sent).
+            logger.error(
+                f"Кампания {campaign_id} остановлена с ошибкой — будет продолжена "
+                f"cron-восстановлением (только неотправленные получатели)"
+            )
 
 
 @router.post(
@@ -229,9 +224,23 @@ async def send_campaign_now(
     if campaign.status not in (CampaignStatus.PENDING,):
         raise HTTPException(status_code=400, detail={"code": "CAMPAIGN_NOT_PENDING", "message": f"Статус: {campaign.status.value}"})
 
-    # Сразу ставим PROCESSING чтобы заблокировать повторный запуск
-    campaign.status = CampaignStatus.PROCESSING
+    # АТОМАРНЫЙ claim: UPDATE ... WHERE status='pending'.
+    # Двойной клик / гонка с cron не запустят кампанию дважды.
+    from sqlalchemy import update as sa_update
+    claim = await db.execute(
+        sa_update(BonusCampaign)
+        .where(
+            BonusCampaign.id == campaign_id,
+            BonusCampaign.status == CampaignStatus.PENDING,
+        )
+        .values(status=CampaignStatus.PROCESSING)
+    )
     await db.commit()
+    if claim.rowcount == 0:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "CAMPAIGN_ALREADY_RUNNING", "message": "Кампания уже запущена"},
+        )
 
     # Запускаем в фоне — HTTP ответ возвращается мгновенно
     asyncio.create_task(_run_campaign_in_background(campaign_id))

@@ -226,12 +226,19 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
                     if wa_interval > 0:
                         await asyncio.sleep(wa_interval)
             except Exception as e:
-                rec.status = "failed"
-                rec.error = str(e)[:500]
+                if rec.sent_at is not None:
+                    # Бонус уже начислен — оставляем «sent», иначе resume
+                    # начислил бы повторно. Ошибка только в доставке WA.
+                    rec.error = ("wa_or_link_failed: " + str(e))[:500]
+                    logger.warning(f"  Получатель {rec.customer_id}: бонус начислен, WA не доставлен: {e}")
+                else:
+                    rec.status = "failed"
+                    rec.error = str(e)[:500]
 
-        # Flush each batch to keep memory usage bounded
-        await db.flush()
-        logger.info(f"  Батч {batch_num}/{total_batches} завершён: отправлено {sent_count}")
+        # COMMIT после каждого батча: статусы «sent» долговечны.
+        # Рестарт контейнера больше НЕ приводит к повторной отправке/начислению.
+        await db.commit()
+        logger.info(f"  Батч {batch_num}/{total_batches} завершён (commit): отправлено {sent_count}")
 
         # Пауза между батчами (защита от блокировки WhatsApp)
         if BATCH_PAUSE > 0 and i + BATCH_SIZE < len(pending):
@@ -239,9 +246,10 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
             await asyncio.sleep(BATCH_PAUSE)
 
     logger.info(f"Кампания «{campaign.name}» завершена: {sent_count}/{len(pending)} отправлено")
-    campaign.sent_count = sent_count
+    # sent_count аккумулируем (возобновлённый запуск не затирает прошлый счётчик)
+    campaign.sent_count = (campaign.sent_count or 0) + sent_count
     campaign.sent_at = datetime.now(timezone.utc)
     campaign.status = CampaignStatus.SENT
-    await db.flush()
+    await db.commit()
 
     return sent_count

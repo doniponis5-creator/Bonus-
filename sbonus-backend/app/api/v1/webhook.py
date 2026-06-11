@@ -17,11 +17,14 @@ Endpoints:
   - Idempotency через receipt_number (уникальный индекс в БД)
 """
 
+import asyncio
 import hashlib
 import hmac
 import ipaddress
+import logging
 import uuid
-from decimal import Decimal
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy import select, func
@@ -46,6 +49,7 @@ from app.utils import normalize_phone
 
 settings = get_settings()
 router = APIRouter(prefix="/webhook", tags=["Вебхуки 1С"])
+logger = logging.getLogger("sbonus.webhook")
 
 
 # ═══════════════════════════════════════════
@@ -293,6 +297,35 @@ async def webhook_1c_spend(
         getattr(body, "cashier_name", None),
     )
 
+    # Idempotency: повторный webhook с тем же чеком НЕ списывает второй раз
+    spend_receipt = f"SPEND-{body.receipt_number}"[:50]
+    dup_result = await db.execute(
+        select(Transaction).where(
+            Transaction.receipt_number == spend_receipt,
+            Transaction.customer_id == customer.id,
+            Transaction.type == TransactionType.SPEND,
+        )
+    )
+    dup_txn = dup_result.scalar_one_or_none()
+    if dup_txn:
+        acc_r = await db.execute(
+            select(BonusAccount).where(BonusAccount.customer_id == customer.id)
+        )
+        acc = acc_r.scalar_one_or_none()
+        return {
+            "success": True,
+            "event": "spend",
+            "duplicate": True,
+            "receipt_number": body.receipt_number,
+            "customer_id": str(customer.id),
+            "customer_name": customer.full_name,
+            "purchase_amount": float(body.purchase_amount),
+            "bonus_spent": float(dup_txn.amount),
+            "new_balance": float(acc.balance) if acc else 0.0,
+            "tier": customer.tier.name if customer.tier else "",
+            "message": "Чек уже обработан ранее (идемпотентность)",
+        }
+
     svc = BonusService(db)
     result = await svc.spend(
         customer_id=customer.id,
@@ -301,6 +334,7 @@ async def webhook_1c_spend(
         branch_id=body.branch_id,
         cashier_id=resolved_cashier,
         note=f"1С: оплата бонусами, чек #{body.receipt_number}",
+        receipt_number=spend_receipt,
     )
     await db.commit()
 
@@ -359,14 +393,51 @@ async def webhook_1c_refund(
     )
     original_txn = orig_result.scalar_one_or_none()
 
+    # Дубликат возврата: уже обработан → вернуть прежний результат, не 500
+    refund_receipt = f"REFUND-{body.original_receipt_number}"[:50]
+    dup_ref = await db.execute(
+        select(Transaction).where(
+            Transaction.receipt_number == refund_receipt,
+            Transaction.customer_id == customer.id,
+            Transaction.type == TransactionType.REFUND,
+        )
+    )
+    prev_refund = dup_ref.scalar_one_or_none()
+    if prev_refund:
+        acc_r = await db.execute(
+            select(BonusAccount).where(BonusAccount.customer_id == customer.id)
+        )
+        acc = acc_r.scalar_one_or_none()
+        return {
+            "success": True,
+            "event": "refund",
+            "duplicate": True,
+            "original_receipt": body.original_receipt_number,
+            "refund_receipt": prev_refund.receipt_number,
+            "customer_id": str(customer.id),
+            "customer_name": customer.full_name,
+            "refund_amount": float(body.refund_amount),
+            "bonus_deducted": float(prev_refund.amount),
+            "new_balance": float(acc.balance) if acc else 0.0,
+            "message": "Возврат уже обработан ранее (идемпотентность)",
+        }
+
     # Вычисляем сумму возврата бонусов
     if original_txn:
-        # Возврат пропорционально сумме возврата
+        # Возврат пропорционально сумме возврата (не больше 100% оригинала)
         refund_ratio = body.refund_amount / (original_txn.purchase_amount or body.refund_amount)
+        if refund_ratio > Decimal("1"):
+            refund_ratio = Decimal("1")
         refund_bonus = (original_txn.amount * refund_ratio).quantize(Decimal("0.01"))
     else:
-        # Прямой возврат если оригинал не найден
-        refund_bonus = body.refund_amount
+        # Оригинал не найден: оцениваем по проценту уровня клиента,
+        # а НЕ списываем всю сумму возврата (старый баг)
+        tier_pct = (
+            customer.tier.bonus_percent
+            if customer.tier and customer.tier.bonus_percent
+            else Decimal("2")
+        )
+        refund_bonus = (body.refund_amount * tier_pct / Decimal("100")).quantize(Decimal("0.01"))
 
     # Найти бонусный счёт с блокировкой (предотвращает double-spend)
     acc_result = await db.execute(
@@ -394,7 +465,7 @@ async def webhook_1c_refund(
         purchase_amount=body.refund_amount,
         branch_id=body.branch_id,
         cashier_id=resolved_cashier,
-        receipt_number=f"REFUND-{body.original_receipt_number}",
+        receipt_number=refund_receipt,
         note=body.note or f"1С: возврат чека #{body.original_receipt_number}",
     )
     db.add(refund_txn)
@@ -902,6 +973,19 @@ async def webhook_greenapi(
     if not await check_rate_limit(f"greenapi:{client_ip}", max_attempts=30, window_seconds=60):
         return {"success": False, "error": "rate_limit"}
 
+    # Проверка webhook-токена GreenAPI (если задан в Настройках).
+    # В консоли GreenAPI установите webhookUrlToken — он приходит в Authorization.
+    token_row = await db.execute(
+        select(Setting).where(Setting.key == "GREENAPI_WEBHOOK_TOKEN")
+    )
+    expected_token = (token_row.scalar_one_or_none() or Setting(key="", value="")).value or ""
+    if expected_token.strip():
+        auth_header = request.headers.get("authorization", "") or request.headers.get("x-webhook-token", "")
+        provided = auth_header.replace("Bearer ", "").strip()
+        if not hmac.compare_digest(provided, expected_token.strip()):
+            logger.warning("GreenAPI webhook: неверный токен, запрос отклонён")
+            return {"success": False, "error": "unauthorized"}
+
     try:
         body = await request.json()
     except Exception:
@@ -966,6 +1050,7 @@ async def webhook_greenapi(
 async def webhook_1c_expenses(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    x_signature: str = Header(None, alias="X-Signature"),
 ):
     """
     1С отправляет расходы.
@@ -978,16 +1063,19 @@ async def webhook_1c_expenses(
     """
     from app.models import Expense
 
-    enable = await db.execute(select(Setting).where(Setting.key == "ENABLE_1C_WEBHOOK"))
-    s = enable.scalar_one_or_none()
-    if not s or s.value != "true":
-        raise HTTPException(status_code=403, detail="1C webhook disabled")
+    # Та же защита, что и у остальных 1С endpoints: флаг + IP + HMAC
+    await _security_check(request, x_signature, db)
 
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
     expenses_data = body.get("expenses", [])
 
-    if not expenses_data:
+    if not isinstance(expenses_data, list) or not expenses_data:
         raise HTTPException(status_code=400, detail="No expenses provided")
+    if len(expenses_data) > 1000:
+        raise HTTPException(status_code=400, detail="Too many expenses (max 1000)")
 
     created = 0
     skipped = 0
@@ -1002,12 +1090,21 @@ async def webhook_1c_expenses(
                 skipped += 1
                 continue
 
+        try:
+            amount = Decimal(str(item.get("amount", 0)))
+        except (InvalidOperation, ValueError, TypeError):
+            skipped += 1
+            continue
+        if amount <= 0 or amount > Decimal("100000000"):
+            skipped += 1
+            continue
+
         expense = Expense(
-            category=item.get("category", "other"),
-            amount=Decimal(str(item.get("amount", 0))),
-            month=item.get("month", datetime.now(timezone.utc).strftime("%Y-%m")),
-            description=item.get("description"),
-            reference=ref,
+            category=str(item.get("category", "other"))[:50],
+            amount=amount,
+            month=str(item.get("month") or datetime.now(timezone.utc).strftime("%Y-%m"))[:7],
+            description=(str(item.get("description"))[:500] if item.get("description") else None),
+            reference=(str(ref)[:100] if ref else None),
             source="1c",
         )
         db.add(expense)
