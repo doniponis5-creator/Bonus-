@@ -66,12 +66,12 @@ const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
   <div
     onClick={onToggle}
     style={{
-      width: 52, height: 28, borderRadius: 14, cursor: 'pointer',
-      background: on ? '#22c55e' : '#1c2a3a', position: 'relative', transition: 'background 0.2s',
+      width: 52, height: 28, borderRadius: 16, cursor: 'pointer',
+      background: on ? 'var(--success)' : 'var(--bg3)', position: 'relative', transition: 'background 0.2s',
     }}
   >
     <div style={{
-      width: 22, height: 22, borderRadius: '50%', background: '#fff', position: 'absolute',
+      width: 22, height: 22, borderRadius: '16%', background: '#fff', position: 'absolute',
       top: 3, left: on ? 27 : 3, transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
     }} />
   </div>
@@ -81,13 +81,13 @@ const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
 // PROGRESS BAR
 // ═══════════════════════════════════════════
 
-const ProgressBar = ({ current, target, color = '#FFE600' }: { current: number; target: number; color?: string }) => {
+const ProgressBar = ({ current, target, color = 'var(--accent)' }: { current: number; target: number; color?: string }) => {
   const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   return (
-    <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden' }}>
       <div
         style={{
-          height: '100%', borderRadius: 4, background: `linear-gradient(90deg, ${color}, ${color}cc)`,
+          height: '100%', borderRadius: 10, background: color,
           width: `${pct}%`, transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       />
@@ -175,14 +175,14 @@ export default function CashierBonusesPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 14,
-            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+            width: 48, height: 48, borderRadius: 16,
+            background: 'var(--warn)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Flame size={26} color="#fff" />
           </div>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>Мотивация кассиров</h1>
+            <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)' }}>Мотивация кассиров</h1>
             <p style={{ color: 'var(--text2)', fontSize: 13, marginTop: 2 }}>Ступенчатые бонусы за продажи</p>
           </div>
         </div>
@@ -275,7 +275,7 @@ function ProgressTab({
       <div className="grid-4" style={{ marginBottom: 24 }}>
         <SummaryCard icon={<Zap size={20} />} label="Продажи сегодня" value={totalSalesToday} color="#22c55e" />
         <SummaryCard icon={<TrendingUp size={20} />} label="Выручка сегодня" value={`${totalRevenueToday.toLocaleString()} сом`} color="#3b82f6" />
-        <SummaryCard icon={<Award size={20} />} label="Бонусы выданы" value={`${totalEarnedToday.toLocaleString()} сом`} color="#f97316" />
+        <SummaryCard icon={<Award size={20} />} label="Бонусы выданы" value={`${totalEarnedToday.toLocaleString()} сом`} color="#f59e0b" />
         <SummaryCard icon={<Flame size={20} />} label="Макс. стрик" value={`${topStreak} дней`} color="#ef4444" />
       </div>
 
@@ -300,14 +300,14 @@ function SummaryCard({ icon, label, value, color }: { icon: React.ReactNode; lab
   return (
     <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
       <div style={{
-        width: 44, height: 44, borderRadius: 12,
+        width: 44, height: 44, borderRadius: 10,
         background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color,
       }}>
         {icon}
       </div>
       <div>
         <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginTop: 2 }}>{value}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginTop: 2 }}>{value}</div>
       </div>
     </div>
   );
@@ -332,10 +332,10 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
-            width: 42, height: 42, borderRadius: 12,
-            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+            width: 42, height: 42, borderRadius: 10,
+            background: 'var(--warn)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 800, fontSize: 16,
+            color: '#fff', fontWeight: 700, fontSize: 16,
           }}>
             {c.full_name.charAt(0).toUpperCase()}
           </div>
@@ -348,15 +348,15 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
           {/* Quick stats */}
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600 }}>Сегодня</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#22c55e' }}>{c.daily.sales}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--success)' }}>{c.daily.sales}</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600 }}>Месяц</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#3b82f6' }}>{c.monthly.sales}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--info)' }}>{c.monthly.sales}</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600 }}>Стрик</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: c.streak.days >= 7 ? '#f97316' : 'var(--text2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: c.streak.days >= 7 ? 'var(--warn)' : 'var(--text2)' }}>
               {c.streak.days}d
             </div>
           </div>
@@ -376,17 +376,17 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
         <div style={{ padding: '0 24px 24px', borderTop: '1px solid var(--border)' }}>
           <div className="grid-3" style={{ marginTop: 20 }}>
             {/* Daily */}
-            <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 18 }}>
+            <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <Zap size={16} color="#22c55e" />
+                <Zap size={16} color="var(--success)" />
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Дневной прогресс</span>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: '#22c55e', marginBottom: 4 }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--success)', marginBottom: 4 }}>
                 {c.daily.sales} <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)' }}>продаж</span>
               </div>
               {dailyNext && (
                 <>
-                  <ProgressBar current={c.daily.sales} target={dailyNext.sales} color="#22c55e" />
+                  <ProgressBar current={c.daily.sales} target={dailyNext.sales} color="var(--success)" />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
                     <span>Цель: {dailyNext.sales} продаж</span>
                     <span>+{dailyNext.bonus} сом</span>
@@ -394,7 +394,7 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 </>
               )}
               {!dailyNext && c.daily.current_milestone && (
-                <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 600, marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600, marginTop: 6 }}>
                   Все вехи пройдены!
                 </div>
               )}
@@ -402,22 +402,22 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 Выручка: <b style={{ color: 'var(--text)' }}>{c.daily.revenue.toLocaleString()} сом</b>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-                Заработано: <b style={{ color: '#22c55e' }}>+{c.daily.earned_today.toLocaleString()} сом</b>
+                Заработано: <b style={{ color: 'var(--success)' }}>+{c.daily.earned_today.toLocaleString()} сом</b>
               </div>
             </div>
 
             {/* Monthly */}
-            <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 18 }}>
+            <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <Calendar size={16} color="#3b82f6" />
+                <Calendar size={16} color="var(--info)" />
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Месячный прогресс</span>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: '#3b82f6', marginBottom: 4 }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--info)', marginBottom: 4 }}>
                 {c.monthly.sales} <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)' }}>продаж</span>
               </div>
               {monthlyNext && (
                 <>
-                  <ProgressBar current={c.monthly.sales} target={monthlyNext.sales} color="#3b82f6" />
+                  <ProgressBar current={c.monthly.sales} target={monthlyNext.sales} color="var(--info)" />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
                     <span>Цель: {monthlyNext.sales} продаж</span>
                     <span>+{monthlyNext.bonus} сом</span>
@@ -425,7 +425,7 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 </>
               )}
               {!monthlyNext && c.monthly.current_milestone && (
-                <div style={{ fontSize: 12, color: '#3b82f6', fontWeight: 600, marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--info)', fontWeight: 600, marginTop: 6 }}>
                   Все вехи пройдены!
                 </div>
               )}
@@ -433,22 +433,22 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 Выручка: <b style={{ color: 'var(--text)' }}>{c.monthly.revenue.toLocaleString()} сом</b>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-                Заработано: <b style={{ color: '#3b82f6' }}>+{c.monthly.earned_month.toLocaleString()} сом</b>
+                Заработано: <b style={{ color: 'var(--info)' }}>+{c.monthly.earned_month.toLocaleString()} сом</b>
               </div>
             </div>
 
             {/* Streak */}
-            <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 18 }}>
+            <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <Flame size={16} color="#f97316" />
+                <Flame size={16} color="var(--warn)" />
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Стрик</span>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: '#f97316', marginBottom: 4 }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--warn)', marginBottom: 4 }}>
                 {c.streak.days} <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)' }}>дней подряд</span>
               </div>
               {streakNext && (
                 <>
-                  <ProgressBar current={c.streak.days} target={streakNext.days} color="#f97316" />
+                  <ProgressBar current={c.streak.days} target={streakNext.days} color="var(--warn)" />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
                     <span>Цель: {streakNext.days} дней</span>
                     <span>+{streakNext.bonus} сом</span>
@@ -456,7 +456,7 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 </>
               )}
               {!streakNext && c.streak.current_milestone && (
-                <div style={{ fontSize: 12, color: '#f97316', fontWeight: 600, marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--warn)', fontWeight: 600, marginTop: 6 }}>
                   Все вехи пройдены!
                 </div>
               )}
@@ -464,7 +464,7 @@ function CashierCard({ cashier: c, config }: { cashier: CashierProgress; config:
                 Мин. продаж/день: <b style={{ color: 'var(--text)' }}>{c.streak.min_sales}</b>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-                Всего за стрик: <b style={{ color: '#f97316' }}>+{c.streak.earned_total.toLocaleString()} сом</b>
+                Всего за стрик: <b style={{ color: 'var(--warn)' }}>+{c.streak.earned_total.toLocaleString()} сом</b>
               </div>
             </div>
           </div>
@@ -512,7 +512,7 @@ function SettingsTab({
             background: config.enabled ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {config.enabled ? <Zap size={20} color="#22c55e" /> : <AlertCircle size={20} color="#ef4444" />}
+            {config.enabled ? <Zap size={20} color="var(--success)" /> : <AlertCircle size={20} color="var(--danger)" />}
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Система мотивации</div>
@@ -529,7 +529,7 @@ function SettingsTab({
         title="Дневные вехи"
         subtitle="Сбрасываются каждый день в полночь"
         icon={<Zap size={18} />}
-        iconBg="#22c55e"
+        iconBg="var(--success)"
         items={config.daily_milestones}
         field1Label="Продаж"
         field1Key="sales"
@@ -545,7 +545,7 @@ function SettingsTab({
         title="Месячные вехи"
         subtitle="Сбрасываются 1-го числа каждого месяца"
         icon={<Calendar size={18} />}
-        iconBg="#3b82f6"
+        iconBg="var(--info)"
         items={config.monthly_milestones}
         field1Label="Продаж"
         field1Key="sales"
@@ -561,7 +561,7 @@ function SettingsTab({
         title="Стрик-бонусы"
         subtitle="За непрерывные дни с минимум N продажами"
         icon={<Flame size={18} />}
-        iconBg="#f97316"
+        iconBg="var(--warn)"
         items={config.streak_milestones.map(s => ({ sales: s.days, bonus: s.bonus }))}
         field1Label="Дней подряд"
         field1Key="days"
@@ -580,7 +580,7 @@ function SettingsTab({
             background: 'rgba(249,115,22,0.15)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Target size={16} color="#f97316" />
+            <Target size={16} color="var(--warn)" />
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Минимум продаж для стрика</div>
@@ -677,9 +677,9 @@ function MilestoneEditor({
             }}
           >
             <div style={{
-              width: 28, height: 28, borderRadius: 8,
+              width: 28, height: 28, borderRadius: 10,
               background: `${iconBg}15`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: iconBg, fontSize: 12, fontWeight: 800,
+              color: iconBg, fontSize: 12, fontWeight: 700,
             }}>
               {i + 1}
             </div>
@@ -712,11 +712,11 @@ function MilestoneEditor({
               onClick={() => onRemove(i)}
               style={{
                 background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                borderRadius: 8, padding: 8, cursor: 'pointer', marginTop: 16,
+                borderRadius: 10, padding: 8, cursor: 'pointer', marginTop: 16,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <Trash2 size={14} color="#ef4444" />
+              <Trash2 size={14} color="var(--danger)" />
             </button>
           </div>
         ))}

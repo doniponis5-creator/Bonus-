@@ -14,10 +14,10 @@ import {
 
 // ─── Стили ───
 const tooltipStyle = {
-  background: '#141c2b',
-  border: '1px solid #1e293b',
+  background: 'var(--card)',
+  border: '1px solid var(--border)',
   borderRadius: 10,
-  color: '#e2eaf6',
+  color: 'var(--text)',
   fontSize: 13,
   boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
   padding: '10px 14px',
@@ -65,19 +65,19 @@ function KpiCard({ icon: Icon, label, value, sub, color = '#FFE600' }: {
 }) {
   return (
     <div style={{
-      background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14,
+      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16,
       padding: '18px 20px', display: 'flex', gap: 14, alignItems: 'center',
     }}>
       <div style={{
-        width: 44, height: 44, borderRadius: 12,
+        width: 44, height: 44, borderRadius: 10,
         background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <Icon size={22} color={color} />
       </div>
       <div>
-        <div style={{ color: '#8899aa', fontSize: 12, marginBottom: 2 }}>{label}</div>
-        <div style={{ color: '#e2eaf6', fontSize: 20, fontWeight: 700 }}>{value}</div>
-        {sub && <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 2 }}>{sub}</div>}
+        <div style={{ color: 'var(--text2)', fontSize: 12, marginBottom: 2 }}>{label}</div>
+        <div style={{ color: 'var(--text)', fontSize: 20, fontWeight: 700 }}>{value}</div>
+        {sub && <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 2 }}>{sub}</div>}
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ function Badge({ text, color }: { text: string; color: string }) {
   return (
     <span style={{
       background: color + '20', color, fontSize: 11, fontWeight: 600,
-      padding: '2px 8px', borderRadius: 6,
+      padding: '2px 8px', borderRadius: 10,
     }}>
       {text}
     </span>
@@ -101,20 +101,20 @@ function SearchBar({ value, onChange, placeholder = 'Поиск по назва�
 }) {
   return (
     <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-      <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#5e6e82' }} />
+      <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)' }} />
       <input
         type="text" value={value} onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         style={{
           width: '100%', padding: '9px 12px 9px 36px',
-          background: '#0a101e', border: '1px solid #1e293b', borderRadius: 8,
-          color: '#e2eaf6', fontSize: 13, outline: 'none',
+          background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10,
+          color: 'var(--text)', fontSize: 13, outline: 'none',
         }}
       />
       {value && (
         <button onClick={() => onChange('')} style={{
           position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-          background: 'none', border: 'none', color: '#5e6e82', cursor: 'pointer', padding: 2,
+          background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 2,
         }}>
           <X size={14} />
         </button>
@@ -130,8 +130,8 @@ function CategorySelect({ value, onChange, categories }: {
   if (!categories || categories.length === 0) return null;
   return (
     <select value={value} onChange={e => onChange(e.target.value)} style={{
-      padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
-      borderRadius: 8, color: '#e2eaf6', fontSize: 13, cursor: 'pointer', outline: 'none',
+      padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border)',
+      borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer', outline: 'none',
       minWidth: 140,
     }}>
       <option value="">Все категории</option>
@@ -146,8 +146,8 @@ function ShowMoreBtn({ shown, total, onClick }: { shown: number; total: number; 
   return (
     <div style={{ textAlign: 'center', padding: 16 }}>
       <button onClick={onClick} style={{
-        padding: '8px 24px', background: '#1e293b', border: '1px solid #334155',
-        borderRadius: 8, color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+        padding: '8px 24px', background: 'var(--border)', border: '1px solid var(--bg3)',
+        borderRadius: 10, color: 'var(--text)', cursor: 'pointer', fontSize: 13,
       }}>
         Показать ещё ({total - shown} осталось)
       </button>
@@ -253,7 +253,7 @@ export default function ProductAnalyticsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#8899aa' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text2)' }}>
         <Loader2 size={32} className="animate-spin" style={{ marginRight: 12 }} />
         Загрузка товарной аналитики...
       </div>
@@ -262,12 +262,12 @@ export default function ProductAnalyticsPage() {
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', padding: 60, color: '#ef4444' }}>
+      <div style={{ textAlign: 'center', padding: 60, color: 'var(--danger)' }}>
         <AlertTriangle size={40} style={{ marginBottom: 12 }} />
         <div>{error}</div>
         <button onClick={loadData} style={{
-          marginTop: 16, padding: '8px 20px', background: '#1e293b', border: 'none',
-          borderRadius: 8, color: '#e2eaf6', cursor: 'pointer',
+          marginTop: 16, padding: '8px 20px', background: 'var(--border)', border: 'none',
+          borderRadius: 10, color: 'var(--text)', cursor: 'pointer',
         }}>
           Повторить
         </button>
@@ -281,14 +281,14 @@ export default function ProductAnalyticsPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Package size={28} color="#FFE600" />
-          <h1 style={{ color: '#e2eaf6', fontSize: 24, fontWeight: 700, margin: 0 }}>
+          <h1 style={{ color: 'var(--text)', fontSize: 24, fontWeight: 700, margin: 0 }}>
             Товарная аналитика
           </h1>
         </div>
         <button onClick={loadData} style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '8px 16px', background: '#1e293b', border: '1px solid #334155',
-          borderRadius: 8, color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+          padding: '8px 16px', background: 'var(--border)', border: '1px solid var(--bg3)',
+          borderRadius: 10, color: 'var(--text)', cursor: 'pointer', fontSize: 13,
         }}>
           <RefreshCw size={14} /> Обновить
         </button>
@@ -297,8 +297,8 @@ export default function ProductAnalyticsPage() {
       {/* Tabs */}
       <div className="mobile-tab-bar" style={{
         display: 'flex', gap: 4, marginBottom: 24, overflowX: 'auto',
-        background: '#0a101e', borderRadius: 12, padding: 4,
-        border: '1px solid #1e293b',
+        background: 'var(--bg2)', borderRadius: 10, padding: 4,
+        border: '1px solid var(--border)',
       }}>
         {TABS.map(t => (
           <button
@@ -306,9 +306,9 @@ export default function ProductAnalyticsPage() {
             onClick={() => setTab(t.key)}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '10px 16px', border: 'none', borderRadius: 8,
-              background: tab === t.key ? '#1e293b' : 'transparent',
-              color: tab === t.key ? '#FFE600' : '#8899aa',
+              padding: '10px 16px', border: 'none', borderRadius: 10,
+              background: tab === t.key ? 'var(--border)' : 'transparent',
+              color: tab === t.key ? 'var(--accent)' : 'var(--text2)',
               cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 600 : 400,
               whiteSpace: 'nowrap', transition: 'all 0.15s',
             }}
@@ -380,22 +380,22 @@ function OverviewTab({ summary, lowStock }: { summary: any; lowStock: any }) {
       {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
         {/* Stock Status Pie */}
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20 }}>
-          <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Статус остатков</h3>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
+          <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Статус остатков</h3>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
               <Pie data={stockData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" paddingAngle={3} strokeWidth={0}>
                 {stockData.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
-              <Legend wrapperStyle={{ fontSize: 12, color: '#8899aa' }} />
+              <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text2)' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
         {/* ABC Pie */}
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20 }}>
-          <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>ABC классификация</h3>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
+          <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>ABC классификация</h3>
           {abcData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
@@ -403,11 +403,11 @@ function OverviewTab({ summary, lowStock }: { summary: any; lowStock: any }) {
                   {abcData.map((d, i) => <Cell key={i} fill={d.fill} />)}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'transparent' }} />
-                <Legend wrapperStyle={{ fontSize: 12, color: '#8899aa' }} />
+                <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text2)' }} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5e6e82' }}>
+            <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)' }}>
               Нажмите "Пересчитать ABC" в разделе ABC анализ
             </div>
           )}
@@ -416,25 +416,25 @@ function OverviewTab({ summary, lowStock }: { summary: any; lowStock: any }) {
 
       {/* Critical Alerts Preview */}
       {lowStock && lowStock.critical > 0 && (
-        <div style={{ background: '#0d1526', border: '1px solid #ef444440', borderRadius: 14, padding: 20 }}>
-          <h3 style={{ color: '#ef4444', fontSize: 15, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 16, padding: 20 }}>
+          <h3 style={{ color: 'var(--danger)', fontSize: 15, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
             <AlertTriangle size={18} /> Критические алерты ({lowStock.critical})
           </h3>
           <div style={{ display: 'grid', gap: 8 }}>
             {lowStock.alerts.filter((a: any) => a.urgency === 'critical').slice(0, 5).map((a: any, i: number) => (
               <div key={i} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: '#1a0a0a', borderRadius: 8, padding: '10px 14px',
+                background: 'rgba(239,68,68,0.08)', borderRadius: 10, padding: '10px 14px',
               }}>
                 <div>
-                  <span style={{ color: '#e2eaf6', fontSize: 13, fontWeight: 500 }}>{a.name}</span>
-                  <span style={{ color: '#5e6e82', fontSize: 11, marginLeft: 8 }}>{a.sku}</span>
+                  <span style={{ color: 'var(--text)', fontSize: 13, fontWeight: 500 }}>{a.name}</span>
+                  <span style={{ color: 'var(--text3)', fontSize: 11, marginLeft: 8 }}>{a.sku}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ color: '#ef4444', fontSize: 13, fontWeight: 600 }}>
+                  <span style={{ color: 'var(--danger)', fontSize: 13, fontWeight: 600 }}>
                     Остаток: {a.current_stock} {a.current_stock <= 0 ? '(нет!)' : ''}
                   </span>
-                  <span style={{ color: '#8899aa', fontSize: 11 }}>
+                  <span style={{ color: 'var(--text2)', fontSize: 11 }}>
                     Заказать: {a.recommended_order}
                   </span>
                 </div>
@@ -469,7 +469,7 @@ function LowStockTab({ data }: { data: any }) {
     return items;
   }, [data?.alerts, search, catFilter, urgFilter]);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -486,8 +486,8 @@ function LowStockTab({ data }: { data: any }) {
         <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} />
         <CategorySelect value={catFilter} onChange={v => { setCatFilter(v); setVisibleCount(PAGE_SIZE); }} categories={data.categories || []} />
         <select value={urgFilter} onChange={e => { setUrgFilter(e.target.value); setVisibleCount(PAGE_SIZE); }} style={{
-          padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
-          borderRadius: 8, color: '#e2eaf6', fontSize: 13, cursor: 'pointer', outline: 'none',
+          padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border)',
+          borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer', outline: 'none',
         }}>
           <option value="">Все статусы</option>
           <option value="critical">Критичные</option>
@@ -499,54 +499,54 @@ function LowStockTab({ data }: { data: any }) {
           'low-stock-alerts.csv'
         )} style={{
           display: 'flex', alignItems: 'center', gap: 4, padding: '9px 14px',
-          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
-          color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+          background: 'var(--border)', border: '1px solid var(--bg3)', borderRadius: 10,
+          color: 'var(--text)', cursor: 'pointer', fontSize: 13,
         }}>
           <Download size={14} /> Excel
         </button>
         {(search || catFilter || urgFilter) && (
-          <span style={{ color: '#8899aa', fontSize: 12 }}>Найдено: {filtered.length}</span>
+          <span style={{ color: 'var(--text2)', fontSize: 12 }}>Найдено: {filtered.length}</span>
         )}
       </div>
 
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Статус</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Товар</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Остаток</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Минимум</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Продажи/день</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Дней до 0</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Заказать</th>
+            <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Статус</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Товар</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Остаток</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Минимум</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Продажи/день</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Дней до 0</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Заказать</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((a: any, i: number) => (
-              <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
+              <tr key={i} style={{ borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <Badge text={URGENCY_LABELS[a.urgency]} color={URGENCY_COLORS[a.urgency]} />
                 </td>
                 <td style={{ padding: '10px 16px' }}>
-                  <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{a.name}</div>
-                  <div style={{ color: '#5e6e82', fontSize: 11 }}>{a.sku} {a.category ? `• ${a.category}` : ''}</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 500 }}>{a.name}</div>
+                  <div style={{ color: 'var(--text3)', fontSize: 11 }}>{a.sku} {a.category ? `• ${a.category}` : ''}</div>
                 </td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: a.current_stock <= 0 ? '#ef4444' : '#f59e0b', fontWeight: 600 }}>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: a.current_stock <= 0 ? 'var(--danger)' : 'var(--warn)', fontWeight: 600 }}>
                   {a.current_stock}
                 </td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#8899aa' }}>{a.min_stock_level}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{a.avg_daily_sales}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: a.days_until_stockout !== null && a.days_until_stockout <= 3 ? '#ef4444' : '#e2eaf6', fontWeight: 600 }}>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text2)' }}>{a.min_stock_level}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{a.avg_daily_sales}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: a.days_until_stockout !== null && a.days_until_stockout <= 3 ? 'var(--danger)' : 'var(--text)', fontWeight: 600 }}>
                   {a.days_until_stockout !== null ? `${a.days_until_stockout} дн` : '—'}
                 </td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#22c55e', fontWeight: 600 }}>{a.recommended_order}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{a.recommended_order}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#22c55e' }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--success)' }}>
             {search || catFilter || urgFilter ? 'Ничего не найдено' : 'Все товары в норме!'}
           </div>
         )}
@@ -571,7 +571,7 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
     return allSellers.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
   }, [allSellers, search]);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const chartData = allSellers.slice(0, 10).map((s: any) => ({
     name: s.name.length > 30 ? s.name.slice(0, 28) + '…' : s.name,
@@ -584,9 +584,9 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         {[7, 30, 90].map(d => (
           <button key={d} onClick={() => { setPeriod(d); reload(d); }} style={{
-            padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: period === d ? '#FFE600' : '#1e293b',
-            color: period === d ? '#0a101e' : '#8899aa', fontSize: 13, fontWeight: 500,
+            padding: '6px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
+            background: period === d ? 'var(--accent)' : 'var(--border)',
+            color: period === d ? 'var(--bg2)' : 'var(--text2)', fontSize: 13, fontWeight: 500,
           }}>
             {d} дней
           </button>
@@ -596,13 +596,13 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
       </div>
 
       {chartData.length > 0 && (
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20, marginBottom: 20 }}>
-          <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Топ-10 по выручке</h3>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+          <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Топ-10 по выручке</h3>
           <ResponsiveContainer width="100%" height={380}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-              <XAxis type="number" stroke="#5e6e82" tickFormatter={(v: number) => fmt(v)} />
-              <YAxis type="category" dataKey="name" stroke="#94a3b8" width={160} tick={{ fontSize: 12 }} />
+              <XAxis type="number" stroke="#8899aa" tickFormatter={(v: number) => fmt(v)} />
+              <YAxis type="category" dataKey="name" stroke="#8899aa" width={160} tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
               <Bar dataKey="revenue" radius={[0, 6, 6, 0]} name="Выручка" label={{ position: 'right', fill: '#FFE600', fontSize: 11, formatter: (v: number) => fmt(v) }}>
                 {chartData.map((_: any, i: number) => <Cell key={i} fill={`hsl(${50 - i * 3}, 100%, ${55 - i * 2}%)`} />)}
@@ -612,32 +612,32 @@ function TopSellersTab({ data, period, setPeriod, reload }: { data: any; period:
         </div>
       )}
 
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>#</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Товар</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Продано</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Выручка</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>В день</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Остаток</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Дней до 0</th>
+            <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>#</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Товар</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Продано</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Выручка</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>В день</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Остаток</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Дней до 0</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((s: any, i: number) => (
-              <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
-                <td style={{ padding: '10px 16px', color: '#FFE600', fontWeight: 700 }}>{i + 1}</td>
+              <tr key={i} style={{ borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
+                <td style={{ padding: '10px 16px', color: 'var(--accent)', fontWeight: 700 }}>{i + 1}</td>
                 <td style={{ padding: '10px 16px' }}>
-                  <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{s.name}</div>
-                  <div style={{ color: '#5e6e82', fontSize: 11 }}>{s.sku} {s.category ? `• ${s.category}` : ''}</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 500 }}>{s.name}</div>
+                  <div style={{ color: 'var(--text3)', fontSize: 11 }}>{s.sku} {s.category ? `• ${s.category}` : ''}</div>
                 </td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{fmt(s.total_sold)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#22c55e', fontWeight: 600 }}>{fmtMoney(s.total_revenue)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{s.avg_daily_sales}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: s.current_stock <= 5 ? '#ef4444' : '#e2eaf6' }}>{s.current_stock}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: s.days_until_stockout !== null && s.days_until_stockout <= 7 ? '#ef4444' : '#e2eaf6', fontWeight: 600 }}>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{fmt(s.total_sold)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{fmtMoney(s.total_revenue)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{s.avg_daily_sales}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: s.current_stock <= 5 ? 'var(--danger)' : 'var(--text)' }}>{s.current_stock}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: s.days_until_stockout !== null && s.days_until_stockout <= 7 ? 'var(--danger)' : 'var(--text)', fontWeight: 600 }}>
                   {s.days_until_stockout !== null ? `${s.days_until_stockout} дн` : '∞'}
                 </td>
               </tr>
@@ -671,7 +671,7 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
     return items;
   }, [allItems, search, classFilter]);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -684,7 +684,7 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div style={{ color: '#8899aa', fontSize: 13 }}>
+        <div style={{ color: 'var(--text2)', fontSize: 13 }}>
           Период: {data.period_days} дней | Общая выручка: {fmtMoney(data.total_revenue)}
         </div>
         <button onClick={async () => {
@@ -693,8 +693,8 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
           setRecalculating(false);
         }} style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '8px 16px', background: '#22c55e20', border: '1px solid #22c55e40',
-          borderRadius: 8, color: '#22c55e', cursor: 'pointer', fontSize: 13,
+          padding: '8px 16px', background: 'rgba(34,197,94,0.13)', border: '1px solid rgba(34,197,94,0.25)',
+          borderRadius: 10, color: 'var(--success)', cursor: 'pointer', fontSize: 13,
         }}>
           {recalculating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           Пересчитать ABC
@@ -706,12 +706,12 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
           {summaryData.map((s, i) => (
             <div key={i} style={{
-              background: '#0d1526', border: `1px solid ${s.fill}30`, borderRadius: 14, padding: 18,
+              background: 'var(--bg2)', border: `1px solid ${s.fill}30`, borderRadius: 16, padding: 18,
               borderLeft: `4px solid ${s.fill}`,
             }}>
               <div style={{ color: s.fill, fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{s.name}</div>
-              <div style={{ color: '#e2eaf6', fontSize: 20, fontWeight: 700 }}>{s.count} товаров</div>
-              <div style={{ color: '#8899aa', fontSize: 12, marginTop: 4 }}>Выручка: {fmtMoney(s.revenue)}</div>
+              <div style={{ color: 'var(--text)', fontSize: 20, fontWeight: 700 }}>{s.count} товаров</div>
+              <div style={{ color: 'var(--text2)', fontSize: 12, marginTop: 4 }}>Выручка: {fmtMoney(s.revenue)}</div>
             </div>
           ))}
         </div>
@@ -721,8 +721,8 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <SearchBar value={search} onChange={v => { setSearch(v); setVisibleCount(PAGE_SIZE); }} />
         <select value={classFilter} onChange={e => { setClassFilter(e.target.value); setVisibleCount(PAGE_SIZE); }} style={{
-          padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
-          borderRadius: 8, color: '#e2eaf6', fontSize: 13, cursor: 'pointer', outline: 'none',
+          padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border)',
+          borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer', outline: 'none',
         }}>
           <option value="">Все классы</option>
           <option value="A">A — Лидеры</option>
@@ -735,47 +735,47 @@ function AbcTab({ data, onRecalculate }: { data: any; onRecalculate: () => void 
           'abc-analysis.csv'
         )} style={{
           display: 'flex', alignItems: 'center', gap: 4, padding: '9px 14px',
-          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
-          color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+          background: 'var(--border)', border: '1px solid var(--bg3)', borderRadius: 10,
+          color: 'var(--text)', cursor: 'pointer', fontSize: 13,
         }}>
           <Download size={14} /> Excel
         </button>
         {(search || classFilter) && (
-          <span style={{ color: '#8899aa', fontSize: 12 }}>Найдено: {filtered.length}</span>
+          <span style={{ color: 'var(--text2)', fontSize: 12 }}>Найдено: {filtered.length}</span>
         )}
       </div>
 
       {/* Table */}
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Класс</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Товар</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Выручка</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>% от общей</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Накопительный %</th>
+            <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Класс</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Товар</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Выручка</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>% от общей</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Накопительный %</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((item: any, i: number) => (
-              <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
+              <tr key={i} style={{ borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <Badge text={item.abc_class} color={ABC_COLORS[item.abc_class] || '#8899aa'} />
                 </td>
                 <td style={{ padding: '10px 16px' }}>
-                  <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{item.name}</div>
-                  <div style={{ color: '#5e6e82', fontSize: 11 }}>{item.sku}</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 500 }}>{item.name}</div>
+                  <div style={{ color: 'var(--text3)', fontSize: 11 }}>{item.sku}</div>
                 </td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#22c55e', fontWeight: 600 }}>{fmtMoney(item.revenue)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{item.revenue_percent}%</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#8899aa' }}>{item.cumulative_percent}%</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{fmtMoney(item.revenue)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{item.revenue_percent}%</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text2)' }}>{item.cumulative_percent}%</td>
               </tr>
             ))}
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#5e6e82' }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>
             {search || classFilter ? 'Ничего не найдено' : 'Нет данных для ABC-анализа'}
           </div>
         )}
@@ -805,7 +805,7 @@ function DeadStockTab({ data }: { data: any }) {
     return items;
   }, [data?.items, search, catFilter]);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -826,44 +826,44 @@ function DeadStockTab({ data }: { data: any }) {
           'dead-stock.csv'
         )} style={{
           display: 'flex', alignItems: 'center', gap: 4, padding: '9px 14px',
-          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
-          color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+          background: 'var(--border)', border: '1px solid var(--bg3)', borderRadius: 10,
+          color: 'var(--text)', cursor: 'pointer', fontSize: 13,
         }}>
           <Download size={14} /> Excel
         </button>
         {(search || catFilter) && (
-          <span style={{ color: '#8899aa', fontSize: 12 }}>Найдено: {filtered.length}</span>
+          <span style={{ color: 'var(--text2)', fontSize: 12 }}>Найдено: {filtered.length}</span>
         )}
       </div>
 
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Товар</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Остаток</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Цена</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Заморожено</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Без продаж</th>
+            <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Товар</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Остаток</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Цена</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Заморожено</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Без продаж</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((item: any, i: number) => (
-              <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
+              <tr key={i} style={{ borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
                 <td style={{ padding: '10px 16px' }}>
-                  <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{item.name}</div>
-                  <div style={{ color: '#5e6e82', fontSize: 11 }}>{item.sku} {item.category ? `• ${item.category}` : ''}</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 500 }}>{item.name}</div>
+                  <div style={{ color: 'var(--text3)', fontSize: 11 }}>{item.sku} {item.category ? `• ${item.category}` : ''}</div>
                 </td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{item.current_stock}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#8899aa' }}>{fmtMoney(item.price)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#f59e0b', fontWeight: 600 }}>{fmtMoney(item.frozen_capital)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>{item.days_without_sale} дн</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{item.current_stock}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text2)' }}>{fmtMoney(item.price)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--warn)', fontWeight: 600 }}>{fmtMoney(item.frozen_capital)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--danger)', fontWeight: 600 }}>{item.days_without_sale} дн</td>
               </tr>
             ))}
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#22c55e' }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--success)' }}>
             {search || catFilter ? 'Ничего не найдено' : 'Dead Stock нет — отлично!'}
           </div>
         )}
@@ -889,7 +889,7 @@ function MarginsTab({ data }: { data: any }) {
     return allItems.filter((a: any) => a.name?.toLowerCase().includes(s) || a.sku?.toLowerCase().includes(s));
   }, [allItems, search]);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -908,13 +908,13 @@ function MarginsTab({ data }: { data: any }) {
       </div>
 
       {chartData.length > 0 && (
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20, marginBottom: 20 }}>
-          <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Маржа по товарам, %</h3>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+          <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Маржа по товарам, %</h3>
           <ResponsiveContainer width="100%" height={380}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 60 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-              <XAxis type="number" stroke="#5e6e82" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
-              <YAxis type="category" dataKey="name" stroke="#94a3b8" width={160} tick={{ fontSize: 12 }} />
+              <XAxis type="number" stroke="#8899aa" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
+              <YAxis type="category" dataKey="name" stroke="#8899aa" width={160} tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number, name: string) => name === 'margin' ? `${v}%` : fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
               <Bar dataKey="margin" radius={[0, 6, 6, 0]} name="Маржа %" label={{ position: 'right', fill: '#22c55e', fontSize: 11, formatter: (v: number) => `${v}%` }}>
                 {chartData.map((_: any, i: number) => <Cell key={i} fill={`hsl(${150 - i * 4}, ${70 - i * 2}%, ${50 - i * 2}%)`} />)}
@@ -933,39 +933,39 @@ function MarginsTab({ data }: { data: any }) {
           'margins.csv'
         )} style={{
           display: 'flex', alignItems: 'center', gap: 4, padding: '9px 14px',
-          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
-          color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+          background: 'var(--border)', border: '1px solid var(--bg3)', borderRadius: 10,
+          color: 'var(--text)', cursor: 'pointer', fontSize: 13,
         }}>
           <Download size={14} /> Excel
         </button>
-        {search && <span style={{ color: '#8899aa', fontSize: 12 }}>Найдено: {filtered.length}</span>}
+        {search && <span style={{ color: 'var(--text2)', fontSize: 12 }}>Найдено: {filtered.length}</span>}
       </div>
 
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Товар</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Цена</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Себестоимость</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Продано</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Выручка</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Прибыль</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Маржа</th>
+            <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Товар</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Цена</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Себестоимость</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Продано</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Выручка</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Прибыль</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Маржа</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((m: any, i: number) => (
-              <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
+              <tr key={i} style={{ borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
                 <td style={{ padding: '10px 16px' }}>
-                  <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{m.name}</div>
-                  <div style={{ color: '#5e6e82', fontSize: 11 }}>{m.sku}</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 500 }}>{m.name}</div>
+                  <div style={{ color: 'var(--text3)', fontSize: 11 }}>{m.sku}</div>
                 </td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{fmtMoney(m.price)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#8899aa' }}>{fmtMoney(m.cost_price)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{fmt(m.total_sold)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{fmtMoney(m.total_revenue)}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#22c55e', fontWeight: 600 }}>{fmtMoney(m.total_profit)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{fmtMoney(m.price)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text2)' }}>{fmtMoney(m.cost_price)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{fmt(m.total_sold)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{fmtMoney(m.total_revenue)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{fmtMoney(m.total_profit)}</td>
                 <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                   <Badge text={`${m.margin_percent}%`} color={m.margin_percent >= 30 ? '#22c55e' : m.margin_percent >= 15 ? '#f59e0b' : '#ef4444'} />
                 </td>
@@ -974,7 +974,7 @@ function MarginsTab({ data }: { data: any }) {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#5e6e82' }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>
             {search ? 'Ничего не найдено' : 'Нет данных о маржинальности'}
           </div>
         )}
@@ -990,45 +990,45 @@ function MarginsTab({ data }: { data: any }) {
 // ═══════════════════════════════════════════
 
 function CrossSellTab({ data }: { data: any }) {
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   return (
     <>
-      <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+      <div style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 16 }}>
         Период: {data.period_days} дней | Всего чеков: {fmt(data.total_receipts)}
       </div>
 
       <div style={{ display: 'grid', gap: 12 }}>
         {(data.pairs || []).map((p: any, i: number) => (
           <div key={i} style={{
-            background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14,
+            background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16,
             padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ color: '#FFE600', fontSize: 18, fontWeight: 700 }}>#{i + 1}</div>
+              <div style={{ color: 'var(--accent)', fontSize: 18, fontWeight: 700 }}>#{i + 1}</div>
               <div>
-                <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 500 }}>
-                  {p.product_a_name} <span style={{ color: '#5e6e82', margin: '0 6px' }}>+</span> {p.product_b_name}
+                <div style={{ color: 'var(--text)', fontSize: 14, fontWeight: 500 }}>
+                  {p.product_a_name} <span style={{ color: 'var(--text3)', margin: '0 6px' }}>+</span> {p.product_b_name}
                 </div>
-                <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 4 }}>
+                <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 4 }}>
                   {p.product_a_sku} + {p.product_b_sku}
                 </div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: '#22c55e', fontSize: 18, fontWeight: 700 }}>{p.times_bought_together}</div>
-                <div style={{ color: '#5e6e82', fontSize: 10 }}>раз вместе</div>
+                <div style={{ color: 'var(--success)', fontSize: 18, fontWeight: 700 }}>{p.times_bought_together}</div>
+                <div style={{ color: 'var(--text3)', fontSize: 10 }}>раз вместе</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ color: '#3b82f6', fontSize: 14, fontWeight: 600 }}>{(p.confidence * 100).toFixed(1)}%</div>
-                <div style={{ color: '#5e6e82', fontSize: 10 }}>от всех чеков</div>
+                <div style={{ color: 'var(--info)', fontSize: 14, fontWeight: 600 }}>{(p.confidence * 100).toFixed(1)}%</div>
+                <div style={{ color: 'var(--text3)', fontSize: 10 }}>от всех чеков</div>
               </div>
             </div>
           </div>
         ))}
         {(data.pairs || []).length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#5e6e82', background: '#0d1526', borderRadius: 14 }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', background: 'var(--bg2)', borderRadius: 16 }}>
             Недостаточно данных. Нужно больше чеков с несколькими товарами.
           </div>
         )}
@@ -1116,7 +1116,7 @@ function AllProductsTab({ data }: { data: any }) {
     return { count: filtered.length, stock, value, costValue };
   }, [filtered]);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -1161,8 +1161,8 @@ function AllProductsTab({ data }: { data: any }) {
         <CategorySelect value={category} onChange={v => { setCategory(v); setVisibleCount(PAGE_SIZE); }} categories={categories} />
         <button onClick={handleExport} style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '9px 16px', background: '#166534', border: '1px solid #22c55e40',
-          borderRadius: 8, color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+          padding: '9px 16px', background: 'var(--success)', border: '1px solid rgba(34,197,94,0.25)',
+          borderRadius: 10, color: 'var(--text)', cursor: 'pointer', fontSize: 13,
         }}>
           <Download size={14} /> Excel ({filtered.length})
         </button>
@@ -1170,12 +1170,12 @@ function AllProductsTab({ data }: { data: any }) {
 
       {/* Table */}
       <div style={{
-        background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden',
+        background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden',
       }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #1e293b' }}>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th style={{ ...thStyle, width: 48 }}>№</th>
                 <th style={{ ...thStyle, cursor: 'pointer' }} onClick={() => toggleSort('name')}>
                   Название {sortIcon('name')}
@@ -1197,40 +1197,40 @@ function AllProductsTab({ data }: { data: any }) {
             <tbody>
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#5e6e82' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>
                     {search || category ? 'Ничего не найдено' : 'Нет товаров'}
                   </td>
                 </tr>
               )}
               {visible.map((p: any, i: number) => {
-                const stockColor = p.current_stock <= 0 ? '#ef4444' :
-                  (p.min_stock_level > 0 && p.current_stock <= p.min_stock_level) ? '#f59e0b' : '#e2eaf6';
+                const stockColor = p.current_stock <= 0 ? 'var(--danger)' :
+                  (p.min_stock_level > 0 && p.current_stock <= p.min_stock_level) ? 'var(--warn)' : 'var(--text)';
                 return (
                   <tr key={p.id} style={{
-                    borderBottom: '1px solid #1e293b15',
-                    background: i % 2 === 0 ? 'transparent' : '#0a101e40',
+                    borderBottom: '1px solid rgba(30,41,59,0.5)',
+                    background: i % 2 === 0 ? 'transparent' : 'rgba(10,15,26,0.35)',
                   }}>
-                    <td style={{ ...tdStyle, color: '#5e6e82' }}>{i + 1}</td>
+                    <td style={{ ...tdStyle, color: 'var(--text3)' }}>{i + 1}</td>
                     <td style={{ ...tdStyle, fontWeight: 500, maxWidth: 300 }}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.name}
                       </div>
                     </td>
-                    <td style={{ ...tdStyle, color: '#8899aa', fontFamily: 'monospace', fontSize: 12 }}>
+                    <td style={{ ...tdStyle, color: 'var(--text2)', fontFamily: 'monospace', fontSize: 12 }}>
                       {p.sku || '—'}
                     </td>
-                    <td style={{ ...tdStyle, color: '#8899aa' }}>{p.category || '—'}</td>
+                    <td style={{ ...tdStyle, color: 'var(--text2)' }}>{p.category || '—'}</td>
                     <td style={{ ...tdStyle, textAlign: 'right', color: stockColor, fontWeight: 600 }}>
                       {fmt(p.current_stock)}
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>
                       {fmtMoney(p.price)}
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'right', color: p.cost_price ? '#e2eaf6' : '#5e6e82' }}>
+                    <td style={{ ...tdStyle, textAlign: 'right', color: p.cost_price ? 'var(--text)' : 'var(--text3)' }}>
                       {p.cost_price ? fmtMoney(p.cost_price) : '—'}
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      {p.abc_class ? <Badge text={p.abc_class} color={ABC_COLORS[p.abc_class] || '#5e6e82'} /> : '—'}
+                      {p.abc_class ? <Badge text={p.abc_class} color={ABC_COLORS[p.abc_class] || '#8899aa'} /> : '—'}
                     </td>
                   </tr>
                 );
@@ -1238,17 +1238,17 @@ function AllProductsTab({ data }: { data: any }) {
             </tbody>
             {filtered.length > 0 && (
               <tfoot>
-                <tr style={{ borderTop: '2px solid #1e293b', background: '#0a101e' }}>
-                  <td colSpan={4} style={{ ...tdStyle, fontWeight: 700, color: '#FFE600', fontSize: 12, textTransform: 'uppercase' }}>
+                <tr style={{ borderTop: '2px solid var(--border)', background: 'var(--bg2)' }}>
+                  <td colSpan={4} style={{ ...tdStyle, fontWeight: 700, color: 'var(--accent)', fontSize: 12, textTransform: 'uppercase' }}>
                     Итого: {fmt(totals.count)} товаров
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#22c55e' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>
                     {fmt(totals.stock)} шт
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#FFE600' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: 'var(--accent)' }}>
                     {fmtMoney(Math.round(totals.value))}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: 'var(--warn)' }}>
                     {fmtMoney(Math.round(totals.costValue))}
                   </td>
                   <td style={tdStyle} />
@@ -1264,13 +1264,13 @@ function AllProductsTab({ data }: { data: any }) {
 }
 
 const thStyle: React.CSSProperties = {
-  padding: '12px 14px', textAlign: 'left', color: '#8899aa',
+  padding: '12px 14px', textAlign: 'left', color: 'var(--text2)',
   fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
   whiteSpace: 'nowrap', userSelect: 'none',
 };
 
 const tdStyle: React.CSSProperties = {
-  padding: '10px 14px', color: '#e2eaf6', whiteSpace: 'nowrap',
+  padding: '10px 14px', color: 'var(--text)', whiteSpace: 'nowrap',
 };
 
 
@@ -1284,7 +1284,7 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
   const [reloading, setReloading] = useState(false);
 
   if (!data) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#8899aa' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text2)' }}>
       <Loader2 size={24} className="animate-spin" style={{ marginRight: 10 }} />
       Анализ товаров...
     </div>
@@ -1313,16 +1313,16 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            background: 'linear-gradient(135deg, #FFE600 0%, #ff9500 100%)',
+            background: 'var(--accent)',
             borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8,
           }}>
-            <Zap size={18} color="#0a101e" />
-            <span style={{ color: '#0a101e', fontWeight: 700, fontSize: 14 }}>SMART AI</span>
+            <Zap size={18} color="#0a0f1a" />
+            <span style={{ color: 'var(--on-accent)', fontWeight: 700, fontSize: 14 }}>SMART AI</span>
           </div>
-          <span style={{ color: '#8899aa', fontSize: 13 }}>
+          <span style={{ color: 'var(--text2)', fontSize: 13 }}>
             {data.total_recommendations} рекомендаций
             {data.critical_count > 0 && (
-              <span style={{ color: '#ef4444', marginLeft: 8, fontWeight: 600 }}>
+              <span style={{ color: 'var(--danger)', marginLeft: 8, fontWeight: 600 }}>
                 ({data.critical_count} критичных)
               </span>
             )}
@@ -1330,8 +1330,8 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
         </div>
         <button onClick={handleReload} disabled={reloading} style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '8px 16px', background: '#1e293b', border: '1px solid #334155',
-          borderRadius: 8, color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+          padding: '8px 16px', background: 'var(--border)', border: '1px solid var(--bg3)',
+          borderRadius: 10, color: 'var(--text)', cursor: 'pointer', fontSize: 13,
           opacity: reloading ? 0.6 : 1,
         }}>
           <RefreshCw size={14} className={reloading ? 'animate-spin' : ''} />
@@ -1343,18 +1343,18 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
       <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
         {sections.map(sec => (
           <button key={sec.key} onClick={() => setActiveSection(sec.key)} style={{
-            padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
-            background: activeSection === sec.key ? '#FFE60020' : '#0d1526',
-            color: activeSection === sec.key ? '#FFE600' : '#8899aa',
+            padding: '8px 16px', borderRadius: 16, cursor: 'pointer',
+            background: activeSection === sec.key ? 'var(--accent-dim)' : 'var(--bg2)',
+            color: activeSection === sec.key ? 'var(--accent)' : 'var(--text2)',
             fontSize: 13, fontWeight: activeSection === sec.key ? 600 : 400,
-            border: activeSection === sec.key ? '1px solid #FFE60040' : '1px solid #1e293b',
+            border: activeSection === sec.key ? '1px solid var(--accent-border)' : '1px solid var(--border)',
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             {sec.label}
             <span style={{
-              background: sec.count > 0 ? (activeSection === sec.key ? '#FFE60030' : '#1e293b') : '#1e293b',
+              background: sec.count > 0 ? (activeSection === sec.key ? 'rgba(255,230,0,0.2)' : 'var(--border)') : 'var(--border)',
               padding: '1px 7px', borderRadius: 10, fontSize: 11,
-              color: sec.count > 0 ? '#FFE600' : '#5e6e82',
+              color: sec.count > 0 ? 'var(--accent)' : 'var(--text3)',
             }}>
               {sec.count || 0}
             </span>
@@ -1380,36 +1380,36 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
           {/* Frozen Capital Card */}
           {frozen.frozen_30_days > 0 && (
             <div style={{
-              background: 'linear-gradient(135deg, #1a0a0a 0%, #0d1526 100%)',
-              border: '1px solid #ef444430', borderRadius: 14, padding: 20, marginBottom: 20,
+              background: 'var(--bg2)',
+              border: '1px solid rgba(239,68,68,0.2)', borderRadius: 16, padding: 20, marginBottom: 20,
             }}>
-              <h3 style={{ color: '#ef4444', fontSize: 15, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ color: 'var(--danger)', fontSize: 15, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <AlertTriangle size={18} /> Замороженный капитал
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <div>
-                  <div style={{ color: '#5e6e82', fontSize: 11 }}>Весь склад</div>
-                  <div style={{ color: '#e2eaf6', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.total_inventory_value || 0)}</div>
+                  <div style={{ color: 'var(--text3)', fontSize: 11 }}>Весь склад</div>
+                  <div style={{ color: 'var(--text)', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.total_inventory_value || 0)}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#5e6e82', fontSize: 11 }}>Заморожено 30+ дн</div>
-                  <div style={{ color: '#f59e0b', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.frozen_30_days || 0)}</div>
+                  <div style={{ color: 'var(--text3)', fontSize: 11 }}>Заморожено 30+ дн</div>
+                  <div style={{ color: 'var(--warn)', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.frozen_30_days || 0)}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#5e6e82', fontSize: 11 }}>Заморожено 60+ дн</div>
-                  <div style={{ color: '#ef4444', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.frozen_60_days || 0)}</div>
+                  <div style={{ color: 'var(--text3)', fontSize: 11 }}>Заморожено 60+ дн</div>
+                  <div style={{ color: 'var(--danger)', fontSize: 18, fontWeight: 700 }}>{fmtMoney(frozen.frozen_60_days || 0)}</div>
                 </div>
               </div>
               {(frozen.recovery_plan || []).map((plan: any, i: number) => (
                 <div key={i} style={{
-                  background: '#0a101e', borderRadius: 8, padding: '10px 14px', marginBottom: 8,
+                  background: 'var(--bg2)', borderRadius: 10, padding: '10px 14px', marginBottom: 8,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
                   <div>
-                    <div style={{ color: '#e2eaf6', fontSize: 13 }}>{plan.action}</div>
-                    <div style={{ color: '#5e6e82', fontSize: 11 }}>{plan.products_count} товаров</div>
+                    <div style={{ color: 'var(--text)', fontSize: 13 }}>{plan.action}</div>
+                    <div style={{ color: 'var(--text3)', fontSize: 11 }}>{plan.products_count} товаров</div>
                   </div>
-                  <div style={{ color: '#22c55e', fontSize: 14, fontWeight: 600 }}>
+                  <div style={{ color: 'var(--success)', fontSize: 14, fontWeight: 600 }}>
                     +{fmtMoney(plan.potential_recovery || 0)}
                   </div>
                 </div>
@@ -1420,12 +1420,12 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
           {/* Quick Actions */}
           {data.total_recommendations === 0 && (
             <div style={{
-              background: '#0d1526', border: '1px solid #22c55e30', borderRadius: 14,
+              background: 'var(--bg2)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 16,
               padding: 40, textAlign: 'center',
             }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>&#10003;</div>
-              <div style={{ color: '#22c55e', fontSize: 16, fontWeight: 600 }}>Всё в порядке!</div>
-              <div style={{ color: '#8899aa', fontSize: 13, marginTop: 6 }}>
+              <div style={{ fontSize: 26, marginBottom: 12 }}>&#10003;</div>
+              <div style={{ color: 'var(--success)', fontSize: 16, fontWeight: 600 }}>Всё в порядке!</div>
+              <div style={{ color: 'var(--text2)', fontSize: 13, marginTop: 6 }}>
                 Нет критичных рекомендаций. Система проанализирует данные после поступления продаж.
               </div>
             </div>
@@ -1434,7 +1434,7 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
           {/* Top-3 urgent from each category */}
           {(data.slow_movers || []).slice(0, 3).length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <h3 style={{ color: '#f59e0b', fontSize: 14, fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <h3 style={{ color: 'var(--warn)', fontSize: 14, fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <AlertTriangle size={16} /> Срочные действия
               </h3>
               {(data.slow_movers || []).slice(0, 3).map((item: any, i: number) => (
@@ -1448,7 +1448,7 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
       {/* Combos Section */}
       {activeSection === 'combos' && (
         <>
-          <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+          <div style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 16 }}>
             Товары которые часто покупают вместе. Создайте комплект со скидкой для увеличения среднего чека.
           </div>
           {(data.combos || []).length === 0 ? (
@@ -1457,8 +1457,8 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
             <div style={{ display: 'grid', gap: 12 }}>
               {(data.combos || []).map((combo: any, i: number) => (
                 <div key={i} style={{
-                  background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 18,
-                  borderLeft: `4px solid ${combo.priority === 'high' ? '#22c55e' : '#3b82f6'}`,
+                  background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 18,
+                  borderLeft: `4px solid ${combo.priority === 'high' ? 'var(--success)' : 'var(--info)'}`,
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                     <div>
@@ -1466,30 +1466,30 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
                         <Badge text={`#${i + 1}`} color="#FFE600" />
                         <Badge text={`${combo.times_together}x вместе`} color="#22c55e" />
                       </div>
-                      <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600 }}>
+                      <div style={{ color: 'var(--text)', fontSize: 14, fontWeight: 600 }}>
                         {combo.product_a.name}
                       </div>
-                      <div style={{ color: '#5e6e82', fontSize: 12, margin: '4px 0' }}>+</div>
-                      <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600 }}>
+                      <div style={{ color: 'var(--text3)', fontSize: 12, margin: '4px 0' }}>+</div>
+                      <div style={{ color: 'var(--text)', fontSize: 14, fontWeight: 600 }}>
                         {combo.product_b.name}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', minWidth: 140 }}>
-                      <div style={{ color: '#5e6e82', fontSize: 11 }}>По отдельности</div>
-                      <div style={{ color: '#8899aa', fontSize: 14, textDecoration: 'line-through' }}>{fmtMoney(combo.total_price)}</div>
-                      <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 6 }}>Комплект (-5%)</div>
-                      <div style={{ color: '#22c55e', fontSize: 18, fontWeight: 700 }}>{fmtMoney(combo.combo_price_5pct)}</div>
-                      <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 2 }}>или -10%: {fmtMoney(combo.combo_price_10pct)}</div>
+                      <div style={{ color: 'var(--text3)', fontSize: 11 }}>По отдельности</div>
+                      <div style={{ color: 'var(--text2)', fontSize: 14, textDecoration: 'line-through' }}>{fmtMoney(combo.total_price)}</div>
+                      <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 6 }}>Комплект (-5%)</div>
+                      <div style={{ color: 'var(--success)', fontSize: 18, fontWeight: 700 }}>{fmtMoney(combo.combo_price_5pct)}</div>
+                      <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 2 }}>или -10%: {fmtMoney(combo.combo_price_10pct)}</div>
                     </div>
                   </div>
                   <div style={{
-                    background: '#0a101e', borderRadius: 8, padding: '10px 14px',
+                    background: 'var(--bg2)', borderRadius: 10, padding: '10px 14px',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   }}>
-                    <div style={{ color: '#FFE600', fontSize: 12, fontWeight: 500 }}>
+                    <div style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 500 }}>
                       {combo.action}
                     </div>
-                    <div style={{ color: '#5e6e82', fontSize: 11 }}>
+                    <div style={{ color: 'var(--text3)', fontSize: 11 }}>
                       Потенциал: +{fmtMoney(combo.potential_revenue)}
                     </div>
                   </div>
@@ -1503,7 +1503,7 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
       {/* Slow Movers Section */}
       {activeSection === 'slow' && (
         <>
-          <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+          <div style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 16 }}>
             Товары с падающими или остановившимися продажами. Рекомендуем акции и скидки.
           </div>
           {(data.slow_movers || []).length === 0 ? (
@@ -1533,7 +1533,7 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
       {/* Rising Stars Section */}
       {activeSection === 'rising' && (
         <>
-          <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+          <div style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 16 }}>
             Товары с растущим спросом. Увеличьте запасы, чтобы не упустить продажи!
           </div>
           {(data.rising_stars || []).length === 0 ? (
@@ -1542,8 +1542,8 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
             <div style={{ display: 'grid', gap: 10 }}>
               {(data.rising_stars || []).map((star: any, i: number) => (
                 <div key={i} style={{
-                  background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 16,
-                  borderLeft: `4px solid ${star.priority === 'high' ? '#ef4444' : '#22c55e'}`,
+                  background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 16,
+                  borderLeft: `4px solid ${star.priority === 'high' ? 'var(--danger)' : 'var(--success)'}`,
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -1553,25 +1553,25 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
                           <Badge text={`${star.days_until_stockout} дн до 0!`} color="#ef4444" />
                         )}
                       </div>
-                      <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600 }}>{star.name}</div>
-                      <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 2 }}>{star.sku} {star.category ? '• ' + star.category : ''}</div>
+                      <div style={{ color: 'var(--text)', fontSize: 14, fontWeight: 600 }}>{star.name}</div>
+                      <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 2 }}>{star.sku} {star.category ? '• ' + star.category : ''}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: '#5e6e82', fontSize: 11 }}>Продажи/день</div>
+                      <div style={{ color: 'var(--text3)', fontSize: 11 }}>Продажи/день</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: '#8899aa', fontSize: 13 }}>{star.avg_daily_full}</span>
+                        <span style={{ color: 'var(--text2)', fontSize: 13 }}>{star.avg_daily_full}</span>
                         <TrendingUp size={14} color="#22c55e" />
-                        <span style={{ color: '#22c55e', fontSize: 15, fontWeight: 700 }}>{star.avg_daily_recent}</span>
+                        <span style={{ color: 'var(--success)', fontSize: 15, fontWeight: 700 }}>{star.avg_daily_recent}</span>
                       </div>
-                      <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 4 }}>
+                      <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 4 }}>
                         Остаток: {star.current_stock} шт
                         {star.days_until_stockout && <span> ({star.days_until_stockout} дн)</span>}
                       </div>
                     </div>
                   </div>
                   <div style={{
-                    background: '#0a101e', borderRadius: 8, padding: '8px 12px', marginTop: 10,
-                    color: '#FFE600', fontSize: 12, fontWeight: 500,
+                    background: 'var(--bg2)', borderRadius: 10, padding: '8px 12px', marginTop: 10,
+                    color: 'var(--accent)', fontSize: 12, fontWeight: 500,
                   }}>
                     {star.action}
                   </div>
@@ -1585,38 +1585,38 @@ function SmartAITab({ data, reload }: { data: any; reload: () => void }) {
       {/* Margin Alerts Section */}
       {activeSection === 'margins' && (
         <>
-          <div style={{ color: '#8899aa', fontSize: 13, marginBottom: 16 }}>
+          <div style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 16 }}>
             Товары с подозрительно низкой маржой. Возможно, нужно скорректировать цены.
           </div>
           {(data.margin_alerts || []).length === 0 ? (
             <EmptyState text="Все товары с нормальной маржой." />
           ) : (
-            <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Товар</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Цена</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Себест.</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Маржа</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Рекоменд. цена</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Упущено</th>
+                  <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Товар</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Цена</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Себест.</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Маржа</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Рекоменд. цена</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Упущено</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(data.margin_alerts || []).map((m: any, i: number) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
                       <td style={{ padding: '10px 16px' }}>
-                        <div style={{ color: '#e2eaf6', fontWeight: 500 }}>{m.name}</div>
-                        <div style={{ color: '#5e6e82', fontSize: 11 }}>{m.sku}</div>
+                        <div style={{ color: 'var(--text)', fontWeight: 500 }}>{m.name}</div>
+                        <div style={{ color: 'var(--text3)', fontSize: 11 }}>{m.sku}</div>
                       </td>
-                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{fmtMoney(m.price)}</td>
-                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#8899aa' }}>{fmtMoney(m.cost_price)}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{fmtMoney(m.price)}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text2)' }}>{fmtMoney(m.cost_price)}</td>
                       <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                         <Badge text={`${m.margin_percent}%`} color={m.margin_percent < 5 ? '#ef4444' : '#f59e0b'} />
                       </td>
-                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#22c55e', fontWeight: 600 }}>{fmtMoney(m.suggested_price)}</td>
-                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>{fmtMoney(m.lost_profit)}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{fmtMoney(m.suggested_price)}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--danger)', fontWeight: 600 }}>{fmtMoney(m.lost_profit)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1641,7 +1641,7 @@ function ActionCard({ item, showPrice }: { item: any; showPrice?: boolean }) {
 
   return (
     <div style={{
-      background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 16,
+      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 16,
       borderLeft: `4px solid ${color}`,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1649,33 +1649,33 @@ function ActionCard({ item, showPrice }: { item: any; showPrice?: boolean }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <Badge text={priorityLabels[item.priority] || item.priority} color={color} />
             {item.days_without_sale && (
-              <span style={{ color: '#5e6e82', fontSize: 11 }}>
+              <span style={{ color: 'var(--text3)', fontSize: 11 }}>
                 {item.days_without_sale} дн без продаж
               </span>
             )}
           </div>
-          <div style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600 }}>{item.name}</div>
-          <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 2 }}>
+          <div style={{ color: 'var(--text)', fontSize: 14, fontWeight: 600 }}>{item.name}</div>
+          <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 2 }}>
             {item.sku} {item.category ? '• ' + item.category : ''}
           </div>
         </div>
         <div style={{ textAlign: 'right', minWidth: 130 }}>
-          <div style={{ color: '#5e6e82', fontSize: 11 }}>Заморожено</div>
-          <div style={{ color: '#f59e0b', fontSize: 16, fontWeight: 700 }}>{fmtMoney(item.frozen_capital || 0)}</div>
+          <div style={{ color: 'var(--text3)', fontSize: 11 }}>Заморожено</div>
+          <div style={{ color: 'var(--warn)', fontSize: 16, fontWeight: 700 }}>{fmtMoney(item.frozen_capital || 0)}</div>
           {showPrice && item.suggested_price && (
             <>
-              <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 6 }}>Скидка → цена</div>
+              <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 6 }}>Скидка → цена</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                <span style={{ color: '#8899aa', fontSize: 12, textDecoration: 'line-through' }}>{fmtMoney(item.current_price)}</span>
-                <span style={{ color: '#22c55e', fontSize: 14, fontWeight: 600 }}>{fmtMoney(item.suggested_price)}</span>
+                <span style={{ color: 'var(--text2)', fontSize: 12, textDecoration: 'line-through' }}>{fmtMoney(item.current_price)}</span>
+                <span style={{ color: 'var(--success)', fontSize: 14, fontWeight: 600 }}>{fmtMoney(item.suggested_price)}</span>
               </div>
             </>
           )}
         </div>
       </div>
       <div style={{
-        background: '#0a101e', borderRadius: 8, padding: '8px 12px', marginTop: 10,
-        color: '#FFE600', fontSize: 12, fontWeight: 500,
+        background: 'var(--bg2)', borderRadius: 10, padding: '8px 12px', marginTop: 10,
+        color: 'var(--accent)', fontSize: 12, fontWeight: 500,
       }}>
         {item.action}
       </div>
@@ -1687,11 +1687,11 @@ function ActionCard({ item, showPrice }: { item: any; showPrice?: boolean }) {
 function EmptyState({ text }: { text: string }) {
   return (
     <div style={{
-      background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14,
+      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16,
       padding: 40, textAlign: 'center',
     }}>
-      <Package size={32} color="#5e6e82" style={{ marginBottom: 12 }} />
-      <div style={{ color: '#8899aa', fontSize: 14 }}>{text}</div>
+      <Package size={32} color="#8899aa" style={{ marginBottom: 12 }} />
+      <div style={{ color: 'var(--text2)', fontSize: 14 }}>{text}</div>
     </div>
   );
 }
@@ -1707,7 +1707,7 @@ function SettingsTab({ data, onSave }: { data: any; onSave: (params: any) => voi
 
   useEffect(() => { if (data) setForm(data); }, [data]);
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const handleSave = async () => {
     setSaving(true);
@@ -1723,27 +1723,27 @@ function SettingsTab({ data, onSave }: { data: any; onSave: (params: any) => voi
   };
 
   const inputStyle = {
-    background: '#0a101e', border: '1px solid #1e293b', borderRadius: 8,
-    padding: '10px 14px', color: '#e2eaf6', fontSize: 14, width: '100%',
+    background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10,
+    padding: '10px 14px', color: 'var(--text)', fontSize: 14, width: '100%',
     outline: 'none',
   };
 
-  const labelStyle = { color: '#8899aa', fontSize: 12, marginBottom: 6, display: 'block' as const };
+  const labelStyle = { color: 'var(--text2)', fontSize: 12, marginBottom: 6, display: 'block' as const };
 
   return (
     <div style={{ maxWidth: 600 }}>
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 24 }}>
-        <h3 style={{ color: '#e2eaf6', fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Настройки товарной аналитики</h3>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24 }}>
+        <h3 style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Настройки товарной аналитики</h3>
 
         <div style={{ display: 'grid', gap: 20 }}>
           {/* Alert enabled */}
           <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
             <input type="checkbox" checked={form.low_stock_alert_enabled || false}
               onChange={e => setForm({ ...form, low_stock_alert_enabled: e.target.checked })}
-              style={{ width: 18, height: 18, accentColor: '#FFE600' }} />
+              style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
             <div>
-              <div style={{ color: '#e2eaf6', fontSize: 14 }}>Алерты при низком остатке</div>
-              <div style={{ color: '#5e6e82', fontSize: 12 }}>Автоматические уведомления когда товар заканчивается</div>
+              <div style={{ color: 'var(--text)', fontSize: 14 }}>Алерты при низком остатке</div>
+              <div style={{ color: 'var(--text3)', fontSize: 12 }}>Автоматические уведомления когда товар заканчивается</div>
             </div>
           </label>
 
@@ -1751,10 +1751,10 @@ function SettingsTab({ data, onSave }: { data: any; onSave: (params: any) => voi
           <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
             <input type="checkbox" checked={form.daily_digest_enabled || false}
               onChange={e => setForm({ ...form, daily_digest_enabled: e.target.checked })}
-              style={{ width: 18, height: 18, accentColor: '#FFE600' }} />
+              style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
             <div>
-              <div style={{ color: '#e2eaf6', fontSize: 14 }}>Ежедневный дайджест</div>
-              <div style={{ color: '#5e6e82', fontSize: 12 }}>Утренний отчёт по товарам в WhatsApp/Telegram</div>
+              <div style={{ color: 'var(--text)', fontSize: 14 }}>Ежедневный дайджест</div>
+              <div style={{ color: 'var(--text3)', fontSize: 12 }}>Утренний отчёт по товарам в WhatsApp/Telegram</div>
             </div>
           </label>
 
@@ -1764,7 +1764,7 @@ function SettingsTab({ data, onSave }: { data: any; onSave: (params: any) => voi
             <input type="number" value={form.reorder_days || 14} min={1} max={90}
               onChange={e => setForm({ ...form, reorder_days: parseInt(e.target.value) || 14 })}
               style={inputStyle} />
-            <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 4 }}>
+            <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 4 }}>
               Рекомендация заказа = средние продажи/день x кол-во дней
             </div>
           </div>
@@ -1799,7 +1799,7 @@ function SettingsTab({ data, onSave }: { data: any; onSave: (params: any) => voi
 
         <button onClick={handleSave} disabled={saving} style={{
           marginTop: 24, width: '100%', padding: '12px 0',
-          background: '#FFE600', color: '#0a101e', border: 'none',
+          background: 'var(--accent)', color: 'var(--bg2)', border: 'none',
           borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer',
           opacity: saving ? 0.6 : 1,
         }}>

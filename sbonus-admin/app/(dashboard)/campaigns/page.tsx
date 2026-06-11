@@ -6,10 +6,10 @@ import { adminAPI, customersAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 
 const STATUS_LABEL: Record<string, { text: string; color: string; bg: string }> = {
-  pending:    { text: 'Ожидает',     color: '#ffb347', bg: '#ffb34718' },
-  processing: { text: 'Обработка',   color: '#00b8d4', bg: '#00b8d418' },
-  sent:       { text: 'Отправлено',  color: '#22c55e', bg: '#22c55e18' },
-  cancelled:  { text: 'Отменено',    color: '#ff4d4d', bg: '#ff4d4d18' },
+  pending:    { text: 'Ожидает',     color: 'var(--warn)', bg: 'rgba(245,158,11,0.12)' },
+  processing: { text: 'Обработка',   color: 'var(--info)', bg: 'rgba(59,130,246,0.12)' },
+  sent:       { text: 'Отправлено',  color: 'var(--success)', bg: 'rgba(34,197,94,0.12)' },
+  cancelled:  { text: 'Отменено',    color: 'var(--danger)', bg: 'rgba(239,68,68,0.12)' },
 };
 
 export default function CampaignsPage() {
@@ -131,71 +131,71 @@ export default function CampaignsPage() {
 
   return (
     <div>
-      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800, marginBottom: 24, flexWrap: 'wrap' as any }}>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 700, marginBottom: 24, flexWrap: 'wrap' as any }}>
         <Gift size={24} /> Бонусные кампании
       </h1>
 
       {/* Список */}
-      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>
+      <div style={{ overflowX: 'auto', background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16, marginBottom: 32 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
               {['Название', 'Дата', 'Сумма', 'Цель', 'Получатели', 'Статус', 'Действия'].map(h => (
-                <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+                <th key={h} style={{ padding: '14px 16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 12 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>
                 <Loader2 className="animate-spin" style={{ marginRight: 8, display: 'inline' }} size={16} /> Загрузка...
               </td></tr>
             )}
             {!loading && items.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Кампаний пока нет</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>Кампаний пока нет</td></tr>
             )}
             {!loading && items.map(c => {
               const st = STATUS_LABEL[c.status] || STATUS_LABEL.pending;
               return (
                 <tr key={c.id}>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 600, color: '#e2eaf6' }}>
-                    <Link href={`/campaigns/${c.id}`} style={{ color: '#FFE600' }}>{c.name}</Link>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                    <Link href={`/campaigns/${c.id}`} style={{ color: 'var(--accent)' }}>{c.name}</Link>
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text)' }}>
                     {new Date(c.bonus_date).toLocaleDateString('ru-RU')}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: c.campaign_type === 'wheel' ? '#c084fc' : '#FFE600' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 700, color: c.campaign_type === 'wheel' ? 'var(--violet)' : 'var(--accent)' }}>
                     {c.campaign_type === 'wheel' ? (
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Disc size={14} /> Спин</span>
                     ) : (
                       <>+{Number(c.amount).toLocaleString('ru-RU')} сом</>
                     )}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12, color: 'var(--text2)' }}>
                     {c.target_type === 'all' ? 'Все клиенты' : 'Индивидуально'}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text)' }}>
                     {c.sent_count} / {c.recipients_count || '—'}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
-                    <span style={{ background: st.bg, color: st.color, padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700 }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
+                    <span style={{ background: st.bg, color: st.color, padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                       {st.text}
                     </span>
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12 }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {c.status === 'pending' && (
                         <>
                           <button onClick={() => onSendNow(c.id, c.name)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Send size={12} /> Сейчас
                           </button>
-                          <button onClick={() => onCancel(c.id)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 12, color: '#ff4d4d' }}>
+                          <button onClick={() => onCancel(c.id)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 12, color: 'var(--danger)' }}>
                             Отменить
                           </button>
                         </>
                       )}
                       {(c.status === 'pending' || c.status === 'cancelled') && (
-                        <button onClick={() => onDelete(c.id)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: 12, color: '#ff4d4d' }}>
+                        <button onClick={() => onDelete(c.id)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: 12, color: 'var(--danger)' }}>
                           <Trash2 size={12} />
                         </button>
                       )}
@@ -216,44 +216,44 @@ export default function CampaignsPage() {
         <form onSubmit={onCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Campaign type */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Тип кампании *</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Тип кампании *</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={() => { setCampaignType('bonus'); setTemplate('Здравствуйте, {name}! Вам начислен бонус +{amount} сом. Баланс: {balance} сом.'); }}
-                className="btn btn-secondary" style={{ flex: 1, background: campaignType === 'bonus' ? 'rgba(255,230,0,0.15)' : undefined, color: campaignType === 'bonus' ? '#FFE600' : undefined, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                className="btn btn-secondary" style={{ flex: 1, background: campaignType === 'bonus' ? 'rgba(255,230,0,0.15)' : undefined, color: campaignType === 'bonus' ? 'var(--accent)' : undefined, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Gift size={14} /> Бонусы
               </button>
               <button type="button" onClick={() => { setCampaignType('wheel'); setTemplate('Здравствуйте, {name}! Вам подарен бесплатный спин Колеса удачи! Испытайте удачу и выиграйте бонусы!\n{link}'); }}
-                className="btn btn-secondary" style={{ flex: 1, background: campaignType === 'wheel' ? 'rgba(192,132,252,0.15)' : undefined, color: campaignType === 'wheel' ? '#c084fc' : undefined, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                className="btn btn-secondary" style={{ flex: 1, background: campaignType === 'wheel' ? 'rgba(192,132,252,0.15)' : undefined, color: campaignType === 'wheel' ? 'var(--violet)' : undefined, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Disc size={14} /> Колесо удачи
               </button>
             </div>
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Название *</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Название *</label>
             <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder={campaignType === 'wheel' ? 'Колесо удачи — акция' : 'Новогодний бонус 2026'} required />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: campaignType === 'wheel' ? '1fr' : '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Дата отправки *</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Дата отправки *</label>
               <input className="input" type="date" value={bonusDate} onChange={e => setBonusDate(e.target.value)} required />
             </div>
             {campaignType === 'bonus' && (
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (сом) *</label>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Сумма бонуса (сом) *</label>
                 <input className="input" type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="200" required />
               </div>
             )}
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сабаб / Повод (для админ-инфо)</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Сабаб / Повод (для админ-инфо)</label>
             <input className="input" value={reason} onChange={e => setReason(e.target.value)} placeholder="Новый год / 8 марта / Юбилей" />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>
               WhatsApp шаблон (плейсхолдеры: {'{name} {amount} {balance} {link}'})
             </label>
             {/* Quick templates */}
@@ -270,9 +270,9 @@ export default function CampaignsPage() {
               ]).map(t => (
                 <button key={t.label} type="button" onClick={() => setTemplate(t.text)}
                   style={{
-                    padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    padding: '4px 10px', borderRadius: 10, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     background: template === t.text ? 'rgba(255,230,0,0.2)' : 'rgba(255,255,255,0.06)',
-                    color: template === t.text ? '#FFE600' : '#8899aa',
+                    color: template === t.text ? 'var(--accent)' : 'var(--text2)',
                   }}>
                   {t.label}
                 </button>
@@ -283,10 +283,10 @@ export default function CampaignsPage() {
             {template && (
               <div style={{
                 marginTop: 8, padding: '12px 14px', borderRadius: 10,
-                background: '#075E54', color: '#e2eaf6', fontSize: 13, lineHeight: 1.5,
+                background: 'var(--bg3)', color: 'var(--text)', fontSize: 13, lineHeight: 1.5,
                 whiteSpace: 'pre-wrap', position: 'relative',
               }}>
-                <div style={{ fontSize: 10, color: '#25D366', fontWeight: 700, marginBottom: 4 }}>Предпросмотр WhatsApp:</div>
+                <div style={{ fontSize: 10, color: 'var(--success)', fontWeight: 700, marginBottom: 4 }}>Предпросмотр WhatsApp:</div>
                 {template
                   .replace(/\{name\}/g, 'Алексей')
                   .replace(/\{amount\}/g, campaignType === 'wheel' ? '1 спин' : (amount || '200'))
@@ -297,19 +297,19 @@ export default function CampaignsPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Цель *</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Цель *</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => setTargetType('all')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'all' ? 'rgba(255,230,0,0.15)' : undefined, color: targetType === 'all' ? '#FFE600' : undefined, fontWeight: 700 }}>
+              <button type="button" onClick={() => setTargetType('all')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'all' ? 'rgba(255,230,0,0.15)' : undefined, color: targetType === 'all' ? 'var(--accent)' : undefined, fontWeight: 700 }}>
                 Все клиенты
               </button>
-              <button type="button" onClick={() => setTargetType('individual')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'individual' ? 'rgba(255,230,0,0.15)' : undefined, color: targetType === 'individual' ? '#FFE600' : undefined, fontWeight: 700 }}>
+              <button type="button" onClick={() => setTargetType('individual')} className="btn btn-secondary" style={{ flex: 1, background: targetType === 'individual' ? 'rgba(255,230,0,0.15)' : undefined, color: targetType === 'individual' ? 'var(--accent)' : undefined, fontWeight: 700 }}>
                 Индивидуально
               </button>
             </div>
           </div>
 
           {targetType === 'individual' && (
-            <div style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 12, padding: 12 }}>
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 10, padding: 12 }}>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 <input className="input" placeholder="Поиск: ФИО или телефон" value={search} onChange={e => setSearch(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } }}
@@ -322,20 +322,20 @@ export default function CampaignsPage() {
               {searchResults.length > 0 && (
                 <div style={{ marginBottom: 12, maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {searchResults.map(c => (
-                    <div key={c.id} onClick={() => addSelected(c)} style={{ padding: '8px 10px', borderRadius: 8, fontSize: 13, color: '#e2eaf6', background: '#1c2a3a', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
+                    <div key={c.id} onClick={() => addSelected(c)} style={{ padding: '8px 10px', borderRadius: 10, fontSize: 13, color: 'var(--text)', background: 'var(--bg3)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
                       <span>{c.full_name}</span>
-                      <span style={{ color: '#8899aa' }}>{c.phone}</span>
+                      <span style={{ color: 'var(--text2)' }}>{c.phone}</span>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div style={{ fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Выбрано: {selected.length}</div>
+              <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Выбрано: {selected.length}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {selected.map(s => (
-                  <div key={s.id} style={{ background: 'rgba(255,230,0,0.12)', color: '#FFE600', padding: '4px 10px', borderRadius: 100, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div key={s.id} style={{ background: 'rgba(255,230,0,0.12)', color: 'var(--accent)', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {s.name}
-                    <button type="button" onClick={() => removeSelected(s.id)} style={{ background: 'none', border: 'none', color: '#FFE600', cursor: 'pointer', padding: 0 }}>×</button>
+                    <button type="button" onClick={() => removeSelected(s.id)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0 }}>×</button>
                   </div>
                 ))}
               </div>

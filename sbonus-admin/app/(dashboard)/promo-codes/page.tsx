@@ -32,24 +32,24 @@ export default function PromoCodesPage() {
 
   return (
     <div>
-      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24, flexWrap: 'wrap' as any }}><Ticket size={24} /> Промокоды</h1>
+      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 700, marginBottom: 24, flexWrap: 'wrap' as any }}><Ticket size={24} /> Промокоды</h1>
 
       {/* Таблица промокодов */}
-      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>
+      <div style={{ overflowX: 'auto', background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16, marginBottom: 32 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
               {['Код', 'Бонус', 'Использовано', 'Лимит', 'Истекает', 'Статус', 'Создан'].map(h => (
-                <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+                <th key={h} style={{ padding: '14px 16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 12 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}><Loader2 className="animate-spin" style={{marginRight: 8, display: 'inline'}} size={16} /> Загрузка...</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}><Loader2 className="animate-spin" style={{marginRight: 8, display: 'inline'}} size={16} /> Загрузка...</td></tr>
             )}
             {!loading && items.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Промокодов нет</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>Промокодов нет</td></tr>
             )}
             {!loading && items.map(p => {
               const exhausted = p.used_count >= p.max_uses;
@@ -57,31 +57,31 @@ export default function PromoCodesPage() {
               const inactive = !p.is_active || exhausted || expired;
               return (
                 <tr key={p.id}>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#FFE600' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>
                     {p.code}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#e2eaf6' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
                     +{Number(p.bonus_amount).toLocaleString('ru-RU')} сом
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text)' }}>
                     {p.used_count}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>
                     {p.max_uses}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12, color: 'var(--text2)' }}>
                     {p.expires_at ? new Date(p.expires_at).toLocaleDateString('ru-RU') : '∞'}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
                     <span style={{
-                      background: inactive ? '#ff4d4d18' : '#22c55e18',
-                      color: inactive ? '#ff4d4d' : '#22c55e',
-                      padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700,
+                      background: inactive ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
+                      color: inactive ? 'var(--danger)' : 'var(--success)',
+                      padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
                     }}>
                       {exhausted ? 'Исчерпан' : expired ? 'Истёк' : p.is_active ? 'Активен' : 'Отключён'}
                     </span>
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12, color: 'var(--text2)' }}>
                     {new Date(p.created_at).toLocaleDateString('ru-RU')}
                   </td>
                 </tr>
@@ -127,21 +127,21 @@ export default function PromoCodesPage() {
           style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
         >
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Код *</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Код *</label>
             <input className="input" name="code" placeholder="BONUS500" required style={{ textTransform: 'uppercase' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Сумма бонуса (сом) *</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Сумма бонуса (сом) *</label>
               <input className="input" name="amount" type="number" min="1" placeholder="500" required />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Лимит использований</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Лимит использований</label>
               <input className="input" name="max" type="number" min="1" placeholder="100" />
             </div>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Истекает (необязательно)</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Истекает (необязательно)</label>
             <input className="input" name="expires" type="datetime-local" />
           </div>
           <button className="btn btn-primary" type="submit" disabled={saving} style={{ marginTop: 4 }}>

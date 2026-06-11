@@ -62,10 +62,10 @@ export default function DebtDetailPage() {
     <div style={{ padding: '0 0 40px', maxWidth: 480, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()} aria-label="Назад" style={{ background: 'var(--card-strong)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer', width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <ArrowLeft size={20} />
+        <button onClick={() => router.back()} aria-label="Назад" className="tap" style={{ background: 'var(--card-strong)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer', width: 36, height: 36, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <ArrowLeft size={17} />
         </button>
-        <span style={{ fontSize: 17, fontWeight: 700 }}>Рассрочка</span>
+        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>Рассрочка</span>
       </div>
 
       {/* ── HERO: остаток + прогресс ── */}

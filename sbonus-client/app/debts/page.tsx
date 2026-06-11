@@ -42,20 +42,20 @@ export default function DebtsPage() {
   return (
     <div style={{ padding: '0 0 24px', maxWidth: 480, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', padding: 0 }}>
-          <ArrowLeft size={20} />
+      <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={() => router.back()} aria-label="Назад" className="tap" style={{ background: 'var(--card-strong)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer', width: 36, height: 36, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <ArrowLeft size={17} />
         </button>
-        <span className="h2" style={{ margin: 0 }}>Рассрочки</span>
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-3)', background: 'var(--card)', padding: '3px 10px', borderRadius: 999 }}>
-          {data.count} шт.
+        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>Рассрочки</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-3)', background: 'var(--card)', border: '1px solid var(--border)', padding: '3px 10px', borderRadius: 999 }}>
+          {data.count}
         </span>
       </div>
 
       {/* Summary */}
       <div style={{ margin: '0 16px 16px', background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)' }}>
         <div style={{ textAlign: 'center', marginBottom: 12 }}>
-          <p className="label" style={{ margin: '0 0 4px' }}>Общий долг</p>
+          <p className="label" style={{ margin: '0 0 4px' }}>Остаток по рассрочкам</p>
           <p className="display numeric" style={{ color: 'var(--text)', margin: 0 }}>
             {data.total_debt.toLocaleString('ru-RU')} <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-3)' }}>сом</span>
           </p>
@@ -63,7 +63,7 @@ export default function DebtsPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           <StatMini label="Всего" value={data.total_original} />
           <StatMini label="Оплачено" value={data.total_paid} color="var(--success)" />
-          <StatMini label="Остаток" value={data.total_debt} color="var(--danger)" />
+          <StatMini label="Остаток" value={data.total_debt} />
         </div>
         {/* Overall progress */}
         <div style={{ marginTop: 12 }}>

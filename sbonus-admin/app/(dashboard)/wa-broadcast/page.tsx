@@ -53,13 +53,13 @@ const SEGMENT_ICONS: Record<string, any> = {
 };
 
 const SEGMENT_COLORS: Record<string, string> = {
-  all: '#60a5fa',
+  all: '#3b82f6',
   sleeping: '#f59e0b',
-  vip: '#a855f7',
+  vip: '#8b5cf6',
   new: '#22c55e',
-  birthday: '#f472b6',
-  high_balance: '#ffd60a',
-  low_balance: '#fb923c',
+  birthday: '#ec4899',
+  high_balance: '#FFE600',
+  low_balance: '#f59e0b',
 };
 
 const VARIABLES = [
@@ -80,7 +80,7 @@ function TabButton({ active, onClick, icon: Icon, label }: {
       display: 'flex', alignItems: 'center', gap: 8,
       padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: active ? 700 : 500,
       background: active ? 'rgba(37,211,102,0.1)' : 'transparent',
-      color: active ? '#25d366' : '#8899aa',
+      color: active ? 'var(--success)' : 'var(--text2)',
       border: `1px solid ${active ? 'rgba(37,211,102,0.25)' : 'transparent'}`,
       cursor: 'pointer', transition: 'all 0.2s',
     }}>
@@ -93,17 +93,17 @@ function SegmentCard({ seg, selected, onClick }: {
   seg: Segment; selected: boolean; onClick: () => void;
 }) {
   const Icon = SEGMENT_ICONS[seg.id] || Users;
-  const color = SEGMENT_COLORS[seg.id] || '#60a5fa';
+  const color = SEGMENT_COLORS[seg.id] || '#3b82f6';
   return (
     <div onClick={onClick} style={{
-      padding: '14px 16px', borderRadius: 14, cursor: 'pointer',
-      background: selected ? `${color}11` : '#0d1117',
-      border: `1.5px solid ${selected ? `${color}44` : '#1c2a3a'}`,
+      padding: '14px 16px', borderRadius: 16, cursor: 'pointer',
+      background: selected ? `${color}11` : 'var(--bg2)',
+      border: `1.5px solid ${selected ? `${color}44` : 'var(--bg3)'}`,
       transition: 'all 0.2s', minWidth: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         <div style={{
-          width: 32, height: 32, borderRadius: 8,
+          width: 32, height: 32, borderRadius: 10,
           background: `${color}18`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
@@ -113,8 +113,8 @@ function SegmentCard({ seg, selected, onClick }: {
           {seg.name}
         </div>
       </div>
-      <div style={{ fontSize: 11, color: '#556677', marginBottom: 8 }}>{seg.description}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color }}>{seg.count.toLocaleString()}</div>
+      <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>{seg.description}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color }}>{seg.count.toLocaleString()}</div>
     </div>
   );
 }
@@ -125,9 +125,9 @@ function ToggleSwitch({ checked, onChange, label, description, icon: Icon }: {
   return (
     <div onClick={() => onChange(!checked)} style={{
       display: 'flex', alignItems: 'center', gap: 14,
-      padding: '16px 18px', borderRadius: 14,
+      padding: '16px 18px', borderRadius: 16,
       background: checked ? 'rgba(37,211,102,0.06)' : 'rgba(136,153,170,0.04)',
-      border: `1px solid ${checked ? 'rgba(37,211,102,0.2)' : '#1c2a3a'}`,
+      border: `1px solid ${checked ? 'rgba(37,211,102,0.2)' : 'var(--bg3)'}`,
       cursor: 'pointer', transition: 'all 0.2s',
     }}>
       <div style={{
@@ -135,19 +135,19 @@ function ToggleSwitch({ checked, onChange, label, description, icon: Icon }: {
         background: checked ? 'rgba(37,211,102,0.12)' : 'rgba(136,153,170,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
-        <Icon size={18} color={checked ? '#25d366' : '#556677'} />
+        <Icon size={18} color={checked ? 'var(--success)' : 'var(--text3)'} />
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
-        <div style={{ fontSize: 12, color: '#556677', marginTop: 2 }}>{description}</div>
+        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{description}</div>
       </div>
       <div style={{
-        width: 44, height: 24, borderRadius: 12,
-        background: checked ? '#25d366' : '#2a3444',
+        width: 44, height: 24, borderRadius: 10,
+        background: checked ? 'var(--success)' : 'var(--bg3)',
         position: 'relative', transition: 'background 0.2s', flexShrink: 0,
       }}>
         <div style={{
-          width: 18, height: 18, borderRadius: 9,
+          width: 18, height: 18, borderRadius: 10,
           background: '#fff', position: 'absolute', top: 3,
           left: checked ? 23 : 3, transition: 'left 0.2s',
           boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
@@ -261,17 +261,17 @@ export default function WABroadcastPage() {
 
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 24, fontWeight: 800 }}>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 24, fontWeight: 700 }}>
           <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: 'linear-gradient(135deg, #25d366 0%, #128c7e 100%)',
+            width: 40, height: 40, borderRadius: 10,
+            background: 'var(--success)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <MessageCircle size={20} color="#fff" />
           </div>
           Рассылки WhatsApp
         </h1>
-        <p style={{ color: '#556677', fontSize: 13, marginTop: 6 }}>
+        <p style={{ color: 'var(--text3)', fontSize: 13, marginTop: 6 }}>
           Сегментные рассылки и автоматические триггеры
         </p>
       </div>
@@ -287,14 +287,14 @@ export default function WABroadcastPage() {
         <>
           {/* Segments */}
           <div style={{
-            background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16,
+            background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16,
             padding: 24, marginBottom: 20,
           }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>
               Выберите сегмент
             </h3>
             {loadingSegs ? (
-              <div style={{ padding: 24, textAlign: 'center', color: '#556677' }}>
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--text3)' }}>
                 <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
               </div>
             ) : (
@@ -322,10 +322,10 @@ export default function WABroadcastPage() {
           {/* Threshold (if needed) */}
           {needsThreshold && (
             <div style={{
-              background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16,
+              background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16,
               padding: 24, marginBottom: 20,
             }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#8899aa', marginBottom: 8, display: 'block' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 8, display: 'block' }}>
                 Порог баланса (сом)
               </label>
               <input
@@ -335,8 +335,8 @@ export default function WABroadcastPage() {
                 placeholder={selectedSeg === 'high_balance' ? '5000' : '1000'}
                 style={{
                   width: '100%', padding: '10px 14px', maxWidth: 200,
-                  background: '#0a0f18', border: '1px solid #1c2a3a', borderRadius: 10,
-                  color: '#e2eaf6', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+                  background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 10,
+                  color: 'var(--text)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
                 }}
               />
             </div>
@@ -344,7 +344,7 @@ export default function WABroadcastPage() {
 
           {/* Message editor */}
           <div style={{
-            background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16,
+            background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16,
             padding: 24, marginBottom: 20,
           }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>
@@ -357,13 +357,13 @@ export default function WABroadcastPage() {
                   onClick={() => setMessage((m) => m + v.key)}
                   title={v.desc}
                   style={{
-                    padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
-                    background: 'rgba(37,211,102,0.08)', color: '#25d366',
+                    padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                    background: 'rgba(37,211,102,0.08)', color: 'var(--success)',
                     border: '1px solid rgba(37,211,102,0.2)', cursor: 'pointer',
                   }}
                 >
                   {v.key}
-                  <span style={{ color: '#556677', fontWeight: 400, marginLeft: 4 }}>{v.desc}</span>
+                  <span style={{ color: 'var(--text3)', fontWeight: 400, marginLeft: 4 }}>{v.desc}</span>
                 </button>
               ))}
             </div>
@@ -375,16 +375,16 @@ export default function WABroadcastPage() {
               maxLength={2000}
               style={{
                 width: '100%', padding: '12px 14px', boxSizing: 'border-box',
-                background: '#0a0f18', border: '1px solid #1c2a3a', borderRadius: 12,
-                color: '#e2eaf6', fontSize: 14, outline: 'none', resize: 'vertical',
+                background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 10,
+                color: 'var(--text)', fontSize: 14, outline: 'none', resize: 'vertical',
                 lineHeight: 1.6, fontFamily: 'inherit',
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-              <span style={{ fontSize: 11, color: '#556677' }}>
+              <span style={{ fontSize: 11, color: 'var(--text3)' }}>
                 Используйте переменные для персонализации
               </span>
-              <span style={{ fontSize: 11, color: message.length > 1800 ? '#ef4444' : '#556677' }}>
+              <span style={{ fontSize: 11, color: message.length > 1800 ? 'var(--danger)' : 'var(--text3)' }}>
                 {message.length} / 2000
               </span>
             </div>
@@ -397,8 +397,8 @@ export default function WABroadcastPage() {
               disabled={loadingPreview || !selectedSeg || !message.trim()}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 600,
-                background: 'rgba(37,211,102,0.1)', color: '#25d366',
+                padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+                background: 'rgba(37,211,102,0.1)', color: 'var(--success)',
                 border: '1px solid rgba(37,211,102,0.2)',
                 cursor: !selectedSeg || !message.trim() ? 'not-allowed' : 'pointer',
                 opacity: !selectedSeg || !message.trim() ? 0.4 : 1,
@@ -414,7 +414,7 @@ export default function WABroadcastPage() {
           {/* Preview result */}
           {preview && (
             <div style={{
-              background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16,
+              background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16,
               padding: 24, marginBottom: 20,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 , flexWrap: 'wrap', gap: 12 }}>
@@ -422,8 +422,8 @@ export default function WABroadcastPage() {
                   Предпросмотр
                 </h3>
                 <div style={{
-                  padding: '4px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-                  background: 'rgba(37,211,102,0.1)', color: '#25d366',
+                  padding: '4px 12px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                  background: 'rgba(37,211,102,0.1)', color: 'var(--success)',
                 }}>
                   {preview.total} получателей
                 </div>
@@ -431,13 +431,13 @@ export default function WABroadcastPage() {
 
               {/* Example message */}
               <div style={{
-                padding: '16px', borderRadius: 12, marginBottom: 16,
+                padding: '16px', borderRadius: 10, marginBottom: 16,
                 background: 'rgba(37,211,102,0.04)', border: '1px solid rgba(37,211,102,0.12)',
               }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#25d366', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--success)', marginBottom: 8 }}>
                   Пример сообщения:
                 </div>
-                <div style={{ fontSize: 14, color: '#e2eaf6', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                   {preview.example_message}
                 </div>
               </div>
@@ -445,21 +445,21 @@ export default function WABroadcastPage() {
               {/* Customer list */}
               {preview.preview.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: '#8899aa', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>
                     Первые {preview.preview.length} из {preview.total}:
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {preview.preview.map((c, i) => (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '8px 12px', borderRadius: 8,
+                        padding: '8px 12px', borderRadius: 10,
                         background: i % 2 === 0 ? 'rgba(136,153,170,0.03)' : 'transparent',
                       }}>
                         <div>
-                          <span style={{ fontSize: 13, color: '#e2eaf6', fontWeight: 500 }}>{c.full_name}</span>
-                          <span style={{ fontSize: 12, color: '#556677', marginLeft: 8 }}>{c.phone}</span>
+                          <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{c.full_name}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text3)', marginLeft: 8 }}>{c.phone}</span>
                         </div>
-                        <span style={{ fontSize: 13, color: '#ffd60a', fontWeight: 600 }}>
+                        <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
                           {c.balance?.toLocaleString()} сом
                         </span>
                       </div>
@@ -474,8 +474,8 @@ export default function WABroadcastPage() {
                   onClick={() => setConfirmSend(true)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '12px 28px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-                    background: 'linear-gradient(135deg, #25d366 0%, #128c7e 100%)',
+                    padding: '12px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                    background: 'var(--success)',
                     color: '#fff', border: 'none', cursor: 'pointer',
                   }}
                 >
@@ -483,17 +483,17 @@ export default function WABroadcastPage() {
                 </button>
               ) : (
                 <div style={{
-                  padding: '16px', borderRadius: 12,
+                  padding: '16px', borderRadius: 10,
                   background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <AlertTriangle size={18} color="#ef4444" />
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#ef4444' }}>
+                    <AlertTriangle size={18} color="var(--danger)" />
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--danger)' }}>
                       Подтвердите отправку
                     </span>
                   </div>
-                  <p style={{ fontSize: 13, color: '#8899aa', marginBottom: 14 }}>
-                    Сообщение будет отправлено <strong style={{ color: '#e2eaf6' }}>{preview.total}</strong> клиентам через WhatsApp. Это действие нельзя отменить.
+                  <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 14 }}>
+                    Сообщение будет отправлено <strong style={{ color: 'var(--text)' }}>{preview.total}</strong> клиентам через WhatsApp. Это действие нельзя отменить.
                   </p>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button
@@ -502,7 +502,7 @@ export default function WABroadcastPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '10px 24px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-                        background: '#ef4444', color: '#fff', border: 'none',
+                        background: 'var(--danger)', color: '#fff', border: 'none',
                         cursor: sending ? 'not-allowed' : 'pointer',
                         opacity: sending ? 0.6 : 1,
                       }}
@@ -516,8 +516,8 @@ export default function WABroadcastPage() {
                       onClick={() => setConfirmSend(false)}
                       style={{
                         padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                        background: 'transparent', color: '#8899aa',
-                        border: '1px solid #1c2a3a', cursor: 'pointer',
+                        background: 'transparent', color: 'var(--text2)',
+                        border: '1px solid var(--bg3)', cursor: 'pointer',
                       }}
                     >
                       Отмена
@@ -534,14 +534,14 @@ export default function WABroadcastPage() {
       {tab === 'triggers' && (
         <>
           {loadingTriggers ? (
-            <div style={{ padding: 48, textAlign: 'center', color: '#556677' }}>
+            <div style={{ padding: 48, textAlign: 'center', color: 'var(--text3)' }}>
               <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
             </div>
           ) : (
             <>
               {/* Sleeping trigger */}
               <div style={{
-                background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16,
+                background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16,
                 padding: 24, marginBottom: 20,
               }}>
                 <ToggleSwitch
@@ -555,7 +555,7 @@ export default function WABroadcastPage() {
                 {triggers.sleeping_enabled && (
                   <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14, paddingLeft: 54 }}>
                     <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#8899aa', marginBottom: 6, display: 'block' }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6, display: 'block' }}>
                         Дней без покупок
                       </label>
                       <input
@@ -566,13 +566,13 @@ export default function WABroadcastPage() {
                         max={365}
                         style={{
                           width: 100, padding: '8px 12px',
-                          background: '#0a0f18', border: '1px solid #1c2a3a', borderRadius: 8,
-                          color: '#e2eaf6', fontSize: 14, outline: 'none',
+                          background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 10,
+                          color: 'var(--text)', fontSize: 14, outline: 'none',
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#8899aa', marginBottom: 6, display: 'block' }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6, display: 'block' }}>
                         Шаблон сообщения
                       </label>
                       <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -581,8 +581,8 @@ export default function WABroadcastPage() {
                             key={v.key}
                             onClick={() => setTriggers((t) => ({ ...t, sleeping_template: t.sleeping_template + v.key }))}
                             style={{
-                              padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600,
-                              background: 'rgba(37,211,102,0.08)', color: '#25d366',
+                              padding: '3px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                              background: 'rgba(37,211,102,0.08)', color: 'var(--success)',
                               border: '1px solid rgba(37,211,102,0.2)', cursor: 'pointer',
                             }}
                           >
@@ -596,15 +596,15 @@ export default function WABroadcastPage() {
                         rows={3}
                         style={{
                           width: '100%', padding: '10px 14px', boxSizing: 'border-box',
-                          background: '#0a0f18', border: '1px solid #1c2a3a', borderRadius: 10,
-                          color: '#e2eaf6', fontSize: 13, outline: 'none', resize: 'vertical',
+                          background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 10,
+                          color: 'var(--text)', fontSize: 13, outline: 'none', resize: 'vertical',
                           lineHeight: 1.5, fontFamily: 'inherit',
                         }}
                       />
                     </div>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 6,
-                      fontSize: 12, color: '#556677',
+                      fontSize: 12, color: 'var(--text3)',
                     }}>
                       <Clock size={12} /> Отправляется ежедневно в 11:00
                     </div>
@@ -614,7 +614,7 @@ export default function WABroadcastPage() {
 
               {/* Birthday trigger */}
               <div style={{
-                background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16,
+                background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16,
                 padding: 24, marginBottom: 20,
               }}>
                 <ToggleSwitch
@@ -628,7 +628,7 @@ export default function WABroadcastPage() {
                 {triggers.birthday_enabled && (
                   <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14, paddingLeft: 54 }}>
                     <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#8899aa', marginBottom: 6, display: 'block' }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6, display: 'block' }}>
                         Шаблон поздравления
                       </label>
                       <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -637,8 +637,8 @@ export default function WABroadcastPage() {
                             key={v.key}
                             onClick={() => setTriggers((t) => ({ ...t, birthday_template: t.birthday_template + v.key }))}
                             style={{
-                              padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600,
-                              background: 'rgba(37,211,102,0.08)', color: '#25d366',
+                              padding: '3px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                              background: 'rgba(37,211,102,0.08)', color: 'var(--success)',
                               border: '1px solid rgba(37,211,102,0.2)', cursor: 'pointer',
                             }}
                           >
@@ -652,15 +652,15 @@ export default function WABroadcastPage() {
                         rows={3}
                         style={{
                           width: '100%', padding: '10px 14px', boxSizing: 'border-box',
-                          background: '#0a0f18', border: '1px solid #1c2a3a', borderRadius: 10,
-                          color: '#e2eaf6', fontSize: 13, outline: 'none', resize: 'vertical',
+                          background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 10,
+                          color: 'var(--text)', fontSize: 13, outline: 'none', resize: 'vertical',
                           lineHeight: 1.5, fontFamily: 'inherit',
                         }}
                       />
                     </div>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 6,
-                      fontSize: 12, color: '#556677',
+                      fontSize: 12, color: 'var(--text3)',
                     }}>
                       <Clock size={12} /> Отправляется ежедневно в 09:30
                     </div>
@@ -672,14 +672,8 @@ export default function WABroadcastPage() {
               <button
                 onClick={handleSaveTriggers}
                 disabled={savingTriggers}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '12px 28px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-                  background: 'linear-gradient(135deg, #ffd60a 0%, #ff9500 100%)',
-                  color: '#000', border: 'none',
-                  cursor: savingTriggers ? 'not-allowed' : 'pointer',
-                  opacity: savingTriggers ? 0.6 : 1,
-                }}
+                className="btn btn-primary"
+                style={{ padding: '12px 28px' }}
               >
                 {savingTriggers
                   ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />

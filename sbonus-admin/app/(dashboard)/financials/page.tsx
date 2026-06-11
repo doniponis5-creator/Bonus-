@@ -12,8 +12,8 @@ import {
 } from 'recharts';
 
 const tooltipStyle = {
-  background: '#141c2b', border: '1px solid #1e293b', borderRadius: 10,
-  color: '#e2eaf6', fontSize: 13, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+  background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10,
+  color: 'var(--text)', fontSize: 13, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
   padding: '10px 14px',
 };
 const fmt = (v: number) => Number(v).toLocaleString('ru-RU');
@@ -26,19 +26,19 @@ const fmtShort = (v: number) => {
 
 const CATEGORY_COLORS: Record<string, string> = {
   rent: '#ef4444', salary: '#f59e0b', utilities: '#3b82f6', transport: '#8b5cf6',
-  marketing: '#ec4899', equipment: '#14b8a6', supplies: '#f97316', taxes: '#6366f1',
-  insurance: '#06b6d4', communication: '#84cc16', maintenance: '#a855f7', other: '#64748b',
+  marketing: '#ec4899', equipment: '#06b6d4', supplies: '#f59e0b', taxes: '#3b82f6',
+  insurance: '#06b6d4', communication: '#84cc16', maintenance: '#8b5cf6', other: '#8899aa',
   'Аренда': '#ef4444', 'Зарплата': '#f59e0b', 'Коммунальные': '#3b82f6', 'Транспорт': '#8b5cf6',
-  'Маркетинг': '#ec4899', 'Оборудование': '#14b8a6', 'Расходные материалы': '#f97316', 'Налоги': '#6366f1',
-  'Страхование': '#06b6d4', 'Связь/Интернет': '#84cc16', 'Ремонт': '#a855f7', 'Прочие': '#64748b',
+  'Маркетинг': '#ec4899', 'Оборудование': '#06b6d4', 'Расходные материалы': '#f59e0b', 'Налоги': '#3b82f6',
+  'Страхование': '#06b6d4', 'Связь/Интернет': '#84cc16', 'Ремонт': '#8b5cf6', 'Прочие': '#8899aa',
 };
 
 // Dynamic color palette for free-text categories
 const DYNAMIC_PALETTE = [
   '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899',
-  '#14b8a6', '#f97316', '#6366f1', '#06b6d4', '#84cc16',
-  '#a855f7', '#e11d48', '#0ea5e9', '#d946ef', '#22c55e',
-  '#fb923c', '#38bdf8', '#c084fc', '#facc15', '#2dd4bf',
+  '#06b6d4', '#f59e0b', '#3b82f6', '#06b6d4', '#84cc16',
+  '#8b5cf6', '#ef4444', '#3b82f6', '#ec4899', '#22c55e',
+  '#f59e0b', '#3b82f6', '#8b5cf6', '#FFE600', '#06b6d4',
 ];
 const getCategoryColor = (cat: string, index: number) =>
   CATEGORY_COLORS[cat] || DYNAMIC_PALETTE[index % DYNAMIC_PALETTE.length];
@@ -165,7 +165,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
 
   if (checking) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#080e1a' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg)' }}>
         <Loader2 size={32} color="#FFE600" style={{ animation: 'spin 1s linear infinite' }} />
       </div>
     );
@@ -177,7 +177,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh', background: '#080e1a', padding: '20px',
+      minHeight: '100vh', background: 'var(--bg)', padding: '20px',
     }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -191,7 +191,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-        .pin-digit:active { transform: scale(0.9); background: #1e293b !important; }
+        .pin-digit:active { transform: scale(0.9); background: var(--border) !important; }
         @media (max-width: 480px) {
           .pin-container { padding: 16px !important; }
           .pin-digit { width: 64px !important; height: 64px !important; font-size: 24px !important; }
@@ -199,7 +199,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
       `}</style>
 
       <div className="pin-container" style={{
-        background: '#0d1526', border: '1px solid #1e293b', borderRadius: 24,
+        background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16,
         padding: '40px 32px', maxWidth: 380, width: '100%',
         animation: 'fadeInUp 0.4s ease-out',
       }}>
@@ -207,24 +207,24 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{
             width: 72, height: 72, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #FFE600 0%, #f59e0b 100%)',
+            background: 'var(--accent)',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 8px 32px rgba(255,230,0,0.2)',
           }}>
-            {showSetup ? <Shield size={36} color="#080e1a" /> : <Lock size={36} color="#080e1a" />}
+            {showSetup ? <Shield size={36} color="#0a0f1a" /> : <Lock size={36} color="#0a0f1a" />}
           </div>
         </div>
 
         {/* Title */}
         <h2 style={{
-          color: '#e2eaf6', textAlign: 'center', fontSize: 20, fontWeight: 700,
+          color: 'var(--text)', textAlign: 'center', fontSize: 20, fontWeight: 700,
           margin: '0 0 6px', letterSpacing: 0.3,
         }}>
           {showSetup
             ? (setupStep === 'new' ? 'Установите PIN-код' : 'Подтвердите PIN-код')
             : 'P&L Финансы'}
         </h2>
-        <p style={{ color: '#5e6e82', textAlign: 'center', fontSize: 13, margin: '0 0 28px' }}>
+        <p style={{ color: 'var(--text3)', textAlign: 'center', fontSize: 13, margin: '0 0 28px' }}>
           {showSetup
             ? (setupStep === 'new' ? 'Придумайте PIN (4–6 цифр)' : 'Введите PIN ещё раз')
             : 'Введите PIN-код для доступа'}
@@ -238,8 +238,8 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
           {Array.from({ length: maxLen }).map((_, i) => (
             <div key={i} style={{
               width: 14, height: 14, borderRadius: '50%',
-              background: i < currentPin.length ? '#FFE600' : 'transparent',
-              border: `2px solid ${i < currentPin.length ? '#FFE600' : '#2a3a4e'}`,
+              background: i < currentPin.length ? 'var(--accent)' : 'transparent',
+              border: `2px solid ${i < currentPin.length ? 'var(--accent)' : 'var(--border-strong)'}`,
               transition: 'all 0.15s ease',
               animation: i < currentPin.length ? 'pulse 0.2s ease' : 'none',
             }} />
@@ -249,8 +249,8 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
         {/* Error */}
         {error && (
           <div style={{
-            color: '#ef4444', textAlign: 'center', fontSize: 13, marginBottom: 16,
-            background: '#ef444415', padding: '8px 12px', borderRadius: 8,
+            color: 'var(--danger)', textAlign: 'center', fontSize: 13, marginBottom: 16,
+            background: 'rgba(239,68,68,0.08)', padding: '8px 12px', borderRadius: 10,
           }}>
             {error}
           </div>
@@ -263,8 +263,8 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
         }}>
           {['1','2','3','4','5','6','7','8','9'].map(d => (
             <button key={d} className="pin-digit" onClick={() => handleDigit(d)} style={{
-              width: 76, height: 76, borderRadius: '50%', border: '1px solid #1e293b',
-              background: '#141c2b', color: '#e2eaf6', fontSize: 28, fontWeight: 600,
+              width: 76, height: 76, borderRadius: '50%', border: '1px solid var(--border)',
+              background: 'var(--card)', color: 'var(--text)', fontSize: 26, fontWeight: 600,
               cursor: 'pointer', transition: 'all 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
@@ -274,8 +274,8 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
           {/* Bottom row */}
           <div />
           <button className="pin-digit" onClick={() => handleDigit('0')} style={{
-            width: 76, height: 76, borderRadius: '50%', border: '1px solid #1e293b',
-            background: '#141c2b', color: '#e2eaf6', fontSize: 28, fontWeight: 600,
+            width: 76, height: 76, borderRadius: '50%', border: '1px solid var(--border)',
+            background: 'var(--card)', color: 'var(--text)', fontSize: 26, fontWeight: 600,
             cursor: 'pointer', transition: 'all 0.15s',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -283,7 +283,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
           </button>
           <button onClick={handleDelete} style={{
             width: 76, height: 76, borderRadius: '50%', border: 'none',
-            background: 'transparent', color: '#8899aa', fontSize: 14,
+            background: 'transparent', color: 'var(--text2)', fontSize: 14,
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Delete size={24} />
@@ -294,8 +294,8 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
         {showSetup && currentPin.length >= 4 && (
           <button onClick={submitSetup} disabled={loading} style={{
             width: '100%', marginTop: 20, padding: '14px',
-            background: 'linear-gradient(135deg, #FFE600, #f59e0b)',
-            border: 'none', borderRadius: 12, color: '#080e1a',
+            background: 'var(--accent)',
+            border: 'none', borderRadius: 10, color: 'var(--on-accent)',
             fontSize: 15, fontWeight: 700, cursor: 'pointer',
             opacity: loading ? 0.6 : 1,
           }}>
@@ -307,8 +307,8 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
           <button onClick={() => { setSetupStep('new'); setConfirmPin(''); setError(''); }}
             style={{
               width: '100%', marginTop: 10, padding: '12px',
-              background: 'transparent', border: '1px solid #1e293b',
-              borderRadius: 12, color: '#8899aa', fontSize: 13, cursor: 'pointer',
+              background: 'transparent', border: '1px solid var(--border)',
+              borderRadius: 10, color: 'var(--text2)', fontSize: 13, cursor: 'pointer',
             }}>
             Назад
           </button>
@@ -330,30 +330,30 @@ function KpiCard({ icon: Icon, label, value, sub, color = '#FFE600', trend }: {
 }) {
   return (
     <div style={{
-      background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14,
+      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16,
       padding: '18px 20px', display: 'flex', gap: 14, alignItems: 'center',
     }}>
       <div style={{
-        width: 44, height: 44, borderRadius: 12,
+        width: 44, height: 44, borderRadius: 10,
         background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <Icon size={22} color={color} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ color: '#8899aa', fontSize: 12, marginBottom: 2 }}>{label}</div>
-        <div style={{ color: '#e2eaf6', fontSize: 20, fontWeight: 700 }}>{value}</div>
-        {sub && <div style={{ color: '#5e6e82', fontSize: 11, marginTop: 2 }}>{sub}</div>}
+        <div style={{ color: 'var(--text2)', fontSize: 12, marginBottom: 2 }}>{label}</div>
+        <div style={{ color: 'var(--text)', fontSize: 20, fontWeight: 700 }}>{value}</div>
+        {sub && <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 2 }}>{sub}</div>}
       </div>
       {trend && trend.value !== 0 && (
         <div style={{ textAlign: 'right' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 2,
-            color: trend.value > 0 ? '#22c55e' : '#ef4444', fontSize: 13, fontWeight: 600,
+            color: trend.value > 0 ? 'var(--success)' : 'var(--danger)', fontSize: 13, fontWeight: 600,
           }}>
             {trend.value > 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
             {Math.abs(trend.value)}%
           </div>
-          <div style={{ color: '#5e6e82', fontSize: 10 }}>{trend.label}</div>
+          <div style={{ color: 'var(--text3)', fontSize: 10 }}>{trend.label}</div>
         </div>
       )}
     </div>
@@ -436,7 +436,7 @@ export default function FinancialsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#8899aa' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text2)' }}>
         <Loader2 size={32} className="animate-spin" style={{ marginRight: 12 }} />
         Загрузка финансов...
       </div>
@@ -445,11 +445,11 @@ export default function FinancialsPage() {
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', padding: 60, color: '#ef4444' }}>
+      <div style={{ textAlign: 'center', padding: 60, color: 'var(--danger)' }}>
         <div>{error}</div>
         <button onClick={loadData} style={{
-          marginTop: 16, padding: '8px 20px', background: '#1e293b', border: 'none',
-          borderRadius: 8, color: '#e2eaf6', cursor: 'pointer',
+          marginTop: 16, padding: '8px 20px', background: 'var(--border)', border: 'none',
+          borderRadius: 10, color: 'var(--text)', cursor: 'pointer',
         }}>Повторить</button>
       </div>
     );
@@ -461,17 +461,17 @@ export default function FinancialsPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Wallet size={28} color="#FFE600" />
-          <h1 style={{ color: '#e2eaf6', fontSize: 24, fontWeight: 700, margin: 0 }}>P&L Финансы</h1>
+          <h1 style={{ color: 'var(--text)', fontSize: 24, fontWeight: 700, margin: 0 }}>P&L Финансы</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input type="month" value={month} onChange={e => handleMonthChange(e.target.value)} style={{
-            padding: '8px 14px', background: '#0a101e', border: '1px solid #1e293b',
-            borderRadius: 8, color: '#e2eaf6', fontSize: 13, cursor: 'pointer',
+            padding: '8px 14px', background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer',
           }} />
           <button onClick={loadData} style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', background: '#1e293b', border: '1px solid #334155',
-            borderRadius: 8, color: '#e2eaf6', cursor: 'pointer', fontSize: 13,
+            padding: '8px 16px', background: 'var(--border)', border: '1px solid var(--bg3)',
+            borderRadius: 10, color: 'var(--text)', cursor: 'pointer', fontSize: 13,
           }}>
             <RefreshCw size={14} /> Обновить
           </button>
@@ -480,15 +480,15 @@ export default function FinancialsPage() {
 
       {/* Tabs */}
       <div className="mobile-tab-bar" style={{
-        display: 'flex', gap: 4, marginBottom: 24, background: '#0a101e',
-        borderRadius: 12, padding: 4, border: '1px solid #1e293b',
+        display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg2)',
+        borderRadius: 10, padding: 4, border: '1px solid var(--border)',
       }}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px',
-            border: 'none', borderRadius: 8,
-            background: tab === t.key ? '#1e293b' : 'transparent',
-            color: tab === t.key ? '#FFE600' : '#8899aa',
+            border: 'none', borderRadius: 10,
+            background: tab === t.key ? 'var(--border)' : 'transparent',
+            color: tab === t.key ? 'var(--accent)' : 'var(--text2)',
             cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 600 : 400,
             whiteSpace: 'nowrap',
           }}>
@@ -545,13 +545,13 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
 
       {/* Revenue vs Expenses Chart */}
       {chartData.length > 1 && (
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20, marginBottom: 20 }}>
-          <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Динамика доходов и расходов</h3>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+          <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Динамика доходов и расходов</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="name" stroke="#5e6e82" tick={{ fontSize: 11 }} />
-              <YAxis stroke="#5e6e82" tickFormatter={fmtShort} />
+              <XAxis dataKey="name" stroke="#8899aa" tick={{ fontSize: 11 }} />
+              <YAxis stroke="#8899aa" tickFormatter={fmtShort} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
               <Bar dataKey="revenue" fill="#22c55e" radius={[4, 4, 0, 0]} name="Выручка" />
               <Bar dataKey="expenses" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Расходы" />
@@ -567,10 +567,10 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
         const grouped = groupExpenseCategories(summary.expense_categories);
         const total = grouped.reduce((s: number, c: any) => s + c.amount, 0);
         return (
-        <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20 }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600 }}>Структура расходов</h3>
-            <span style={{ color: '#94a3b8', fontSize: 12 }}>{summary.expense_categories.length} категорий • {fmtMoney(total)}</span>
+            <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600 }}>Структура расходов</h3>
+            <span style={{ color: 'var(--text2)', fontSize: 12 }}>{summary.expense_categories.length} категорий • {fmtMoney(total)}</span>
           </div>
           <div className="mobile-stack" style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
             <ResponsiveContainer width="45%" height={260}>
@@ -591,12 +591,12 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
                 return (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid rgba(30,41,59,0.3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 3, background: getCategoryColor(c.category, i), flexShrink: 0 }} />
-                    <span style={{ color: '#e2eaf6', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
+                    <div style={{ width: 10, height: 10, borderRadius: 999, background: getCategoryColor(c.category, i), flexShrink: 0 }} />
+                    <span style={{ color: 'var(--text)', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <span style={{ color: '#64748b', fontSize: 11, minWidth: 36, textAlign: 'right' }}>{pct}%</span>
-                    <span style={{ color: '#FFE600', fontSize: 13, fontWeight: 600, minWidth: 80, textAlign: 'right' }}>{fmtMoney(c.amount)}</span>
+                    <span style={{ color: 'var(--text3)', fontSize: 11, minWidth: 36, textAlign: 'right' }}>{pct}%</span>
+                    <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600, minWidth: 80, textAlign: 'right' }}>{fmtMoney(c.amount)}</span>
                   </div>
                 </div>
                 );
@@ -616,7 +616,7 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
 // ═══════════════════════════════════════════
 
 function PnlSection({ data }: { data: any }) {
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка P&L...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка P&L...</div>;
   const r = data.report;
   if (!r) return null;
 
@@ -630,20 +630,20 @@ function PnlSection({ data }: { data: any }) {
   const expLines = opex?.lines || [];
 
   return (
-    <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 24, maxWidth: 700 }}>
-      <h3 style={{ color: '#e2eaf6', fontSize: 16, fontWeight: 700, marginBottom: 20 }}>
+    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: 700 }}>
+      <h3 style={{ color: 'var(--text)', fontSize: 16, fontWeight: 700, marginBottom: 20 }}>
         P&L — {data.month}
       </h3>
       <div style={{ display: 'grid', gap: 0 }}>
         {lines.map((line, i) => (
           <div key={i}>
-            {line.separator && <div style={{ borderTop: '2px solid #1e293b', margin: '8px 0' }} />}
+            {line.separator && <div style={{ borderTop: '2px solid var(--border)', margin: '8px 0' }} />}
             <PnlRow label={line.label} amount={line.amount} bold={line.bold} margin={line.margin_pct} />
           </div>
         ))}
 
-        <div style={{ borderTop: '2px solid #1e293b', margin: '8px 0' }} />
-        <div style={{ color: '#8899aa', fontSize: 12, fontWeight: 600, padding: '8px 0 4px', textTransform: 'uppercase' }}>
+        <div style={{ borderTop: '2px solid var(--border)', margin: '8px 0' }} />
+        <div style={{ color: 'var(--text2)', fontSize: 12, fontWeight: 600, padding: '8px 0 4px', textTransform: 'uppercase' }}>
           Операционные расходы
         </div>
         {expLines.map((line: any, i: number) => (
@@ -651,7 +651,7 @@ function PnlSection({ data }: { data: any }) {
         ))}
         <PnlRow label="Итого опер. расходы" amount={opex.total} bold />
 
-        <div style={{ borderTop: '3px solid #FFE600', margin: '8px 0' }} />
+        <div style={{ borderTop: '3px solid var(--accent)', margin: '8px 0' }} />
         <PnlRow label={r.net_profit.label} amount={r.net_profit.amount} bold big margin={r.net_profit.margin_pct} />
       </div>
     </div>
@@ -668,13 +668,13 @@ function PnlRow({ label, amount, bold, big, indent, margin }: {
       padding: indent ? '3px 0' : '6px 0',
     }}>
       <span style={{
-        color: bold ? '#e2eaf6' : '#8899aa',
+        color: bold ? 'var(--text)' : 'var(--text2)',
         fontSize: big ? 16 : indent ? 12 : 13,
         fontWeight: bold ? 700 : 400,
       }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{
-          color: isNeg ? '#ef4444' : bold ? '#22c55e' : '#e2eaf6',
+          color: isNeg ? 'var(--danger)' : bold ? 'var(--success)' : 'var(--text)',
           fontSize: big ? 18 : 13,
           fontWeight: bold ? 700 : 500,
         }}>
@@ -682,8 +682,8 @@ function PnlRow({ label, amount, bold, big, indent, margin }: {
         </span>
         {margin !== undefined && margin !== 0 && (
           <span style={{
-            background: '#22c55e20', color: '#22c55e', fontSize: 11,
-            padding: '1px 6px', borderRadius: 4, fontWeight: 600,
+            background: 'rgba(34,197,94,0.13)', color: 'var(--success)', fontSize: 11,
+            padding: '1px 6px', borderRadius: 999, fontWeight: 600,
           }}>{margin}%</span>
         )}
       </div>
@@ -727,7 +727,7 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
     onReload();
   };
 
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const rawCats = byCategory?.categories || [];
   const catGrouped = groupExpenseCategories(rawCats);
@@ -742,14 +742,14 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ color: '#8899aa', fontSize: 13 }}>
+        <div style={{ color: 'var(--text2)', fontSize: 13 }}>
           Всего расходов: {fmtMoney(byCategory?.total || 0)}
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '8px 16px', background: showForm ? '#ef444420' : '#22c55e20',
-          border: `1px solid ${showForm ? '#ef444440' : '#22c55e40'}`,
-          borderRadius: 8, color: showForm ? '#ef4444' : '#22c55e', cursor: 'pointer', fontSize: 13,
+          padding: '8px 16px', background: showForm ? 'rgba(239,68,68,0.13)' : 'rgba(34,197,94,0.13)',
+          border: `1px solid ${showForm ? 'rgba(239,68,68,0.25)' : 'rgba(34,197,94,0.25)'}`,
+          borderRadius: 10, color: showForm ? 'var(--danger)' : 'var(--success)', cursor: 'pointer', fontSize: 13,
         }}>
           {showForm ? <><X size={14} /> Отмена</> : <><Plus size={14} /> Добавить расход</>}
         </button>
@@ -758,48 +758,48 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
       {/* Add Expense Form */}
       {showForm && (
         <div style={{
-          background: '#0d1526', border: '1px solid #22c55e30', borderRadius: 14,
+          background: 'var(--bg2)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 16,
           padding: 20, marginBottom: 16,
         }}>
           <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 12, marginBottom: 12 }}>
             <div>
-              <label style={{ color: '#8899aa', fontSize: 11, display: 'block', marginBottom: 4 }}>Категория</label>
+              <label style={{ color: 'var(--text2)', fontSize: 11, display: 'block', marginBottom: 4 }}>Категория</label>
               <input list="cat-list" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
                 placeholder="Введите или выберите" style={{
-                  width: '100%', padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
-                  borderRadius: 8, color: '#e2eaf6', fontSize: 13,
+                  width: '100%', padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border)',
+                  borderRadius: 10, color: 'var(--text)', fontSize: 13,
                 }} />
               <datalist id="cat-list">
                 {CATEGORIES.map(c => <option key={c.value} value={c.label} />)}
               </datalist>
             </div>
             <div>
-              <label style={{ color: '#8899aa', fontSize: 11, display: 'block', marginBottom: 4 }}>Сумма (сом)</label>
+              <label style={{ color: 'var(--text2)', fontSize: 11, display: 'block', marginBottom: 4 }}>Сумма (сом)</label>
               <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
                 placeholder="50000" style={{
-                  width: '100%', padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
-                  borderRadius: 8, color: '#e2eaf6', fontSize: 13,
+                  width: '100%', padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border)',
+                  borderRadius: 10, color: 'var(--text)', fontSize: 13,
                 }} />
             </div>
             <div>
-              <label style={{ color: '#8899aa', fontSize: 11, display: 'block', marginBottom: 4 }}>Описание</label>
+              <label style={{ color: 'var(--text2)', fontSize: 11, display: 'block', marginBottom: 4 }}>Описание</label>
               <input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
                 placeholder="Аренда за май" style={{
-                  width: '100%', padding: '9px 12px', background: '#0a101e', border: '1px solid #1e293b',
-                  borderRadius: 8, color: '#e2eaf6', fontSize: 13,
+                  width: '100%', padding: '9px 12px', background: 'var(--bg2)', border: '1px solid var(--border)',
+                  borderRadius: 10, color: 'var(--text)', fontSize: 13,
                 }} />
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={form.is_recurring} onChange={e => setForm({ ...form, is_recurring: e.target.checked })}
-                style={{ accentColor: '#FFE600' }} />
-              <span style={{ color: '#8899aa', fontSize: 12 }}>Ежемесячный расход</span>
+                style={{ accentColor: 'var(--accent)' }} />
+              <span style={{ color: 'var(--text2)', fontSize: 12 }}>Ежемесячный расход</span>
             </label>
             <button onClick={handleSave} disabled={saving || !form.amount} style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '9px 20px', background: '#22c55e', border: 'none',
-              borderRadius: 8, color: '#0a101e', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              padding: '9px 20px', background: 'var(--success)', border: 'none',
+              borderRadius: 10, color: 'var(--bg2)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
               opacity: saving || !form.amount ? 0.5 : 1,
             }}>
               <Save size={14} /> {saving ? 'Сохранение...' : 'Сохранить'}
@@ -811,8 +811,8 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
       {/* Charts + Table */}
       <div style={{ display: 'grid', gridTemplateColumns: catData.length > 0 ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
         {catData.length > 0 && (
-          <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20 }}>
-            <h3 style={{ color: '#e2eaf6', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>По категориям</h3>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
+            <h3 style={{ color: 'var(--text)', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>По категориям</h3>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={catData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} dataKey="value" paddingAngle={3} strokeWidth={0}>
@@ -827,39 +827,39 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
       </div>
 
       {/* Expenses Table */}
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Категория</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Описание</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Сумма</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', color: '#8899aa', fontWeight: 500 }}>Источник</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', color: '#8899aa', fontWeight: 500, width: 60 }}></th>
+            <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Категория</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Описание</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Сумма</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text2)', fontWeight: 500 }}>Источник</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text2)', fontWeight: 500, width: 60 }}></th>
             </tr>
           </thead>
           <tbody>
             {(data.expenses || []).map((e: any) => (
-              <tr key={e.id} style={{ borderBottom: '1px solid #1e293b15' }}>
+              <tr key={e.id} style={{ borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: catColorMap[e.category] || getCategoryColor(e.category, 0) }} />
-                    <span style={{ color: '#e2eaf6', fontWeight: 500 }}>{e.category_label}</span>
+                    <div style={{ width: 8, height: 8, borderRadius: 999, background: catColorMap[e.category] || getCategoryColor(e.category, 0) }} />
+                    <span style={{ color: 'var(--text)', fontWeight: 500 }}>{e.category_label}</span>
                   </div>
                 </td>
-                <td style={{ padding: '10px 16px', color: '#8899aa' }}>{e.description || '—'}</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>{fmtMoney(e.amount)}</td>
+                <td style={{ padding: '10px 16px', color: 'var(--text2)' }}>{e.description || '—'}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--danger)', fontWeight: 600 }}>{fmtMoney(e.amount)}</td>
                 <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                   <span style={{
-                    background: e.source === '1c' ? '#3b82f620' : '#22c55e20',
-                    color: e.source === '1c' ? '#3b82f6' : '#22c55e',
-                    fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+                    background: e.source === '1c' ? 'rgba(59,130,246,0.13)' : 'rgba(34,197,94,0.13)',
+                    color: e.source === '1c' ? 'var(--info)' : 'var(--success)',
+                    fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
                   }}>{e.source === '1c' ? '1С' : 'Ручной'}</span>
                 </td>
                 <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                   {e.source === 'manual' && (
                     <button onClick={() => handleDelete(e.id)} style={{
-                      background: 'none', border: 'none', color: '#5e6e82', cursor: 'pointer', padding: 4,
+                      background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4,
                     }}>
                       <Trash2 size={14} />
                     </button>
@@ -869,7 +869,7 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
             ))}
             {(data.expenses || []).length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: 40, color: '#5e6e82' }}>
+                <td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>
                   Нет расходов за этот месяц. Нажмите &quot;Добавить расход&quot;.
                 </td>
               </tr>
@@ -887,36 +887,36 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
 // ═══════════════════════════════════════════
 
 function CashiersSection({ data }: { data: any }) {
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const cashiers = data.cashiers || [];
 
   return (
-    <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ background: '#0a101e', borderBottom: '1px solid #1e293b' }}>
-            <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>#</th>
-            <th style={{ padding: '12px 16px', textAlign: 'left', color: '#8899aa', fontWeight: 500 }}>Кассир</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Транзакций</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Выручка</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Начислено бонусов</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', color: '#8899aa', fontWeight: 500 }}>Списано бонусов</th>
+          <tr style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+            <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>#</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text2)', fontWeight: 500 }}>Кассир</th>
+            <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Транзакций</th>
+            <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Выручка</th>
+            <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Начислено бонусов</th>
+            <th style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text2)', fontWeight: 500 }}>Списано бонусов</th>
           </tr>
         </thead>
         <tbody>
           {cashiers.map((c: any, i: number) => (
-            <tr key={i} style={{ borderBottom: '1px solid #1e293b15' }}>
-              <td style={{ padding: '10px 16px', color: '#FFE600', fontWeight: 700 }}>{i + 1}</td>
-              <td style={{ padding: '10px 16px', color: '#e2eaf6', fontWeight: 500 }}>{c.cashier_name}</td>
-              <td style={{ padding: '10px 16px', textAlign: 'right', color: '#e2eaf6' }}>{fmt(c.transactions)}</td>
-              <td style={{ padding: '10px 16px', textAlign: 'right', color: '#22c55e', fontWeight: 600 }}>{fmtMoney(c.revenue)}</td>
-              <td style={{ padding: '10px 16px', textAlign: 'right', color: '#3b82f6' }}>{fmtMoney(c.bonuses_earned)}</td>
-              <td style={{ padding: '10px 16px', textAlign: 'right', color: '#f59e0b' }}>{fmtMoney(c.bonuses_spent)}</td>
+            <tr key={i} style={{ borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
+              <td style={{ padding: '10px 16px', color: 'var(--accent)', fontWeight: 700 }}>{i + 1}</td>
+              <td style={{ padding: '10px 16px', color: 'var(--text)', fontWeight: 500 }}>{c.cashier_name}</td>
+              <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text)' }}>{fmt(c.transactions)}</td>
+              <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{fmtMoney(c.revenue)}</td>
+              <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--info)' }}>{fmtMoney(c.bonuses_earned)}</td>
+              <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--warn)' }}>{fmtMoney(c.bonuses_spent)}</td>
             </tr>
           ))}
           {cashiers.length === 0 && (
-            <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#5e6e82' }}>Нет данных по кассирам</td></tr>
+            <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>Нет данных по кассирам</td></tr>
           )}
         </tbody>
       </table>
@@ -930,7 +930,7 @@ function CashiersSection({ data }: { data: any }) {
 // ═══════════════════════════════════════════
 
 function TrendsSection({ data }: { data: any }) {
-  if (!data) return <div style={{ color: '#8899aa', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
 
   const months = data.months || [];
   const chartData = months.map((m: any) => ({
@@ -954,8 +954,8 @@ function TrendsSection({ data }: { data: any }) {
       </div>
 
       {/* Revenue + Profit Line */}
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20, marginBottom: 16 }}>
-        <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Выручка и прибыль</h3>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+        <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Выручка и прибыль</h3>
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={chartData}>
             <defs>
@@ -969,8 +969,8 @@ function TrendsSection({ data }: { data: any }) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="name" stroke="#5e6e82" tick={{ fontSize: 11 }} />
-            <YAxis stroke="#5e6e82" tickFormatter={fmtShort} />
+            <XAxis dataKey="name" stroke="#8899aa" tick={{ fontSize: 11 }} />
+            <YAxis stroke="#8899aa" tickFormatter={fmtShort} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'transparent' }} />
             <Area type="monotone" dataKey="revenue" stroke="#22c55e" fillOpacity={1} fill="url(#gRevenue)" name="Выручка" strokeWidth={2} />
             <Area type="monotone" dataKey="netProfit" stroke="#3b82f6" fillOpacity={1} fill="url(#gProfit)" name="Чистая прибыль" strokeWidth={2} />
@@ -980,12 +980,12 @@ function TrendsSection({ data }: { data: any }) {
       </div>
 
       {/* Average Receipt */}
-      <div style={{ background: '#0d1526', border: '1px solid #1e293b', borderRadius: 14, padding: 20 }}>
-        <h3 style={{ color: '#e2eaf6', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Средний чек и количество</h3>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
+        <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Средний чек и количество</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="name" stroke="#5e6e82" tick={{ fontSize: 11 }} />
+            <XAxis dataKey="name" stroke="#8899aa" tick={{ fontSize: 11 }} />
             <YAxis yAxisId="left" stroke="#FFE600" tickFormatter={fmtShort} />
             <YAxis yAxisId="right" orientation="right" stroke="#8b5cf6" />
             <Tooltip contentStyle={tooltipStyle} formatter={(v: number, name: string) => name === 'Ср. чек' ? fmtMoney(v) : fmt(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />

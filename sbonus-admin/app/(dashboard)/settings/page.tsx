@@ -12,8 +12,8 @@ const CustomToggle = ({ isEnabled, onToggle }: { isEnabled: boolean; onToggle: (
     style={{
       width: "52px",
       height: "28px",
-      background: isEnabled ? "#22c55e" : "#1c2a3a",
-      borderRadius: "14px",
+      background: isEnabled ? "var(--success)" : "var(--bg3)",
+      borderRadius: "16px",
       cursor: "pointer",
       position: "relative",
       transition: "background 0.2s",
@@ -26,7 +26,7 @@ const CustomToggle = ({ isEnabled, onToggle }: { isEnabled: boolean; onToggle: (
         width: "22px",
         height: "22px",
         background: "white",
-        borderRadius: "50%",
+        borderRadius: "16%",
         position: "absolute",
         top: "3px",
         left: isEnabled ? "27px" : "3px",
@@ -187,12 +187,12 @@ export default function SettingsPage() {
 
   // ─── Стили ───
   const colors = {
-    bg: "#07090f",
-    cardBg: "#0d1117",
-    border: "#1c2a3a",
-    accent: "#FFE600",
-    text: "#e2eaf6",
-    textMuted: "#8899aa",
+    bg: "var(--bg)",
+    cardBg: "var(--bg2)",
+    border: "var(--bg3)",
+    accent: "var(--accent)",
+    text: "var(--text)",
+    textMuted: "var(--text2)",
   };
 
   const styles = {
@@ -207,7 +207,7 @@ export default function SettingsPage() {
       marginBottom: "32px",
     },
     title: {
-      fontSize: "28px",
+      fontSize: "24px",
       fontWeight: 700,
       margin: "0 0 8px 0",
       display: "flex",
@@ -259,7 +259,7 @@ export default function SettingsPage() {
       alignItems: "center",
       background: colors.bg,
       border: `1px solid ${colors.border}`,
-      borderRadius: "12px",
+      borderRadius: "10px",
       padding: "16px",
       marginBottom: "20px",
     },
@@ -305,9 +305,9 @@ export default function SettingsPage() {
       alignItems: "center",
       gap: "10px",
       background: colors.accent,
-      color: "#0a0f1a",
+      color: "var(--bg)",
       border: "none",
-      borderRadius: "12px",
+      borderRadius: "10px",
       padding: "16px 32px",
       fontSize: "16px",
       fontWeight: 700,
@@ -316,7 +316,7 @@ export default function SettingsPage() {
       transition: "all 0.2s",
     },
     btnTest: {
-      background: "#1c2a3a",
+      background: "var(--bg3)",
       color: colors.text,
       border: "none",
       borderRadius: "10px",
@@ -361,7 +361,7 @@ export default function SettingsPage() {
             }}
           >
             <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: settings.ENABLE_1C_WEBHOOK === "true" ? colors.accent : "#ff4d4d", display: "inline-block" }} />
+              <span style={{ width: 8, height: 8, borderRadius: "16%", background: settings.ENABLE_1C_WEBHOOK === "true" ? colors.accent : "var(--danger)", display: "inline-block" }} />
               {settings.ENABLE_1C_WEBHOOK === "true" ? "Включено" : "Отключено"}
             </span>
           </div>
@@ -376,7 +376,7 @@ export default function SettingsPage() {
                 style={{
                   background: colors.border,
                   padding: "2px 6px",
-                  borderRadius: "4px",
+                  borderRadius: "10px",
                   color: colors.accent,
                 }}
               >
@@ -408,7 +408,7 @@ export default function SettingsPage() {
             }}
           >
             <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: settings.ENABLE_WHATSAPP_NOTIFICATIONS === "true" ? colors.accent : "#ff4d4d", display: "inline-block" }} />
+              <span style={{ width: 8, height: 8, borderRadius: "16%", background: settings.ENABLE_WHATSAPP_NOTIFICATIONS === "true" ? colors.accent : "var(--danger)", display: "inline-block" }} />
               {settings.ENABLE_WHATSAPP_NOTIFICATIONS === "true" ? "Включено" : "Отключено"}
             </span>
           </div>
@@ -472,7 +472,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Campaign batch settings */}
-        <div style={{ marginTop: "20px", padding: "16px", background: "rgba(255,230,0,0.04)", borderRadius: "12px", border: "1px solid rgba(255,230,0,0.1)" }}>
+        <div style={{ marginTop: "20px", padding: "16px", background: "rgba(255,230,0,0.04)", borderRadius: "10px", border: "1px solid rgba(255,230,0,0.1)" }}>
           <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="#FFE600" strokeWidth="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="#FFE600" strokeWidth="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="#FFE600" strokeWidth="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="#FFE600" strokeWidth="1.5"/></svg>
             Батч-рассылка кампаний
@@ -513,7 +513,7 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-          <div style={{ fontSize: "12px", color: colors.textMuted, marginTop: "10px", padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
+          <div style={{ fontSize: "12px", color: colors.textMuted, marginTop: "10px", padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: "10px" }}>
             Пример: 900 клиентов, батч 50, пауза 30с → 18 батчей → ~{Math.ceil(900 / Number(settings.CAMPAIGN_BATCH_SIZE || 50))} батчей, ~{Math.ceil(900 / Number(settings.CAMPAIGN_BATCH_SIZE || 50) * (Number(settings.CAMPAIGN_BATCH_PAUSE || 30) + Number(settings.CAMPAIGN_BATCH_SIZE || 50) * Number(settings.WA_MESSAGE_INTERVAL || 3)) / 60)} мин
           </div>
         </div>
@@ -709,9 +709,9 @@ export default function SettingsPage() {
             </div>
           </div>
           <div style={{
-            background: `${colors.accent}10`,
-            border: `1px solid ${colors.accent}30`,
-            borderRadius: "12px",
+            background: "var(--accent-dim)",
+            border: "1px solid var(--accent-border)",
+            borderRadius: "10px",
             padding: "12px 16px",
             fontSize: "13px",
             color: colors.textMuted,
@@ -745,9 +745,9 @@ export default function SettingsPage() {
                   <button
                     onClick={() => updateMilestones(milestones.filter((_, j) => j !== i))}
                     title="Удалить"
-                    style={{ background: "rgba(239,68,68,0.12)", border: "none", borderRadius: 8, padding: 9, cursor: "pointer", display: "flex" }}
+                    style={{ background: "rgba(239,68,68,0.12)", border: "none", borderRadius: 10, padding: 9, cursor: "pointer", display: "flex" }}
                   >
-                    <Trash2 size={16} color="#ef4444" />
+                    <Trash2 size={16} color="var(--danger)" />
                   </button>
                 </div>
               ))}
@@ -826,14 +826,14 @@ export default function SettingsPage() {
         </div>
 
         {/* Порог-бонусы */}
-        <div style={{ padding: "16px", background: "rgba(255,230,0,0.04)", borderRadius: "12px", border: "1px solid rgba(255,230,0,0.1)", marginBottom: "20px" }}>
+        <div style={{ padding: "16px", background: "rgba(255,230,0,0.04)", borderRadius: "10px", border: "1px solid rgba(255,230,0,0.1)", marginBottom: "20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
             <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text }}>Порог-бонусы за размер чека</div>
             <button
               onClick={() => updateBasketTiers(basketTiers, !basketEnabled)}
-              style={{ padding: "6px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
-                background: basketEnabled ? "linear-gradient(135deg, #22c55e, #16a34a)" : "#1c2a3a",
-                color: basketEnabled ? "#fff" : "#8899aa" }}
+              style={{ padding: "6px 16px", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
+                background: basketEnabled ? "var(--success)" : "var(--bg3)",
+                color: basketEnabled ? "#fff" : "var(--text2)" }}
             >
               {basketEnabled ? "Включено" : "Выключено"}
             </button>
@@ -851,26 +851,26 @@ export default function SettingsPage() {
                 onChange={(e) => { const arr = [...basketTiers]; arr[i] = { ...arr[i], bonus: Number(e.target.value) }; updateBasketTiers(arr, basketEnabled); }} />
               <span style={{ fontSize: "13px", color: colors.textMuted }}>сом</span>
               <button onClick={() => updateBasketTiers(basketTiers.filter((_, j) => j !== i), basketEnabled)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "4px" }}>
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: "4px" }}>
                 <Trash2 size={16} />
               </button>
             </div>
           ))}
           <button onClick={() => updateBasketTiers([...basketTiers, { min: 5000, bonus: 300 }], basketEnabled)}
-            style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: `1px dashed ${colors.border}`, borderRadius: "8px", padding: "8px 14px", cursor: "pointer", color: colors.textMuted, fontSize: "13px", marginTop: "4px" }}>
+            style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: `1px dashed ${colors.border}`, borderRadius: "10px", padding: "8px 14px", cursor: "pointer", color: colors.textMuted, fontSize: "13px", marginTop: "4px" }}>
             <Plus size={14} /> Добавить порог
           </button>
         </div>
 
         {/* Auto-Coupon */}
-        <div style={{ padding: "16px", background: "rgba(99,102,241,0.05)", borderRadius: "12px", border: "1px solid rgba(99,102,241,0.15)" }}>
+        <div style={{ padding: "16px", background: "rgba(99,102,241,0.05)", borderRadius: "10px", border: "1px solid rgba(99,102,241,0.15)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
             <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text }}>Auto-Coupon Engine (Чт 11:00, еженедельно)</div>
             <button
               onClick={() => toggleBoolean("AUTO_COUPON_ENABLED")}
-              style={{ padding: "6px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
-                background: settings.AUTO_COUPON_ENABLED === "true" ? "linear-gradient(135deg, #22c55e, #16a34a)" : "#1c2a3a",
-                color: settings.AUTO_COUPON_ENABLED === "true" ? "#fff" : "#8899aa" }}
+              style={{ padding: "6px 16px", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
+                background: settings.AUTO_COUPON_ENABLED === "true" ? "var(--success)" : "var(--bg3)",
+                color: settings.AUTO_COUPON_ENABLED === "true" ? "#fff" : "var(--text2)" }}
             >
               {settings.AUTO_COUPON_ENABLED === "true" ? "Включено" : "Выключено"}
             </button>
@@ -899,14 +899,14 @@ export default function SettingsPage() {
         </div>
 
         {/* Post-Purchase Follow-up */}
-        <div style={{ padding: "16px", background: "rgba(16,185,129,0.05)", borderRadius: "12px", border: "1px solid rgba(16,185,129,0.15)", marginTop: "20px" }}>
+        <div style={{ padding: "16px", background: "rgba(16,185,129,0.05)", borderRadius: "10px", border: "1px solid rgba(16,185,129,0.15)", marginTop: "20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
             <div style={{ fontSize: "14px", fontWeight: 700, color: colors.text }}>Забота после покупки (ежедневно 11:10)</div>
             <button
               onClick={() => toggleBoolean("POST_PURCHASE_FOLLOWUP_ENABLED")}
-              style={{ padding: "6px 16px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
-                background: settings.POST_PURCHASE_FOLLOWUP_ENABLED === "true" ? "linear-gradient(135deg, #22c55e, #16a34a)" : "#1c2a3a",
-                color: settings.POST_PURCHASE_FOLLOWUP_ENABLED === "true" ? "#fff" : "#8899aa" }}
+              style={{ padding: "6px 16px", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "13px",
+                background: settings.POST_PURCHASE_FOLLOWUP_ENABLED === "true" ? "var(--success)" : "var(--bg3)",
+                color: settings.POST_PURCHASE_FOLLOWUP_ENABLED === "true" ? "#fff" : "var(--text2)" }}
             >
               {settings.POST_PURCHASE_FOLLOWUP_ENABLED === "true" ? "Включено" : "Выключено"}
             </button>
@@ -974,7 +974,7 @@ export default function SettingsPage() {
           </button>
         </div>
         {settings.ENABLE_WHATSAPP_NOTIFICATIONS !== "true" && (
-          <div style={{ color: "#f59e0b", fontSize: "13px", marginTop: "12px", display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ color: "var(--warn)", fontSize: "13px", marginTop: "12px", display: "flex", alignItems: "center", gap: 6 }}>
             <AlertTriangle size={14} /> Для тестирования необходимо включить уведомления и сохранить настройки.
           </div>
         )}
@@ -1031,7 +1031,7 @@ function PasswordChangeCard() {
     } finally { setChanging(false); }
   };
 
-  const colors = { bg: "#07090f", cardBg: "#0d1117", border: "#1c2a3a", accent: "#FFE600", text: "#e2eaf6", textMuted: "#8899aa" };
+  const colors = { bg: "var(--bg)", cardBg: "var(--bg2)", border: "var(--bg3)", accent: "var(--accent)", text: "var(--text)", textMuted: "var(--text2)" };
 
   return (
     <div style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
@@ -1039,12 +1039,12 @@ function PasswordChangeCard() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Lock size={24} color={colors.accent} />
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Смена пароля</h2>
+            <h2 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>Смена пароля</h2>
             <p style={{ fontSize: 13, color: colors.textMuted, margin: '4px 0 0 0' }}>Изменить пароль для входа в админ-панель</p>
           </div>
         </div>
         {success && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#22c55e', fontSize: 14, fontWeight: 600 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--success)', fontSize: 14, fontWeight: 600 }}>
             <CheckCircle2 size={16} /> Изменён
           </span>
         )}
@@ -1065,7 +1065,7 @@ function PasswordChangeCard() {
               style={{ width: '100%', padding: '12px 44px 12px 16px', background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 10, color: colors.text, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
             />
             <button onClick={() => setShowCurrent(!showCurrent)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-              {showCurrent ? <EyeOff size={16} color="#556677" /> : <Eye size={16} color="#556677" />}
+              {showCurrent ? <EyeOff size={16} color="var(--text3)" /> : <Eye size={16} color="var(--text3)" />}
             </button>
           </div>
         </div>
@@ -1082,14 +1082,14 @@ function PasswordChangeCard() {
                 value={newPwd}
                 onChange={e => setNewPwd(e.target.value)}
                 placeholder="Минимум 6 символов"
-                style={{ width: '100%', padding: '12px 44px 12px 16px', background: colors.bg, border: `1px solid ${newPwd.length > 0 && newPwd.length < 6 ? '#ef4444' : colors.border}`, borderRadius: 10, color: colors.text, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '12px 44px 12px 16px', background: colors.bg, border: `1px solid ${newPwd.length > 0 && newPwd.length < 6 ? 'var(--danger)' : colors.border}`, borderRadius: 10, color: colors.text, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
               />
               <button onClick={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                {showNew ? <EyeOff size={16} color="#556677" /> : <Eye size={16} color="#556677" />}
+                {showNew ? <EyeOff size={16} color="var(--text3)" /> : <Eye size={16} color="var(--text3)" />}
               </button>
             </div>
             {newPwd.length > 0 && newPwd.length < 6 && (
-              <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>Минимум 6 символов</p>
+              <p style={{ color: 'var(--danger)', fontSize: 12, marginTop: 6 }}>Минимум 6 символов</p>
             )}
           </div>
 
@@ -1102,10 +1102,10 @@ function PasswordChangeCard() {
               value={confirmPwd}
               onChange={e => setConfirmPwd(e.target.value)}
               placeholder="Повторите новый пароль"
-              style={{ width: '100%', padding: '12px 16px', background: colors.bg, border: `1px solid ${confirmPwd.length > 0 && confirmPwd !== newPwd ? '#ef4444' : colors.border}`, borderRadius: 10, color: colors.text, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '12px 16px', background: colors.bg, border: `1px solid ${confirmPwd.length > 0 && confirmPwd !== newPwd ? 'var(--danger)' : colors.border}`, borderRadius: 10, color: colors.text, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
             />
             {confirmPwd.length > 0 && confirmPwd !== newPwd && (
-              <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>Пароли не совпадают</p>
+              <p style={{ color: 'var(--danger)', fontSize: 12, marginTop: 6 }}>Пароли не совпадают</p>
             )}
           </div>
         </div>
@@ -1116,9 +1116,9 @@ function PasswordChangeCard() {
             disabled={!isValid || changing}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: '12px 28px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-              background: isValid ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#1c2a3a',
-              color: isValid ? '#fff' : '#556677', border: 'none',
+              padding: '12px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+              background: isValid ? 'var(--success)' : 'var(--bg3)',
+              color: isValid ? '#fff' : 'var(--text3)', border: 'none',
               cursor: isValid && !changing ? 'pointer' : 'not-allowed',
               opacity: changing ? 0.6 : 1, transition: 'all 0.2s',
             }}

@@ -15,9 +15,9 @@ const card: React.CSSProperties = {
   border: '1px solid var(--border)',
 };
 const periodBtn = (active: boolean): React.CSSProperties => ({
-  padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+  padding: '6px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
   background: active ? 'var(--accent)' : 'var(--bg2)',
-  color: active ? '#000' : 'var(--text2)', transition: 'all .2s',
+  color: active ? 'var(--on-accent)' : 'var(--text2)', transition: 'all .2s',
 });
 
 function fmt(n: number): string {
@@ -114,7 +114,7 @@ export default function MarketingROIPage() {
               const convFromPrev = i > 0 && funnelSteps[i - 1]?.value > 0
                 ? Math.round((step.value / funnelSteps[i - 1].value) * 100) : 100;
               const Icon = FUNNEL_ICONS[i] || Users;
-              const color = FUNNEL_COLORS[i] || '#888';
+              const color = FUNNEL_COLORS[i] || '#8899aa';
 
               return (
                 <div key={step.key}>
@@ -133,9 +133,9 @@ export default function MarketingROIPage() {
                         <span style={{ fontWeight: 500 }}>{FUNNEL_LABELS[step.key] || step.key}</span>
                         <span style={{ fontWeight: 700 }}>{fmt(step.value)} <span style={{ fontWeight: 400, color: 'var(--text2)', fontSize: 12 }}>({pct}%)</span></span>
                       </div>
-                      <div style={{ height: 8, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}>
+                      <div style={{ height: 8, borderRadius: 999, background: 'var(--bg2)', overflow: 'hidden' }}>
                         <div style={{
-                          height: '100%', borderRadius: 4, background: `linear-gradient(90deg, ${color}, ${color}88)`,
+                          height: '100%', borderRadius: 999, background: color,
                           width: pct + '%', transition: 'width 1s ease',
                         }} />
                       </div>
@@ -157,10 +157,10 @@ export default function MarketingROIPage() {
             const isLow = i > 0 && convFromPrev < 30;
             return (
               <div key={step.key} style={{
-                padding: '8px 12px', borderRadius: 8, background: isLow ? 'rgba(239,68,68,.08)' : 'var(--bg2)',
-                fontSize: 12, color: 'var(--text2)', borderLeft: `3px solid ${isLow ? '#ef4444' : FUNNEL_COLORS[i]}`,
+                padding: '8px 12px', borderRadius: 10, background: isLow ? 'rgba(239,68,68,.08)' : 'var(--bg2)',
+                fontSize: 12, color: 'var(--text2)', borderLeft: `3px solid ${isLow ? 'var(--danger)' : FUNNEL_COLORS[i]}`,
               }}>
-                {isLow && <span style={{ color: '#ef4444', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={14} /> Низкая конверсия! </span>}
+                {isLow && <span style={{ color: 'var(--danger)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={14} /> Низкая конверсия! </span>}
                 {FUNNEL_TIPS[step.key] || ''}
               </div>
             );
@@ -174,7 +174,7 @@ export default function MarketingROIPage() {
         {/* Campaigns ROI */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Megaphone size={18} style={{ color: '#3b82f6' }} />
+            <Megaphone size={18} style={{ color: 'var(--info)' }} />
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Кампании</h3>
           </div>
           {campaigns.length > 0 ? (
@@ -183,7 +183,7 @@ export default function MarketingROIPage() {
                 <div key={i} style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--bg2)', fontSize: 13 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontWeight: 500, maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-                    <span style={{ fontWeight: 600, color: c.roi >= 0 ? '#22c55e' : '#ef4444' }}>ROI {c.roi}%</span>
+                    <span style={{ fontWeight: 600, color: c.roi >= 0 ? 'var(--success)' : 'var(--danger)' }}>ROI {c.roi}%</span>
                   </div>
                   <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text2)' }}>
                     <span>Отправлено: {c.sent}</span>
@@ -201,7 +201,7 @@ export default function MarketingROIPage() {
         {/* Promo Codes ROI */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Ticket size={18} style={{ color: '#8b5cf6' }} />
+            <Ticket size={18} style={{ color: 'var(--violet)' }} />
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Промокоды</h3>
           </div>
           {promos.length > 0 ? (
@@ -229,16 +229,16 @@ export default function MarketingROIPage() {
         {/* Referral Program */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <UserPlus size={18} style={{ color: '#22c55e' }} />
+            <UserPlus size={18} style={{ color: 'var(--success)' }} />
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Реферальная программа</h3>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div style={{ padding: '14px', borderRadius: 10, background: 'var(--bg2)', textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#22c55e' }}>{fmt(referral.total_referrals || 0)}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{fmt(referral.total_referrals || 0)}</div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>Приведено друзей</div>
             </div>
             <div style={{ padding: '14px', borderRadius: 10, background: 'var(--bg2)', textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>{fmt(referral.active_referrers || 0)}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{fmt(referral.active_referrers || 0)}</div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>Активных рефереров</div>
             </div>
           </div>
@@ -253,7 +253,7 @@ export default function MarketingROIPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '8px 0' }}>
               <span style={{ color: 'var(--text2)' }}>ROI реферальной программы</span>
-              <span style={{ fontWeight: 700, color: (referral.roi || 0) >= 0 ? '#22c55e' : '#ef4444' }}>
+              <span style={{ fontWeight: 700, color: (referral.roi || 0) >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                 {referral.roi || 0}%
               </span>
             </div>
@@ -262,8 +262,8 @@ export default function MarketingROIPage() {
       </div>
 
       {/* Marketing tips */}
-      <div style={{ ...card, background: 'linear-gradient(135deg, rgba(59,130,246,.05), rgba(139,92,246,.05))' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><TrendingUp size={18} style={{ color: '#10b981' }} /> Как улучшить маркетинг?</h3>
+      <div style={{ ...card }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><TrendingUp size={18} style={{ color: 'var(--success)' }} /> Как улучшить маркетинг?</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
           <div>
             <strong style={{ color: 'var(--text)' }}>Воронка</strong> — ищите этап с наибольшим «провалом». Если мало первых покупок — улучшите welcome-бонус. Мало повторных — добавьте push после 7 дней.

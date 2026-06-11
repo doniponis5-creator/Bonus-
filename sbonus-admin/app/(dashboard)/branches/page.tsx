@@ -48,42 +48,42 @@ export default function BranchesPage() {
 
   return (
     <div>
-      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 800, marginBottom: 24, flexWrap: 'wrap' as any }}><Store size={24} /> Филиалы</h1>
+      <h1 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 24, fontWeight: 700, marginBottom: 24, flexWrap: 'wrap' as any }}><Store size={24} /> Филиалы</h1>
 
       {/* Таблица филиалов */}
-      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>
+      <div style={{ overflowX: 'auto', background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16, marginBottom: 32 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
               {['#', 'Название', 'Адрес', 'Город', 'Телефон', 'Статус', 'Дата'].map(h => (
-                <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+                <th key={h} style={{ padding: '14px 16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 12 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}><Loader2 className="animate-spin" style={{marginRight: 8, display: 'inline'}} size={16} /> Загрузка...</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}><Loader2 className="animate-spin" style={{marginRight: 8, display: 'inline'}} size={16} /> Загрузка...</td></tr>
             )}
             {!loading && branches.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Филиалы не найдены</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>Филиалы не найдены</td></tr>
             )}
             {!loading && branches.map((b, i) => (
               <tr key={b.id}>
-                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{i + 1}</td>
-                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#e2eaf6' }}>{b.name}</td>
-                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{b.address || '—'}</td>
-                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{b.city || '—'}</td>
-                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{b.phone || '—'}</td>
-                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>{i + 1}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{b.name}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>{b.address || '—'}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>{b.city || '—'}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>{b.phone || '—'}</td>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
                   <span style={{
-                    background: b.is_active ? '#22c55e18' : '#ff4d4d18',
-                    color: b.is_active ? '#22c55e' : '#ff4d4d',
-                    padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700,
+                    background: b.is_active ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+                    color: b.is_active ? 'var(--success)' : 'var(--danger)',
+                    padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
                   }}>
                     {b.is_active ? 'Активен' : 'Отключён'}
                   </span>
                 </td>
-                <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12, color: 'var(--text2)' }}>
                   {new Date(b.created_at).toLocaleDateString('ru-RU')}
                 </td>
               </tr>
@@ -97,20 +97,20 @@ export default function BranchesPage() {
         <h3 style={{display: 'flex', alignItems: 'center', gap: 8,  fontSize: 16, fontWeight: 700, marginBottom: 20 }}><Plus size={16} /> Добавить филиал</h3>
         <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Название *</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Название *</label>
             <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Смарт Центр 2" required />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Адрес</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Адрес</label>
             <input className="input" value={address} onChange={e => setAddress(e.target.value)} placeholder="ул. Ленина, 1" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Город</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Город</label>
               <input className="input" value={city} onChange={e => setCity(e.target.value)} placeholder="Ош" />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Телефон</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Телефон</label>
               <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+996700000000" />
             </div>
           </div>

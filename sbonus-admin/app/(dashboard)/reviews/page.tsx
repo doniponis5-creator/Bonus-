@@ -5,9 +5,9 @@ import { adminAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
-  pending: { label: 'На проверке', bg: '#f59e0b18', color: '#f59e0b' },
-  approved: { label: 'Одобрен', bg: '#22c55e18', color: '#22c55e' },
-  rejected: { label: 'Отклонён', bg: '#ff4d4d18', color: '#ff4d4d' },
+  pending: { label: 'На проверке', bg: 'rgba(245,158,11,0.12)', color: 'var(--warn)' },
+  approved: { label: 'Одобрен', bg: 'rgba(34,197,94,0.12)', color: 'var(--success)' },
+  rejected: { label: 'Отклонён', bg: 'rgba(239,68,68,0.12)', color: 'var(--danger)' },
 };
 
 const PLATFORM_MAP: Record<string, string> = {
@@ -61,10 +61,10 @@ export default function ReviewsPage() {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800 }}>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 700 }}>
           <Star size={24} /> Отзывы за бонус
           {pendingCount > 0 && (
-            <span style={{ fontSize: 13, fontWeight: 700, background: '#f59e0b', color: '#0a0f1a', borderRadius: 100, padding: '2px 10px', marginLeft: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, background: 'var(--warn)', color: 'var(--bg)', borderRadius: 999, padding: '2px 10px', marginLeft: 8 }}>
               {pendingCount} ожидают
             </span>
           )}
@@ -81,9 +81,9 @@ export default function ReviewsPage() {
         ].map(f => (
           <button key={f.value} onClick={() => { setFilter(f.value); setPage(1); }}
             style={{
-              padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-              background: filter === f.value ? '#FFE600' : 'rgba(255,255,255,0.06)',
-              color: filter === f.value ? '#0a0f1a' : '#8899aa',
+              padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              background: filter === f.value ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+              color: filter === f.value ? 'var(--bg)' : 'var(--text2)',
               transition: 'all 0.15s',
             }}>
             {f.label}
@@ -92,73 +92,73 @@ export default function ReviewsPage() {
       </div>
 
       {/* Table */}
-      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>
+      <div style={{ overflowX: 'auto', background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16, marginBottom: 32 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
               {['Клиент', 'Платформа', 'Ссылка', 'Бонус', 'Статус', 'Дата', 'Действия'].map(h => (
-                <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+                <th key={h} style={{ padding: '14px 16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 12 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>
                 <Loader2 className="animate-spin" style={{ marginRight: 8, display: 'inline' }} size={16} /> Загрузка...
               </td></tr>
             )}
             {!loading && items.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Заявок нет</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>Заявок нет</td></tr>
             )}
             {!loading && items.map(r => {
               const st = STATUS_MAP[r.status] || STATUS_MAP.pending;
               return (
                 <tr key={r.id}>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#e2eaf6' }}>{r.customer_name}</div>
-                    <div style={{ fontSize: 12, color: '#8899aa' }}>{r.customer_phone}</div>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{r.customer_name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>{r.customer_phone}</div>
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, fontWeight: 600, color: '#e2eaf6' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                     {PLATFORM_MAP[r.platform] || r.platform}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
                     <a href={r.review_link} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 12, color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+                      style={{ fontSize: 12, color: 'var(--info)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
                       <ExternalLink size={12} /> Открыть
                     </a>
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#22c55e' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 700, color: 'var(--success)' }}>
                     +{Number(r.bonus_amount).toLocaleString('ru-RU')} сом
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
                     <span style={{
                       background: st.bg, color: st.color,
-                      padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700,
+                      padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
                     }}>
                       {st.label}
                     </span>
                     {r.admin_note && (
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{r.admin_note}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{r.admin_note}</div>
                     )}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12, color: 'var(--text2)' }}>
                     {new Date(r.created_at).toLocaleDateString('ru-RU')}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
                     {r.status === 'pending' && (
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => handleAction(r.id, 'approve')} disabled={acting === r.id}
                           style={{
-                            padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                            fontSize: 12, fontWeight: 700, background: '#22c55e', color: '#fff',
+                            padding: '6px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                            fontSize: 12, fontWeight: 700, background: 'var(--success)', color: '#fff',
                             opacity: acting === r.id ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 4,
                           }}>
                           <CheckCircle2 size={13} /> Одобрить
                         </button>
                         <button onClick={() => handleAction(r.id, 'reject')} disabled={acting === r.id}
                           style={{
-                            padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                            fontSize: 12, fontWeight: 700, background: '#ff4d4d22', color: '#ff4d4d',
+                            padding: '6px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                            fontSize: 12, fontWeight: 700, background: 'rgba(239,68,68,0.13)', color: 'var(--danger)',
                             opacity: acting === r.id ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 4,
                           }}>
                           <XCircle size={13} /> Отклонить

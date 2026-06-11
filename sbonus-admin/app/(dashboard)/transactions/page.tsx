@@ -9,13 +9,13 @@ type TxMeta = { label: string; color: string; Icon: typeof PlusCircle };
 
 const TYPE_LABELS: Record<string, TxMeta> = {
   earn:     { label: 'Начисление',    color: '#22c55e', Icon: PlusCircle },
-  spend:    { label: 'Списание',      color: '#ff4d4d', Icon: MinusCircle },
-  birthday: { label: 'День рождения', color: '#ffd700', Icon: Gift },
-  referral: { label: 'Реферал',       color: '#60a5fa', Icon: Users },
-  promo:    { label: 'Промокод',      color: '#c084fc', Icon: Ticket },
+  spend:    { label: 'Списание',      color: '#ef4444', Icon: MinusCircle },
+  birthday: { label: 'День рождения', color: '#FFE600', Icon: Gift },
+  referral: { label: 'Реферал',       color: '#3b82f6', Icon: Users },
+  promo:    { label: 'Промокод',      color: '#8b5cf6', Icon: Ticket },
   expire:   { label: 'Истёк',         color: '#8899aa', Icon: Clock },
-  refund:   { label: 'Возврат',       color: '#fb923c', Icon: RefreshCcw },
-  campaign: { label: 'Кампания',      color: '#34d399', Icon: Megaphone },
+  refund:   { label: 'Возврат',       color: '#f59e0b', Icon: RefreshCcw },
+  campaign: { label: 'Кампания',      color: '#06b6d4', Icon: Megaphone },
 };
 
 const TX_TYPES = ['', 'earn', 'spend', 'birthday', 'referral', 'promo', 'expire', 'refund', 'campaign'];
@@ -115,7 +115,7 @@ export default function TransactionsPage() {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800 }}><CreditCard size={24} /> Транзакции</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 700 }}><CreditCard size={24} /> Транзакции</h1>
           <p style={{ color: 'var(--text2)', fontSize: 13, marginTop: 4 }}>Всего: {total.toLocaleString('ru-RU')}</p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -129,12 +129,12 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16 }}>
+      <div style={{ overflowX: 'auto', background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
               {['Тип', 'Клиент', 'Телефон', 'Сумма', 'Покупка', 'Кассир', 'Филиал', 'Дата', ''].map(h => (
-                <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12, whiteSpace: 'nowrap' }}>
+                <th key={h} style={{ padding: '14px 16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 12, whiteSpace: 'nowrap' }}>
                   {h}
                 </th>
               ))}
@@ -142,10 +142,10 @@ export default function TransactionsPage() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}><Loader2 className="animate-spin" style={{ marginRight: 8, display: 'inline' }} size={16} /> Загрузка...</td></tr>
+              <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}><Loader2 className="animate-spin" style={{ marginRight: 8, display: 'inline' }} size={16} /> Загрузка...</td></tr>
             )}
             {!loading && items.length === 0 && (
-              <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Транзакций нет</td></tr>
+              <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>Транзакций нет</td></tr>
             )}
             {!loading && items.map(t => {
               const meta = TYPE_LABELS[t.type];
@@ -155,43 +155,43 @@ export default function TransactionsPage() {
               const isRefund = t.type === 'refund';
               return (
                 <tr key={t.id} style={{ transition: 'background 0.15s', opacity: isRefund ? 0.6 : 1 }}>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a' }}>
-                    <span style={{ background: `${color}18`, color, padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)' }}>
+                    <span style={{ background: `${color}18`, color, padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {Icon && <Icon size={14} />} {label}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, fontWeight: 600, color: '#e2eaf6' }}>{t.customer_name}</td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{t.customer_phone}</td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, fontWeight: 700, color }}>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{t.customer_name}</td>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>{t.customer_phone}</td>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, fontWeight: 700, color }}>
                     {['spend', 'expire', 'refund'].includes(t.type) ? '−' : '+'}{Number(t.amount).toLocaleString('ru-RU')} сом
                   </td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>
                     {t.purchase_amount ? `${Number(t.purchase_amount).toLocaleString('ru-RU')} сом` : '—'}
                   </td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>
                     <span
                       onClick={() => openCashierEdit(t)}
                       title="Изменить кассира"
-                      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 6, transition: 'background 0.15s' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#1c2a3a')}
+                      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 10, transition: 'background 0.15s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       {t.cashier_name}
-                      <UserCog size={12} style={{ color: '#6366f1', opacity: 0.6 }} />
+                      <UserCog size={12} style={{ color: 'var(--info)', opacity: 0.6 }} />
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>{t.branch_name}</td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>{t.branch_name}</td>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
                     {new Date(t.created_at).toLocaleString('ru-RU')}
                   </td>
-                  <td style={{ padding: '12px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                  <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--bg3)' }}>
                     {canReverse(t.type) && (
                       <button
                         onClick={() => openReverse(t)}
                         title="Отменить транзакцию"
                         style={{
-                          background: 'none', border: '1px solid rgba(251,146,60,0.3)', color: '#fb923c',
-                          borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11,
+                          background: 'none', border: '1px solid rgba(251,146,60,0.3)', color: 'var(--warn)',
+                          borderRadius: 10, padding: '4px 8px', cursor: 'pointer', fontSize: 11,
                           display: 'flex', alignItems: 'center', gap: 4,
                         }}
                       >
@@ -217,22 +217,22 @@ export default function TransactionsPage() {
       {/* Reversal Modal */}
       {reverseModal && reverseTxn && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '420px' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '420px' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 20, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Undo2 size={18} /> Отмена транзакции
             </h2>
 
-            <div style={{ background: '#1c2a3a', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+            <div style={{ background: 'var(--bg3)', borderRadius: 10, padding: 14, marginBottom: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Клиент:</span><div style={{ fontSize: 13, fontWeight: 600 }}>{reverseTxn.customer_name}</div></div>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Тип:</span><div style={{ fontSize: 13 }}>{TYPE_LABELS[reverseTxn.type]?.label || reverseTxn.type}</div></div>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Сумма:</span><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>{Number(reverseTxn.amount).toLocaleString('ru-RU')} сом</div></div>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Дата:</span><div style={{ fontSize: 12 }}>{new Date(reverseTxn.created_at).toLocaleString('ru-RU')}</div></div>
+                <div><span style={{ fontSize: 11, color: 'var(--text2)' }}>Клиент:</span><div style={{ fontSize: 13, fontWeight: 600 }}>{reverseTxn.customer_name}</div></div>
+                <div><span style={{ fontSize: 11, color: 'var(--text2)' }}>Тип:</span><div style={{ fontSize: 13 }}>{TYPE_LABELS[reverseTxn.type]?.label || reverseTxn.type}</div></div>
+                <div><span style={{ fontSize: 11, color: 'var(--text2)' }}>Сумма:</span><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>{Number(reverseTxn.amount).toLocaleString('ru-RU')} сом</div></div>
+                <div><span style={{ fontSize: 11, color: 'var(--text2)' }}>Дата:</span><div style={{ fontSize: 12 }}>{new Date(reverseTxn.created_at).toLocaleString('ru-RU')}</div></div>
               </div>
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Причина отмены *</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Причина отмены *</label>
               <textarea
                 className="input"
                 style={{ width: '100%', minHeight: 80 }}
@@ -242,7 +242,7 @@ export default function TransactionsPage() {
               />
             </div>
 
-            <div style={{ background: 'rgba(251,146,60,0.1)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: '#fb923c' }}>
+            <div style={{ background: 'rgba(251,146,60,0.1)', borderRadius: 10, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: 'var(--warn)' }}>
               <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> {reverseTxn.type === 'spend'
                 ? `Бонусы (${Number(reverseTxn.amount).toLocaleString('ru-RU')} сом) будут возвращены на счёт клиента`
                 : `С бонусного счёта клиента будет списано ${Number(reverseTxn.amount).toLocaleString('ru-RU')} сом`
@@ -250,10 +250,10 @@ export default function TransactionsPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setReverseModal(false)}>Отмена</button>
+              <button className="btn" style={{ flex: 1, background: 'var(--bg3)', color: 'var(--text)' }} onClick={() => setReverseModal(false)}>Отмена</button>
               <button
                 className="btn"
-                style={{ flex: 1, background: '#fb923c', color: '#000', fontWeight: 700 }}
+                style={{ flex: 1, background: 'var(--warn)', color: '#000', fontWeight: 700 }}
                 onClick={handleReverse}
                 disabled={reversing || !reverseReason.trim()}
               >
@@ -266,22 +266,22 @@ export default function TransactionsPage() {
       {/* Cashier Edit Modal */}
       {cashierModal && cashierTxn && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '420px' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <UserCog size={18} style={{ color: '#6366f1' }} /> Изменить кассира
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '420px' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 20, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UserCog size={18} style={{ color: 'var(--info)' }} /> Изменить кассира
             </h2>
 
-            <div style={{ background: '#1c2a3a', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+            <div style={{ background: 'var(--bg3)', borderRadius: 10, padding: 14, marginBottom: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Клиент:</span><div style={{ fontSize: 13, fontWeight: 600 }}>{cashierTxn.customer_name}</div></div>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Сумма:</span><div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{Number(cashierTxn.amount).toLocaleString('ru-RU')} сом</div></div>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Текущий кассир:</span><div style={{ fontSize: 13 }}>{cashierTxn.cashier_name}</div></div>
-                <div><span style={{ fontSize: 11, color: '#8899aa' }}>Дата:</span><div style={{ fontSize: 12 }}>{new Date(cashierTxn.created_at).toLocaleString('ru-RU')}</div></div>
+                <div><span style={{ fontSize: 11, color: 'var(--text2)' }}>Клиент:</span><div style={{ fontSize: 13, fontWeight: 600 }}>{cashierTxn.customer_name}</div></div>
+                <div><span style={{ fontSize: 11, color: 'var(--text2)' }}>Сумма:</span><div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{Number(cashierTxn.amount).toLocaleString('ru-RU')} сом</div></div>
+                <div><span style={{ fontSize: 11, color: 'var(--text2)' }}>Текущий кассир:</span><div style={{ fontSize: 13 }}>{cashierTxn.cashier_name}</div></div>
+                <div><span style={{ fontSize: 11, color: 'var(--text2)' }}>Дата:</span><div style={{ fontSize: 12 }}>{new Date(cashierTxn.created_at).toLocaleString('ru-RU')}</div></div>
               </div>
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Новый кассир *</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Новый кассир *</label>
               <select
                 className="input"
                 style={{ width: '100%' }}
@@ -296,10 +296,10 @@ export default function TransactionsPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setCashierModal(false)}>Отмена</button>
+              <button className="btn" style={{ flex: 1, background: 'var(--bg3)', color: 'var(--text)' }} onClick={() => setCashierModal(false)}>Отмена</button>
               <button
                 className="btn"
-                style={{ flex: 1, background: '#6366f1', color: '#fff', fontWeight: 700 }}
+                style={{ flex: 1, background: 'var(--info)', color: '#fff', fontWeight: 700 }}
                 onClick={handleCashierSave}
                 disabled={savingCashier || !selectedCashier}
               >

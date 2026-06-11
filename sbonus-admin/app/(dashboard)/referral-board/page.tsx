@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 
 const RANK_ICONS = [Crown, Medal, Award, Star, Star];
-const RANK_COLORS = ['#ffd700', '#b0b0b0', '#cd7f32', '#6366f1', '#8b5cf6'];
+const RANK_COLORS = ['#FFE600', '#b0b0b0', '#cd7f32', '#3b82f6', '#8b5cf6'];
 
 export default function ReferralBoardPage() {
   const [stats, setStats] = useState<any>(null);
@@ -67,10 +67,10 @@ export default function ReferralBoardPage() {
       {/* Header */}
       <div className="page-header" style={{ marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)' }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)' }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 12,
-              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+              width: 40, height: 40, borderRadius: 10,
+              background: 'var(--violet)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <Users size={20} color="#fff" />
@@ -85,13 +85,13 @@ export default function ReferralBoardPage() {
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
           {[
-            { label: 'Всего рефералов', value: fmt(stats.total_referrals), icon: Users, color: '#8b5cf6' },
-            { label: 'За месяц', value: fmt(stats.this_month), icon: TrendingUp, color: '#10b981' },
-            { label: 'Бонусов выплачено', value: `${fmt(stats.total_bonus_paid)} сом`, icon: Gift, color: '#f59e0b' },
-            { label: 'Milestones', value: fmt(stats.milestones_claimed), icon: Target, color: '#6366f1' },
+            { label: 'Всего рефералов', value: fmt(stats.total_referrals), icon: Users, color: 'var(--violet)' },
+            { label: 'За месяц', value: fmt(stats.this_month), icon: TrendingUp, color: 'var(--success)' },
+            { label: 'Бонусов выплачено', value: `${fmt(stats.total_bonus_paid)} сом`, icon: Gift, color: 'var(--warn)' },
+            { label: 'Milestones', value: fmt(stats.milestones_claimed), icon: Target, color: 'var(--info)' },
           ].map((kpi, i) => (
             <div key={i} style={{
-              background: 'var(--bg2)', borderRadius: 14, padding: 16,
+              background: 'var(--bg2)', borderRadius: 16, padding: 16,
               border: '1px solid var(--border)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -103,7 +103,7 @@ export default function ReferralBoardPage() {
                   <kpi.icon size={18} color={kpi.color} />
                 </div>
               </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{kpi.value}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{kpi.value}</div>
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{kpi.label}</div>
             </div>
           ))}
@@ -113,14 +113,14 @@ export default function ReferralBoardPage() {
       {/* Top Referrer Banner */}
       {stats?.top_referrer && (
         <div style={{
-          background: 'linear-gradient(135deg, rgba(255,215,0,0.12), rgba(245,158,11,0.06))',
-          borderRadius: 14, padding: 16, marginBottom: 24,
+          background: 'var(--accent-dim)',
+          borderRadius: 16, padding: 16, marginBottom: 24,
           border: '1px solid rgba(255,215,0,0.2)',
           display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         }}>
-          <Crown size={24} color="#ffd700" />
+          <Crown size={24} color="var(--accent)" />
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#ffd700' }}>Лучший рефёрер</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>Лучший рефёрер</div>
             <div style={{ fontSize: 13, color: 'var(--text)' }}>
               {stats.top_referrer.name} — <b>{stats.top_referrer.count}</b> приглашённых
             </div>
@@ -132,9 +132,9 @@ export default function ReferralBoardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 24 }}>
         {/* Chart */}
         {chartData.length > 0 && (
-          <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 20, border: '1px solid var(--border)' }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Trophy size={18} color="#ffd700" /> Топ-10 рефёреров
+              <Trophy size={18} color="var(--accent)" /> Топ-10 рефёреров
             </h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -143,7 +143,8 @@ export default function ReferralBoardPage() {
                   <XAxis type="number" tick={{ fill: 'var(--text3)', fontSize: 11 }} />
                   <YAxis dataKey="name" type="category" width={70} tick={{ fill: 'var(--text3)', fontSize: 11 }} />
                   <Tooltip
-                    contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                    contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
                     formatter={(v: number, n: string) => [v, n === 'referrals' ? 'Рефералы' : 'Бонус']}
                   />
                   <Bar dataKey="referrals" radius={[0, 6, 6, 0]}>
@@ -158,9 +159,9 @@ export default function ReferralBoardPage() {
         )}
 
         {/* Referral tree panel */}
-        <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+        <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 20, border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Gem size={18} color="#8b5cf6" /> Дерево рефералов
+            <Gem size={18} color="var(--violet)" /> Дерево рефералов
           </h3>
           {!treeCustomerId && (
             <p style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: 32 }}>
@@ -176,9 +177,9 @@ export default function ReferralBoardPage() {
             <div>
               {/* Root */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                <Crown size={18} color="#ffd700" />
+                <Crown size={18} color="var(--accent)" />
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#ffd700' }}>{tree.root.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{tree.root.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--text3)' }}>{tree.root.phone} | Код: {tree.root.referral_code}</div>
                 </div>
               </div>
@@ -187,13 +188,13 @@ export default function ReferralBoardPage() {
                 {tree.tree.map((l1: any) => (
                   <div key={l1.id}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0 8px 20px', borderBottom: '1px solid var(--border)' }}>
-                      <User size={14} color="#8b5cf6" />
+                      <User size={14} color="var(--violet)" />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{l1.name}</div>
                         <div style={{ fontSize: 10, color: 'var(--text3)' }}>{l1.phone} | {new Date(l1.joined).toLocaleDateString('ru')}</div>
                       </div>
                       {l1.referrals.length > 0 && (
-                        <span style={{ fontSize: 10, color: '#8b5cf6', fontWeight: 600 }}>+{l1.referrals.length}</span>
+                        <span style={{ fontSize: 10, color: 'var(--violet)', fontWeight: 600 }}>+{l1.referrals.length}</span>
                       )}
                     </div>
                     {/* Level 2 */}
@@ -218,7 +219,7 @@ export default function ReferralBoardPage() {
       </div>
 
       {/* Full Leaderboard Table */}
-      <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+      <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 20, border: '1px solid var(--border)' }}>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px' }}>Полный рейтинг</h3>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -253,16 +254,16 @@ export default function ReferralBoardPage() {
                     <td style={{ padding: '12px' }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '3px 10px', borderRadius: 8,
-                        background: '#8b5cf622', color: '#8b5cf6', fontWeight: 700,
+                        padding: '3px 10px', borderRadius: 10,
+                        background: 'rgba(139,92,246,0.13)', color: 'var(--violet)', fontWeight: 700,
                       }}>
                         <Users size={12} /> {e.referral_count}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', color: '#10b981', fontWeight: 600 }}>{fmt(e.bonus_earned)} сом</td>
+                    <td style={{ padding: '12px', color: 'var(--success)', fontWeight: 600 }}>{fmt(e.bonus_earned)} сом</td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: 11, color: 'var(--accent)' }}>{e.referral_code}</td>
                     <td style={{ padding: '12px' }}>
-                      <ChevronRight size={14} color={isSelected ? '#8b5cf6' : 'var(--text3)'} />
+                      <ChevronRight size={14} color={isSelected ? 'var(--violet)' : 'var(--text3)'} />
                     </td>
                   </tr>
                 );

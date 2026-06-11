@@ -20,14 +20,14 @@ const kpiCard: React.CSSProperties = {
 };
 const badge = (positive: boolean): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600,
-  padding: '2px 8px', borderRadius: 20,
+  padding: '2px 8px', borderRadius: 16,
   background: positive ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)',
-  color: positive ? '#22c55e' : '#ef4444',
+  color: positive ? 'var(--success)' : 'var(--danger)',
 });
 const periodBtn = (active: boolean): React.CSSProperties => ({
-  padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+  padding: '6px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
   background: active ? 'var(--accent)' : 'var(--bg2)',
-  color: active ? '#000' : 'var(--text2)',
+  color: active ? 'var(--on-accent)' : 'var(--text2)',
   transition: 'all .2s',
 });
 const tooltip: React.CSSProperties = {
@@ -36,7 +36,7 @@ const tooltip: React.CSSProperties = {
 
 const RFM_COLORS: Record<string, string> = {
   champions: '#22c55e', loyal: '#3b82f6', potential_loyal: '#8b5cf6',
-  new_customers: '#06b6d4', sleeping: '#f59e0b', at_risk: '#f97316', lost: '#ef4444',
+  new_customers: '#06b6d4', sleeping: '#f59e0b', at_risk: '#f59e0b', lost: '#ef4444',
 };
 const RFM_LABELS: Record<string, string> = {
   champions: 'Чемпионы', loyal: 'Лояльные', potential_loyal: 'Перспективные',
@@ -98,12 +98,12 @@ export default function BusinessAnalyticsPage() {
   }
 
   const kpis = [
-    { label: 'Выручка', value: fmtCur(biz.revenue), prev: biz.prev_revenue, cur: biz.revenue, icon: DollarSign, color: '#22c55e' },
-    { label: 'Транзакции', value: fmt(biz.tx_count), prev: biz.prev_tx_count, cur: biz.tx_count, icon: ShoppingCart, color: '#3b82f6' },
-    { label: 'Средний чек', value: fmtCur(biz.avg_check), prev: biz.prev_avg_check, cur: biz.avg_check, icon: Target, color: '#8b5cf6' },
-    { label: 'Активные клиенты', value: fmt(biz.active_buyers), prev: biz.prev_active_buyers, cur: biz.active_buyers, icon: Users, color: '#f59e0b' },
-    { label: 'LTV (средний)', value: fmtCur(biz.ltv), prev: biz.prev_ltv || 0, cur: biz.ltv, icon: TrendingUp, color: '#06b6d4' },
-    { label: 'Burn Rate', value: biz.burn_rate + '%', prev: biz.prev_burn_rate || 0, cur: biz.burn_rate, icon: TrendingDown, color: '#ef4444' },
+    { label: 'Выручка', value: fmtCur(biz.revenue), prev: biz.prev_revenue, cur: biz.revenue, icon: DollarSign, color: 'var(--success)' },
+    { label: 'Транзакции', value: fmt(biz.tx_count), prev: biz.prev_tx_count, cur: biz.tx_count, icon: ShoppingCart, color: 'var(--info)' },
+    { label: 'Средний чек', value: fmtCur(biz.avg_check), prev: biz.prev_avg_check, cur: biz.avg_check, icon: Target, color: 'var(--violet)' },
+    { label: 'Активные клиенты', value: fmt(biz.active_buyers), prev: biz.prev_active_buyers, cur: biz.active_buyers, icon: Users, color: 'var(--warn)' },
+    { label: 'LTV (средний)', value: fmtCur(biz.ltv), prev: biz.prev_ltv || 0, cur: biz.ltv, icon: TrendingUp, color: 'var(--info)' },
+    { label: 'Burn Rate', value: biz.burn_rate + '%', prev: biz.prev_burn_rate || 0, cur: biz.burn_rate, icon: TrendingDown, color: 'var(--danger)' },
   ];
 
   const rfmData = rfm?.segments ? Object.entries(rfm.segments).map(([key, val]: any) => ({
@@ -166,12 +166,12 @@ export default function BusinessAnalyticsPage() {
                 <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text2)' }} />
-            <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--text2)' }} tickFormatter={(v: number) => fmt(v)} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--text2)' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8899aa' }} />
+            <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#8899aa' }} tickFormatter={(v: number) => fmt(v)} />
+            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#8899aa' }} />
             <Tooltip
-              contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}
+              contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13 }}
               formatter={(v: number, name: string) => [name === 'revenue' ? fmtCur(v) : fmt(v), name === 'revenue' ? 'Выручка' : 'Транзакции']}
             cursor={{ fill: 'transparent' }} />
             <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#22c55e" fill="url(#gRev)" strokeWidth={2} name="revenue" />
@@ -199,7 +199,7 @@ export default function BusinessAnalyticsPage() {
                     onMouseLeave={() => setActiveRfm(null)}
                   >
                     {rfmData.map((s: any, i: number) => (
-                      <Cell key={i} fill={RFM_COLORS[s.key] || '#888'} stroke="var(--card)" strokeWidth={2}
+                      <Cell key={i} fill={RFM_COLORS[s.key] || '#8899aa'} stroke="#141c2b" strokeWidth={2}
                         opacity={activeRfm && activeRfm !== s.key ? 0.4 : 1} />
                     ))}
                   </Pie>
@@ -214,7 +214,7 @@ export default function BusinessAnalyticsPage() {
               )}
               <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {rfmData.map((s: any) => (
-                  <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', borderRadius: 8, background: 'var(--bg2)', cursor: 'pointer' }}
+                  <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 10px', borderRadius: 10, background: 'var(--bg2)', cursor: 'pointer' }}
                     onMouseEnter={() => setActiveRfm(s.key)} onMouseLeave={() => setActiveRfm(null)}>
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: RFM_COLORS[s.key] }} />
                     <span style={{ flex: 1 }}>{s.name}</span>
@@ -258,7 +258,7 @@ export default function BusinessAnalyticsPage() {
                           ? `rgba(34, 197, 94, ${0.1 + intensity * 0.6})`
                           : 'transparent';
                         return (
-                          <td key={i} style={{ padding: '6px', textAlign: 'center', background: bg, borderRadius: 4, fontWeight: r > 30 ? 600 : 400 }}>
+                          <td key={i} style={{ padding: '6px', textAlign: 'center', background: bg, borderRadius: 999, fontWeight: r > 30 ? 600 : 400 }}>
                             {r > 0 ? r + '%' : '—'}
                           </td>
                         );
@@ -286,11 +286,11 @@ export default function BusinessAnalyticsPage() {
         <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600 }}>Средний чек по дням</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={trends}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text2)' }} />
-            <YAxis tick={{ fontSize: 11, fill: 'var(--text2)' }} tickFormatter={(v: number) => fmt(v)} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8899aa' }} />
+            <YAxis tick={{ fontSize: 11, fill: '#8899aa' }} tickFormatter={(v: number) => fmt(v)} />
             <Tooltip
-              contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}
+              contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13 }}
               cursor={{ fill: 'rgba(255,255,255,0.05)' }}
               formatter={(v: number) => [fmtCur(v), 'Ср. чек']}
             />
@@ -300,8 +300,8 @@ export default function BusinessAnalyticsPage() {
       </div>
 
       {/* Summary info */}
-      <div style={{ ...card, background: 'linear-gradient(135deg, rgba(255,230,0,.05), rgba(34,197,94,.05))' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><BarChart3 size={18} style={{ color: '#6366f1' }} /> Что значат эти метрики?</h3>
+      <div style={{ ...card }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><BarChart3 size={18} style={{ color: 'var(--info)' }} /> Что значат эти метрики?</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
           <div>
             <strong style={{ color: 'var(--text)' }}>LTV (Lifetime Value)</strong> — сколько в среднем один клиент принёс за всё время. Чем выше — тем лучше работает удержание.

@@ -5,7 +5,7 @@ import { customersAPI, adminAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 
 const TIER_COLORS: Record<string, string> = {
-  Bronze: '#cd7f32', Silver: '#b0b0b0', Gold: '#ffd700', Platinum: '#FFE600',
+  Bronze: '#cd7f32', Silver: '#b0b0b0', Gold: 'var(--accent)', Platinum: 'var(--accent)',
 };
 const TIERS = ['Bronze', 'Silver', 'Gold', 'Platinum'];
 
@@ -218,7 +218,7 @@ export default function CustomersPage() {
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800 }}>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 700 }}>
           <Users size={24} /> Клиенты
           <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text2)', marginLeft: 8 }}>{total} всего</span>
         </h1>
@@ -266,7 +266,7 @@ export default function CustomersPage() {
       {showFilters && (
         <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center', padding: 16 }}>
           <div>
-            <label style={{ fontSize: 11, color: '#8899aa', display: 'block', marginBottom: 4 }}>Уровень</label>
+            <label style={{ fontSize: 11, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Уровень</label>
             <select
               className="input"
               value={tierFilter}
@@ -278,7 +278,7 @@ export default function CustomersPage() {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: 11, color: '#8899aa', display: 'block', marginBottom: 4 }}>Статус</label>
+            <label style={{ fontSize: 11, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Статус</label>
             <select
               className="input"
               value={activeFilter === null ? '' : String(activeFilter)}
@@ -291,7 +291,7 @@ export default function CustomersPage() {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: 11, color: '#8899aa', display: 'block', marginBottom: 4 }}>Сортировка</label>
+            <label style={{ fontSize: 11, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Сортировка</label>
             <select
               className="input"
               value={sortBy}
@@ -304,7 +304,7 @@ export default function CustomersPage() {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: 11, color: '#8899aa', display: 'block', marginBottom: 4 }}>Направление</label>
+            <label style={{ fontSize: 11, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>Направление</label>
             <select className="input" value={sortDir} onChange={e => setSortDir(e.target.value)} style={{ minWidth: 100 }}>
               <option value="desc">Убывание</option>
               <option value="asc">Возрастание</option>
@@ -324,7 +324,7 @@ export default function CustomersPage() {
       {bulkMode && selected.size > 0 && (
         <div style={{
           background: 'rgba(255,230,0,0.08)', border: '1px solid rgba(255,230,0,0.3)',
-          borderRadius: 12, padding: '12px 16px', marginBottom: 16,
+          borderRadius: 10, padding: '12px 16px', marginBottom: 16,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
@@ -332,8 +332,8 @@ export default function CustomersPage() {
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              className="btn"
-              style={{ background: 'var(--accent)', color: '#000', fontSize: 12, padding: '6px 16px' }}
+              className="btn btn-primary"
+              style={{ fontSize: 12, padding: '6px 16px' }}
               onClick={() => { setBulkType('earn'); setBulkModal(true); }}
             >
               <PlusCircle size={14} style={{ marginRight: 4, display: 'inline' }} /> Начислить
@@ -352,61 +352,61 @@ export default function CustomersPage() {
       {error && <div style={{ color: 'var(--danger)', marginBottom: 16 }}><XCircle size={14} style={{ display: 'inline', marginRight: 4 }} /> {error}</div>}
 
       {/* Table */}
-      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '16px' }}>
+      <div style={{ overflowX: 'auto', background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: '16px' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
               {bulkMode && (
-                <th style={{ padding: '16px 8px 16px 16px', borderBottom: '1px solid #1c2a3a' }}>
-                  <button onClick={toggleSelectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899aa', padding: 0 }}>
+                <th style={{ padding: '16px 8px 16px 16px', borderBottom: '1px solid var(--bg3)' }}>
+                  <button onClick={toggleSelectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', padding: 0 }}>
                     {selected.size === customers.length && customers.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
                   </button>
                 </th>
               )}
-              <th style={{ padding: '16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 13 }}>#</th>
-              <th style={{ padding: '16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 13 }}>Имя</th>
-              <th style={{ padding: '16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 13 }}>Телефон</th>
-              <th style={{ padding: '16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 13 }}>Уровень</th>
-              <th style={{ padding: '16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 13 }}>Баланс</th>
-              <th style={{ padding: '16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 13, textAlign: 'right' }}>Действия</th>
+              <th style={{ padding: '16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 13 }}>#</th>
+              <th style={{ padding: '16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 13 }}>Имя</th>
+              <th style={{ padding: '16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 13 }}>Телефон</th>
+              <th style={{ padding: '16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 13 }}>Уровень</th>
+              <th style={{ padding: '16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 13 }}>Баланс</th>
+              <th style={{ padding: '16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 13, textAlign: 'right' }}>Действия</th>
             </tr>
           </thead>
           <tbody>
             {customers.map((c, idx) => (
               <tr key={c.id} style={{ background: selected.has(c.id) ? 'rgba(255,230,0,0.04)' : 'transparent' }}>
                 {bulkMode && (
-                  <td style={{ padding: '16px 8px 16px 16px', borderBottom: '1px solid #1c2a3a' }}>
-                    <button onClick={() => toggleSelect(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: selected.has(c.id) ? 'var(--accent)' : '#8899aa', padding: 0 }}>
+                  <td style={{ padding: '16px 8px 16px 16px', borderBottom: '1px solid var(--bg3)' }}>
+                    <button onClick={() => toggleSelect(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: selected.has(c.id) ? 'var(--accent)' : 'var(--text2)', padding: 0 }}>
                       {selected.has(c.id) ? <CheckSquare size={16} /> : <Square size={16} />}
                     </button>
                   </td>
                 )}
-                <td style={{ padding: '16px', color: '#e2eaf6', borderBottom: '1px solid #1c2a3a', fontSize: 14 }}>{(page - 1) * limit + idx + 1}</td>
-                <td style={{ padding: '16px', color: '#e2eaf6', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 600 }}>{c.full_name}</td>
-                <td style={{ padding: '16px', color: '#e2eaf6', borderBottom: '1px solid #1c2a3a', fontSize: 14 }}>{c.phone}</td>
-                <td style={{ padding: '16px', borderBottom: '1px solid #1c2a3a', fontSize: 14 }}>
+                <td style={{ padding: '16px', color: 'var(--text)', borderBottom: '1px solid var(--bg3)', fontSize: 14 }}>{(page - 1) * limit + idx + 1}</td>
+                <td style={{ padding: '16px', color: 'var(--text)', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 600 }}>{c.full_name}</td>
+                <td style={{ padding: '16px', color: 'var(--text)', borderBottom: '1px solid var(--bg3)', fontSize: 14 }}>{c.phone}</td>
+                <td style={{ padding: '16px', borderBottom: '1px solid var(--bg3)', fontSize: 14 }}>
                   <span style={{
                     backgroundColor: `${TIER_COLORS[c.tier_name] || '#FFE600'}20`,
                     color: TIER_COLORS[c.tier_name] || '#FFE600',
-                    padding: '4px 10px', borderRadius: '100px', fontSize: 12, fontWeight: 700,
+                    padding: '4px 10px', borderRadius: '999px', fontSize: 12, fontWeight: 700,
                   }}>
                     {c.tier_name}
                   </span>
                 </td>
-                <td style={{ padding: '16px', color: '#FFE600', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700 }}>
+                <td style={{ padding: '16px', color: 'var(--accent)', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 700 }}>
                   {Number(c.balance).toLocaleString('ru-RU')} сом
                   {c.is_active === false && (
-                    <span style={{ display: 'block', fontSize: 10, color: '#ff4d4d', fontWeight: 600, marginTop: 2 }}>Заблокирован</span>
+                    <span style={{ display: 'block', fontSize: 10, color: 'var(--danger)', fontWeight: 600, marginTop: 2 }}>Заблокирован</span>
                   )}
                 </td>
-                <td style={{ padding: '16px', borderBottom: '1px solid #1c2a3a', textAlign: 'right' }}>
+                <td style={{ padding: '16px', borderBottom: '1px solid var(--bg3)', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                    <button onClick={() => openModal('edit', c)} style={{ background: 'none', border: '1px solid #1c2a3a', color: '#8899aa', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Pencil size={12} /> Изм.</button>
-                    <button onClick={() => openDebtModal(c)} style={{ background: 'none', border: '1px solid #f59e0b', color: '#f59e0b', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><FileText size={12} /> Долги</button>
-                    <button onClick={() => openModal('earn', c)} style={{ background: 'none', border: '1px solid #FFE600', color: '#FFE600', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><PlusCircle size={12} /> Бонус</button>
-                    <button onClick={() => openModal('spend', c)} style={{ background: 'none', border: '1px solid #ff4d4d', color: '#ff4d4d', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><MinusCircle size={12} /> Списать</button>
-                    <button onClick={() => handleGiftSpin(c)} style={{ background: 'none', border: '1px solid #c084fc', color: '#c084fc', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Disc size={12} /> Спин</button>
-                    <button onClick={() => toggleActive(c)} style={{ background: 'none', border: '1px solid ' + (c.is_active === false ? '#22c55e' : '#f59e0b'), color: c.is_active === false ? '#22c55e' : '#f59e0b', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <button onClick={() => openModal('edit', c)} style={{ background: 'none', border: '1px solid var(--bg3)', color: 'var(--text2)', padding: '6px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Pencil size={12} /> Изм.</button>
+                    <button onClick={() => openDebtModal(c)} style={{ background: 'none', border: '1px solid var(--warn)', color: 'var(--warn)', padding: '6px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><FileText size={12} /> Долги</button>
+                    <button onClick={() => openModal('earn', c)} style={{ background: 'none', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '6px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><PlusCircle size={12} /> Бонус</button>
+                    <button onClick={() => openModal('spend', c)} style={{ background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '6px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><MinusCircle size={12} /> Списать</button>
+                    <button onClick={() => handleGiftSpin(c)} style={{ background: 'none', border: '1px solid var(--violet)', color: 'var(--violet)', padding: '6px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Disc size={12} /> Спин</button>
+                    <button onClick={() => toggleActive(c)} style={{ background: 'none', border: '1px solid ' + (c.is_active === false ? 'var(--success)' : 'var(--warn)'), color: c.is_active === false ? 'var(--success)' : 'var(--warn)', padding: '6px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       {c.is_active === false ? <><Unlock size={12} /> Разблок.</> : <><Lock size={12} /> Блокир.</>}
                     </button>
                   </div>
@@ -415,7 +415,7 @@ export default function CustomersPage() {
             ))}
             {customers.length === 0 && !loading && (
               <tr>
-                <td colSpan={bulkMode ? 7 : 6} style={{ padding: '32px', textAlign: 'center', color: '#8899aa' }}>Клиенты не найдены</td>
+                <td colSpan={bulkMode ? 7 : 6} style={{ padding: '32px', textAlign: 'center', color: 'var(--text2)' }}>Клиенты не найдены</td>
               </tr>
             )}
           </tbody>
@@ -425,7 +425,7 @@ export default function CustomersPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-          <span style={{ fontSize: 13, color: '#8899aa' }}>
+          <span style={{ fontSize: 13, color: 'var(--text2)' }}>
             Показано {(page - 1) * limit + 1}–{Math.min(page * limit, total)} из {total}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -439,8 +439,8 @@ export default function CustomersPage() {
       {/* Individual Modal */}
       {modalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} className="modal-overlay">
-          <div className="modal-content" style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="modal-content" style={{ background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 24, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
               {modalType === 'edit' ? <><Pencil size={18} /> Редактирование</> :
                modalType === 'earn' ? <><PlusCircle size={18} /> Начисление бонуса</> :
                <><MinusCircle size={18} /> Списание бонуса</>}
@@ -448,22 +448,22 @@ export default function CustomersPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {modalType === 'edit' ? (
                 <>
-                  <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>ФИО</label><input className="input" style={{ width: '100%' }} value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} /></div>
-                  <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Телефон</label><input className="input" style={{ width: '100%' }} value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} /></div>
-                  <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Дата рождения</label><input className="input" style={{ width: '100%' }} type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} /></div>
+                  <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>ФИО</label><input className="input" style={{ width: '100%' }} value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} /></div>
+                  <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Телефон</label><input className="input" style={{ width: '100%' }} value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} /></div>
+                  <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Дата рождения</label><input className="input" style={{ width: '100%' }} type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} /></div>
                 </>
               ) : (
                 <>
-                  <div style={{ background: '#1c2a3a', padding: 12, borderRadius: 12 }}>
-                    <div style={{ fontSize: 12, color: '#8899aa' }}>Клиент:</div>
-                    <div style={{ fontWeight: 700, color: '#e2eaf6' }}>{selectedCustomer.full_name}</div>
+                  <div style={{ background: 'var(--bg3)', padding: 12, borderRadius: 10 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>Клиент:</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text)' }}>{selectedCustomer.full_name}</div>
                   </div>
-                  <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Сумма (сом)</label><input className="input" style={{ width: '100%', fontSize: 20, color: '#FFE600', fontWeight: 700 }} type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} placeholder="0" /></div>
-                  <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Причина *</label><textarea className="input" style={{ width: '100%', minHeight: 80 }} value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="Причина корректировки" /></div>
+                  <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Сумма (сом)</label><input className="input" style={{ width: '100%', fontSize: 20, color: 'var(--accent)', fontWeight: 700 }} type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} placeholder="0" /></div>
+                  <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Причина *</label><textarea className="input" style={{ width: '100%', minHeight: 80 }} value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} placeholder="Причина корректировки" /></div>
                 </>
               )}
               <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-                <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setModalOpen(false)}>Отмена</button>
+                <button className="btn" style={{ flex: 1, background: 'var(--bg3)', color: 'var(--text)' }} onClick={() => setModalOpen(false)}>Отмена</button>
                 <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleAction}>Сохранить</button>
               </div>
             </div>
@@ -474,19 +474,19 @@ export default function CustomersPage() {
       {/* Bulk Bonus Modal */}
       {bulkModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} className="modal-overlay">
-          <div className="modal-content" style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="modal-content" style={{ background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 24, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Coins size={18} /> Массовое {bulkType === 'earn' ? 'начисление' : 'списание'}
             </h2>
-            <div style={{ background: '#1c2a3a', padding: 12, borderRadius: 12, marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: '#8899aa' }}>Выбрано клиентов:</div>
+            <div style={{ background: 'var(--bg3)', padding: 12, borderRadius: 10, marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--text2)' }}>Выбрано клиентов:</div>
               <div style={{ fontWeight: 700, color: 'var(--accent)', fontSize: 20 }}>{selected.size}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Сумма (сом) каждому</label><input className="input" style={{ width: '100%', fontSize: 20, color: '#FFE600', fontWeight: 700 }} type="number" value={bulkAmount} onChange={e => setBulkAmount(e.target.value)} placeholder="0" /></div>
-              <div><label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 8 }}>Причина *</label><textarea className="input" style={{ width: '100%', minHeight: 80 }} value={bulkNote} onChange={e => setBulkNote(e.target.value)} placeholder="Причина массовой операции" /></div>
+              <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Сумма (сом) каждому</label><input className="input" style={{ width: '100%', fontSize: 20, color: 'var(--accent)', fontWeight: 700 }} type="number" value={bulkAmount} onChange={e => setBulkAmount(e.target.value)} placeholder="0" /></div>
+              <div><label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Причина *</label><textarea className="input" style={{ width: '100%', minHeight: 80 }} value={bulkNote} onChange={e => setBulkNote(e.target.value)} placeholder="Причина массовой операции" /></div>
               <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-                <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setBulkModal(false)}>Отмена</button>
+                <button className="btn" style={{ flex: 1, background: 'var(--bg3)', color: 'var(--text)' }} onClick={() => setBulkModal(false)}>Отмена</button>
                 <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleBulkBonus}>
                   {bulkType === 'earn' ? 'Начислить' : 'Списать'}
                 </button>
@@ -500,53 +500,53 @@ export default function CustomersPage() {
       {/* Debt Modal */}
       {debtModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
                 <FileText size={18} /> Долги / Рассрочки
               </h2>
               <div style={{ display: 'flex', gap: 8 }}>
                 {debtData?.debts?.length > 0 && (
-                  <button onClick={exportDebtsExcel} style={{ background: 'none', border: '1px solid #22c55e', color: '#22c55e', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: 12 }}>
+                  <button onClick={exportDebtsExcel} style={{ background: 'none', border: '1px solid var(--success)', color: 'var(--success)', padding: '6px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: 12 }}>
                     Excel
                   </button>
                 )}
-                <button onClick={() => setDebtModal(false)} style={{ background: 'none', border: '1px solid #1c2a3a', color: '#8899aa', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: 12 }}>
+                <button onClick={() => setDebtModal(false)} style={{ background: 'none', border: '1px solid var(--bg3)', color: 'var(--text2)', padding: '6px 14px', borderRadius: '10px', cursor: 'pointer', fontSize: 12 }}>
                   Закрыть
                 </button>
               </div>
             </div>
 
             {/* Customer info */}
-            <div style={{ background: '#1c2a3a', padding: 12, borderRadius: 12, marginBottom: 16 }}>
-              <span style={{ fontWeight: 700, color: '#e2eaf6' }}>{selectedCustomer?.full_name}</span>
-              <span style={{ color: '#8899aa', marginLeft: 12 }}>{selectedCustomer?.phone}</span>
+            <div style={{ background: 'var(--bg3)', padding: 12, borderRadius: 10, marginBottom: 16 }}>
+              <span style={{ fontWeight: 700, color: 'var(--text)' }}>{selectedCustomer?.full_name}</span>
+              <span style={{ color: 'var(--text2)', marginLeft: 12 }}>{selectedCustomer?.phone}</span>
             </div>
 
             {debtLoading ? (
-              <div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>Загрузка...</div>
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)' }}>Загрузка...</div>
             ) : !debtData || debtData.count === 0 ? (
-              <div style={{ textAlign: 'center', padding: 40, color: '#8899aa' }}>Нет долгов / рассрочек</div>
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)' }}>Нет долгов / рассрочек</div>
             ) : (
               <>
                 {/* Summary stats */}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                  <div style={{ flex: 1, background: '#1c2a3a', borderRadius: 12, padding: '10px 12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: '#8899aa', textTransform: 'uppercase' }}>Общий долг</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#ff4d4d' }}>{debtData.total_debt.toLocaleString('ru-RU')}</div>
+                  <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase' }}>Общий долг</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--danger)' }}>{debtData.total_debt.toLocaleString('ru-RU')}</div>
                   </div>
-                  <div style={{ flex: 1, background: '#1c2a3a', borderRadius: 12, padding: '10px 12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: '#8899aa', textTransform: 'uppercase' }}>Оплачено</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#22c55e' }}>{debtData.total_paid.toLocaleString('ru-RU')}</div>
+                  <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase' }}>Оплачено</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--success)' }}>{debtData.total_paid.toLocaleString('ru-RU')}</div>
                   </div>
-                  <div style={{ flex: 1, background: '#1c2a3a', borderRadius: 12, padding: '10px 12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: '#8899aa', textTransform: 'uppercase' }}>Рассрочек</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#e2eaf6' }}>{debtData.count}</div>
+                  <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase' }}>Рассрочек</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{debtData.count}</div>
                   </div>
                   {debtData.overdue_count > 0 && (
-                    <div style={{ flex: 1, background: 'rgba(255,77,77,0.1)', borderRadius: 12, padding: '10px 12px', textAlign: 'center', border: '1px solid rgba(255,77,77,0.3)' }}>
-                      <div style={{ fontSize: 10, color: '#ff4d4d', textTransform: 'uppercase' }}>Просрочено</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: '#ff4d4d' }}>{debtData.overdue_count}</div>
+                    <div style={{ flex: 1, background: 'rgba(255,77,77,0.1)', borderRadius: 10, padding: '10px 12px', textAlign: 'center', border: '1px solid rgba(255,77,77,0.3)' }}>
+                      <div style={{ fontSize: 10, color: 'var(--danger)', textTransform: 'uppercase' }}>Просрочено</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--danger)' }}>{debtData.overdue_count}</div>
                     </div>
                   )}
                 </div>
@@ -554,14 +554,14 @@ export default function CustomersPage() {
                 {/* Debts table */}
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #1c2a3a' }}>
-                      <th style={{ padding: '8px', textAlign: 'left', fontSize: 11, color: '#8899aa', textTransform: 'uppercase', width: 20 }}></th>
-                      <th style={{ padding: '8px', textAlign: 'left', fontSize: 11, color: '#8899aa', textTransform: 'uppercase' }}>Документ</th>
-                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#8899aa' }}>Сумма</th>
-                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#8899aa' }}>Оплачено</th>
-                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#8899aa' }}>Остаток</th>
-                      <th style={{ padding: '8px', textAlign: 'center', fontSize: 11, color: '#8899aa' }}>Прогресс</th>
-                      <th style={{ padding: '8px', textAlign: 'center', fontSize: 11, color: '#8899aa' }}>Статус</th>
+                    <tr style={{ borderBottom: '2px solid var(--bg3)' }}>
+                      <th style={{ padding: '8px', textAlign: 'left', fontSize: 11, color: 'var(--text2)', textTransform: 'uppercase', width: 20 }}></th>
+                      <th style={{ padding: '8px', textAlign: 'left', fontSize: 11, color: 'var(--text2)', textTransform: 'uppercase' }}>Документ</th>
+                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: 'var(--text2)' }}>Сумма</th>
+                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: 'var(--text2)' }}>Оплачено</th>
+                      <th style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: 'var(--text2)' }}>Остаток</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontSize: 11, color: 'var(--text2)' }}>Прогресс</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontSize: 11, color: 'var(--text2)' }}>Статус</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -577,7 +577,7 @@ export default function CustomersPage() {
                         <React.Fragment key={d.id}>
                         <tr
                           onClick={() => setExpandedDebtId(isExpanded ? null : d.id)}
-                          style={{ borderBottom: isExpanded ? 'none' : '1px solid #1c2a3a', cursor: 'pointer', transition: 'background 0.15s' }}
+                          style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--bg3)', cursor: 'pointer', transition: 'background 0.15s' }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
@@ -587,37 +587,37 @@ export default function CustomersPage() {
                             </svg>
                           </td>
                           <td style={{ padding: '10px 8px' }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#e2eaf6' }}>{refShort}</div>
-                            <div style={{ fontSize: 10, color: '#8899aa' }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{refShort}</div>
+                            <div style={{ fontSize: 10, color: 'var(--text2)' }}>
                               {d.created_at ? new Date(d.created_at).toLocaleDateString('ru-RU') : ''}
                             </div>
                           </td>
-                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: '#e2eaf6' }}>
+                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: 'var(--text)' }}>
                             {d.total_amount.toLocaleString('ru-RU')}
                           </td>
-                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: '#22c55e', fontWeight: 600 }}>
+                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
                             {d.paid_amount.toLocaleString('ru-RU')}
                           </td>
-                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: d.overdue_days > 0 ? '#ff4d4d' : '#e2eaf6', fontWeight: 700 }}>
+                          <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 13, color: d.overdue_days > 0 ? 'var(--danger)' : 'var(--text)', fontWeight: 700 }}>
                             {d.amount.toLocaleString('ru-RU')}
                           </td>
                           <td style={{ padding: '10px 8px', textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                              <div style={{ width: 60, height: 6, background: '#1c2a3a', borderRadius: 3, overflow: 'hidden' }}>
-                                <div style={{ height: '100%', width: d.percent_paid + '%', background: d.status === 'paid' ? '#22c55e' : '#FFE600', borderRadius: 3 }} />
+                              <div style={{ width: 60, height: 6, background: 'var(--bg3)', borderRadius: 10, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: d.percent_paid + '%', background: d.status === 'paid' ? 'var(--success)' : 'var(--accent)', borderRadius: 10 }} />
                               </div>
-                              <span style={{ fontSize: 11, color: '#8899aa' }}>{d.percent_paid}%</span>
+                              <span style={{ fontSize: 11, color: 'var(--text2)' }}>{d.percent_paid}%</span>
                             </div>
                           </td>
                           <td style={{ padding: '10px 8px', textAlign: 'center' }}>
                             {d.status === 'paid' ? (
-                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontWeight: 600 }}>Погашена</span>
+                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(34,197,94,0.15)', color: 'var(--success)', fontWeight: 600 }}>Погашена</span>
                             ) : d.overdue_days > 0 ? (
-                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(255,77,77,0.15)', color: '#ff4d4d', fontWeight: 600 }}>
+                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(255,77,77,0.15)', color: 'var(--danger)', fontWeight: 600 }}>
                                 <AlertTriangle size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />{d.overdue_days} дн.
                               </span>
                             ) : (
-                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(255,230,0,0.1)', color: '#FFE600', fontWeight: 600 }}>Активная</span>
+                              <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, background: 'rgba(255,230,0,0.1)', color: 'var(--accent)', fontWeight: 600 }}>Активная</span>
                             )}
                           </td>
                         </tr>
@@ -625,8 +625,8 @@ export default function CustomersPage() {
                         {/* ══ Expanded Detail Panel ══ */}
                         {isExpanded && (
                           <tr>
-                            <td colSpan={7} style={{ padding: 0, borderBottom: '1px solid #1c2a3a' }}>
-                              <div style={{ background: '#0a0f18', padding: '16px 20px', borderTop: '1px solid rgba(255,230,0,0.15)' }}>
+                            <td colSpan={7} style={{ padding: 0, borderBottom: '1px solid var(--bg3)' }}>
+                              <div style={{ background: 'var(--bg2)', padding: '16px 20px', borderTop: '1px solid var(--accent-border)' }}>
 
                                 {/* Next Payment Banner */}
                                 {nextPay && (
@@ -636,10 +636,10 @@ export default function CustomersPage() {
                                       <path d="M12 6V12L16 14" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
                                     </svg>
                                     <div>
-                                      <div style={{ fontSize: 11, color: '#8899aa' }}>Следующий платёж</div>
-                                      <div style={{ fontSize: 14, fontWeight: 700, color: '#3b82f6' }}>
+                                      <div style={{ fontSize: 11, color: 'var(--text2)' }}>Следующий платёж</div>
+                                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--info)' }}>
                                         {Number(nextPay.amount).toLocaleString('ru-RU')} сом
-                                        <span style={{ fontWeight: 400, color: '#8899aa', marginLeft: 8, fontSize: 12 }}>
+                                        <span style={{ fontWeight: 400, color: 'var(--text2)', marginLeft: 8, fontSize: 12 }}>
                                           до {new Date(nextPay.date).toLocaleDateString('ru-RU')}
                                         </span>
                                       </div>
@@ -657,23 +657,23 @@ export default function CustomersPage() {
                                         <path d="M3 10H21" stroke="#FFE600" strokeWidth="1.5"/>
                                         <path d="M8 2V6M16 2V6" stroke="#FFE600" strokeWidth="1.5" strokeLinecap="round"/>
                                       </svg>
-                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#e2eaf6', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                         График платежей
                                       </span>
                                       {schedule.length > 0 && (
-                                        <span style={{ fontSize: 10, color: '#8899aa', marginLeft: 4 }}>({schedule.length})</span>
+                                        <span style={{ fontSize: 10, color: 'var(--text2)', marginLeft: 4 }}>({schedule.length})</span>
                                       )}
                                     </div>
                                     {schedule.length === 0 ? (
-                                      <div style={{ fontSize: 12, color: '#556677', padding: '8px 0' }}>Нет данных от 1С</div>
+                                      <div style={{ fontSize: 12, color: 'var(--text3)', padding: '8px 0' }}>Нет данных от 1С</div>
                                     ) : (
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                         {schedule.map((s: any, i: number) => {
                                           const isPaid = s.status === 'paid';
                                           const isOverdue = s.status === 'overdue';
-                                          const statusColor = isPaid ? '#22c55e' : isOverdue ? '#ff4d4d' : '#8899aa';
+                                          const statusColor = isPaid ? 'var(--success)' : isOverdue ? 'var(--danger)' : 'var(--text2)';
                                           return (
-                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: isPaid ? 'rgba(34,197,94,0.05)' : isOverdue ? 'rgba(255,77,77,0.05)' : 'rgba(255,255,255,0.02)' }}>
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 10, background: isPaid ? 'rgba(34,197,94,0.05)' : isOverdue ? 'rgba(255,77,77,0.05)' : 'rgba(255,255,255,0.02)' }}>
                                               {/* Status icon */}
                                               {isPaid ? (
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -682,9 +682,9 @@ export default function CustomersPage() {
                                                 </svg>
                                               ) : isOverdue ? (
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                                  <path d="M12 2L22 20H2L12 2Z" stroke="#ff4d4d" strokeWidth="1.5" strokeLinejoin="round"/>
-                                                  <path d="M12 10V14" stroke="#ff4d4d" strokeWidth="1.5" strokeLinecap="round"/>
-                                                  <circle cx="12" cy="17" r="0.5" fill="#ff4d4d" stroke="#ff4d4d"/>
+                                                  <path d="M12 2L22 20H2L12 2Z" stroke="#ef4444" strokeWidth="1.5" strokeLinejoin="round"/>
+                                                  <path d="M12 10V14" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
+                                                  <circle cx="12" cy="17" r="0.5" fill="#ef4444" stroke="#ef4444"/>
                                                 </svg>
                                               ) : (
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -693,7 +693,7 @@ export default function CustomersPage() {
                                                 </svg>
                                               )}
                                               {/* Date */}
-                                              <span style={{ fontSize: 12, color: '#8899aa', minWidth: 75 }}>
+                                              <span style={{ fontSize: 12, color: 'var(--text2)', minWidth: 75 }}>
                                                 {new Date(s.date).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })}
                                               </span>
                                               {/* Amount */}
@@ -719,40 +719,40 @@ export default function CustomersPage() {
                                         <path d="M22 12c0-5.52-4.48-10-10-10" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 3"/>
                                         <path d="M12 6V12L8 14" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
                                       </svg>
-                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#e2eaf6', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                         История оплат
                                       </span>
                                       {payments.length > 0 && (
-                                        <span style={{ fontSize: 10, color: '#8899aa', marginLeft: 4 }}>({payments.length})</span>
+                                        <span style={{ fontSize: 10, color: 'var(--text2)', marginLeft: 4 }}>({payments.length})</span>
                                       )}
                                     </div>
                                     {payments.length === 0 ? (
-                                      <div style={{ fontSize: 12, color: '#556677', padding: '8px 0' }}>Нет оплат</div>
+                                      <div style={{ fontSize: 12, color: 'var(--text3)', padding: '8px 0' }}>Нет оплат</div>
                                     ) : (
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                         {payments.map((p: any, i: number) => (
-                                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(34,197,94,0.05)' }}>
+                                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 10, background: 'rgba(34,197,94,0.05)' }}>
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                               <rect x="2" y="5" width="20" height="14" rx="2" stroke="#22c55e" strokeWidth="1.5"/>
                                               <path d="M2 10H22" stroke="#22c55e" strokeWidth="1.5"/>
                                             </svg>
-                                            <span style={{ fontSize: 12, color: '#8899aa', minWidth: 75 }}>
+                                            <span style={{ fontSize: 12, color: 'var(--text2)', minWidth: 75 }}>
                                               {new Date(p.date).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })}
                                             </span>
-                                            <span style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', flex: 1, textAlign: 'right' }}>
+                                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--success)', flex: 1, textAlign: 'right' }}>
                                               +{Number(p.amount).toLocaleString('ru-RU')} сом
                                             </span>
                                             {p.overdue_days > 0 && (
-                                              <span style={{ fontSize: 10, color: '#ff4d4d', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                              <span style={{ fontSize: 10, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 2 }}>
                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                                                  <path d="M12 2L22 20H2L12 2Z" stroke="#ff4d4d" strokeWidth="2" strokeLinejoin="round"/>
-                                                  <path d="M12 10V14" stroke="#ff4d4d" strokeWidth="2" strokeLinecap="round"/>
+                                                  <path d="M12 2L22 20H2L12 2Z" stroke="#ef4444" strokeWidth="2" strokeLinejoin="round"/>
+                                                  <path d="M12 10V14" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/>
                                                 </svg>
                                                 {p.overdue_days} дн.
                                               </span>
                                             )}
                                             {p.document && (
-                                              <span style={{ fontSize: 10, color: '#556677' }}>{p.document}</span>
+                                              <span style={{ fontSize: 10, color: 'var(--text3)' }}>{p.document}</span>
                                             )}
                                           </div>
                                         ))}
@@ -763,13 +763,13 @@ export default function CustomersPage() {
 
                                 {/* Note */}
                                 {d.note && (
-                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 10 }}>
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ marginTop: 1, flexShrink: 0 }}>
                                       <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="#8899aa" strokeWidth="1.5" strokeLinejoin="round"/>
                                       <path d="M14 2V8H20" stroke="#8899aa" strokeWidth="1.5" strokeLinejoin="round"/>
                                       <path d="M8 13H16M8 17H12" stroke="#8899aa" strokeWidth="1.5" strokeLinecap="round"/>
                                     </svg>
-                                    <span style={{ fontSize: 12, color: '#8899aa' }}>{d.note}</span>
+                                    <span style={{ fontSize: 12, color: 'var(--text2)' }}>{d.note}</span>
                                   </div>
                                 )}
                               </div>
@@ -784,7 +784,7 @@ export default function CustomersPage() {
 
                 {/* Sync info */}
                 {debtData.debts[0]?.synced_at && (
-                  <div style={{ marginTop: 12, fontSize: 11, color: '#8899aa', textAlign: 'right' }}>
+                  <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text2)', textAlign: 'right' }}>
                     Последняя синхр.: {new Date(debtData.debts[0].synced_at).toLocaleString('ru-RU')}
                   </div>
                 )}
@@ -797,14 +797,14 @@ export default function CustomersPage() {
       {/* Import Modal */}
       {importModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} className="modal-overlay">
-          <div className="modal-content" style={{ background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '500px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
-            <button onClick={() => setImportModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+          <div className="modal-content" style={{ background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '500px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+            <button onClick={() => setImportModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer' }}>
               <X size={20} />
             </button>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: '#e2eaf6', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 8, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <FileSpreadsheet size={20} /> Excel dan import
             </h2>
-            <p style={{ fontSize: 13, color: '#8899aa', marginBottom: 24 }}>
+            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24 }}>
               Клиенты из Excel файла будут автоматически зарегистрированы. QR-код и реферальный код создаются автоматически.
             </p>
 
@@ -817,7 +817,7 @@ export default function CustomersPage() {
                   onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) setImportFile(f); }}
                   onClick={() => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.xlsx,.xls'; inp.onchange = (e: any) => { const f = e.target.files?.[0]; if (f) setImportFile(f); }; inp.click(); }}
                   style={{
-                    border: `2px dashed ${dragOver ? 'var(--accent)' : '#1e293b'}`,
+                    border: `2px dashed ${dragOver ? 'var(--accent)' : 'var(--border)'}`,
                     borderRadius: 16, padding: '32px 24px', textAlign: 'center', cursor: 'pointer',
                     background: dragOver ? 'rgba(255,230,0,0.05)' : 'transparent',
                     transition: 'all 0.2s',
@@ -825,31 +825,31 @@ export default function CustomersPage() {
                 >
                   {importFile ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                      <FileSpreadsheet size={24} color="#22c55e" />
+                      <FileSpreadsheet size={24} color="var(--success)" />
                       <div>
-                        <div style={{ fontWeight: 700, color: '#e2eaf6' }}>{importFile.name}</div>
-                        <div style={{ fontSize: 12, color: '#8899aa' }}>{(importFile.size / 1024).toFixed(1)} KB</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text)' }}>{importFile.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text2)' }}>{(importFile.size / 1024).toFixed(1)} KB</div>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <Upload size={32} color="#64748b" style={{ marginBottom: 12 }} />
-                      <div style={{ color: '#8899aa', fontSize: 14 }}>Перетащите файл сюда или нажмите</div>
-                      <div style={{ color: '#556677', fontSize: 12, marginTop: 6 }}>.xlsx format</div>
+                      <Upload size={32} color="var(--text3)" style={{ marginBottom: 12 }} />
+                      <div style={{ color: 'var(--text2)', fontSize: 14 }}>Перетащите файл сюда или нажмите</div>
+                      <div style={{ color: 'var(--text3)', fontSize: 12, marginTop: 6 }}>.xlsx format</div>
                     </>
                   )}
                 </div>
 
                 {/* Format hint */}
-                <div style={{ background: '#141c2b', borderRadius: 12, padding: '12px 16px', marginTop: 16, fontSize: 12, color: '#8899aa' }}>
-                  <div style={{ fontWeight: 700, color: '#94a3b8', marginBottom: 6 }}>Ожидаемый формат:</div>
+                <div style={{ background: 'var(--card)', borderRadius: 10, padding: '12px 16px', marginTop: 16, fontSize: 12, color: 'var(--text2)' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>Ожидаемый формат:</div>
                   <div>1-й столбец: ФИО (имя и фамилия)</div>
                   <div>2-й столбец: Номер телефона (0555123456 или +996555123456)</div>
-                  <div style={{ marginTop: 4, color: '#556677' }}>Строка заголовка пропускается автоматически. Столбец с порядковым номером также поддерживается.</div>
+                  <div style={{ marginTop: 4, color: 'var(--text3)' }}>Строка заголовка пропускается автоматически. Столбец с порядковым номером также поддерживается.</div>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                  <button className="btn" style={{ flex: 1, background: '#1c2a3a', color: '#e2eaf6' }} onClick={() => setImportModal(false)}>Отмена</button>
+                  <button className="btn" style={{ flex: 1, background: 'var(--bg3)', color: 'var(--text)' }} onClick={() => setImportModal(false)}>Отмена</button>
                   <button
                     className="btn btn-primary"
                     style={{ flex: 1, opacity: !importFile || importLoading ? 0.5 : 1 }}
@@ -863,37 +863,37 @@ export default function CustomersPage() {
             ) : importResult.error ? (
               /* Error result */
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(239,68,68,0.1)', borderRadius: 12, padding: '16px', marginBottom: 20 }}>
-                  <AlertTriangle size={20} color="#ef4444" />
-                  <div style={{ color: '#ef4444', fontWeight: 600 }}>{importResult.error}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(239,68,68,0.1)', borderRadius: 10, padding: '16px', marginBottom: 20 }}>
+                  <AlertTriangle size={20} color="var(--danger)" />
+                  <div style={{ color: 'var(--danger)', fontWeight: 600 }}>{importResult.error}</div>
                 </div>
                 <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setImportResult(null); setImportFile(null); }}>Попробовать снова</button>
               </div>
             ) : (
               /* Success result */
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(34,197,94,0.1)', borderRadius: 12, padding: '16px', marginBottom: 20 }}>
-                  <CheckCircle2 size={20} color="#22c55e" />
-                  <div style={{ color: '#22c55e', fontWeight: 700 }}>{importResult.message}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(34,197,94,0.1)', borderRadius: 10, padding: '16px', marginBottom: 20 }}>
+                  <CheckCircle2 size={20} color="var(--success)" />
+                  <div style={{ color: 'var(--success)', fontWeight: 700 }}>{importResult.message}</div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
-                  <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: '#22c55e' }}>{importResult.created}</div>
-                    <div style={{ fontSize: 11, color: '#8899aa' }}>Добавлено</div>
+                  <div style={{ background: 'var(--card)', borderRadius: 10, padding: 16, textAlign: 'center' }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{importResult.created}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text2)' }}>Добавлено</div>
                   </div>
-                  <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: '#f59e0b' }}>{importResult.skipped}</div>
-                    <div style={{ fontSize: 11, color: '#8899aa' }}>Дубликат</div>
+                  <div style={{ background: 'var(--card)', borderRadius: 10, padding: 16, textAlign: 'center' }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--warn)' }}>{importResult.skipped}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text2)' }}>Дубликат</div>
                   </div>
-                  <div style={{ background: '#141c2b', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: '#ef4444' }}>{importResult.errors_count}</div>
-                    <div style={{ fontSize: 11, color: '#8899aa' }}>Ошибки</div>
+                  <div style={{ background: 'var(--card)', borderRadius: 10, padding: 16, textAlign: 'center' }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--danger)' }}>{importResult.errors_count}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text2)' }}>Ошибки</div>
                   </div>
                 </div>
                 {importResult.errors?.length > 0 && (
-                  <div style={{ maxHeight: 150, overflowY: 'auto', background: '#141c2b', borderRadius: 12, padding: 12, marginBottom: 16 }}>
+                  <div style={{ maxHeight: 150, overflowY: 'auto', background: 'var(--card)', borderRadius: 10, padding: 12, marginBottom: 16 }}>
                     {importResult.errors.map((err: any, i: number) => (
-                      <div key={i} style={{ fontSize: 12, color: '#ef4444', padding: '4px 0', borderBottom: '1px solid #1c2a3a' }}>
+                      <div key={i} style={{ fontSize: 12, color: 'var(--danger)', padding: '4px 0', borderBottom: '1px solid var(--bg3)' }}>
                         Строка {err.row}: {err.reason} — {err.data}
                       </div>
                     ))}

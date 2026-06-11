@@ -27,11 +27,12 @@ const ICONS: Record<ToastType, typeof CheckCircle2> = {
   info: Info,
 };
 
+// Hex literals — concatenated with alpha suffix (CSS vars cannot be alpha-suffixed)
 const COLORS: Record<ToastType, { bg: string; border: string; icon: string }> = {
   success: { bg: 'rgba(34, 197, 94, 0.1)', border: '#22c55e', icon: '#22c55e' },
-  error: { bg: 'rgba(255, 71, 87, 0.1)', border: '#FF4757', icon: '#FF4757' },
-  warning: { bg: 'rgba(255, 165, 2, 0.1)', border: '#FFA502', icon: '#FFA502' },
-  info: { bg: 'rgba(70, 130, 255, 0.1)', border: '#4682FF', icon: '#4682FF' },
+  error: { bg: 'rgba(239, 68, 68, 0.1)', border: '#ef4444', icon: '#ef4444' },
+  warning: { bg: 'rgba(245, 158, 11, 0.1)', border: '#f59e0b', icon: '#f59e0b' },
+  info: { bg: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6', icon: '#3b82f6' },
 };
 
 function ToastItem({ t, onRemove }: { t: Toast; onRemove: (id: number) => void }) {
@@ -55,7 +56,7 @@ function ToastItem({ t, onRemove }: { t: Toast; onRemove: (id: number) => void }
         gap: 12,
         padding: '14px 18px',
         borderRadius: 12,
-        background: '#1a1f2e',
+        background: 'var(--card)',
         border: `1px solid ${colors.border}33`,
         borderLeft: `3px solid ${colors.border}`,
         boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
@@ -69,8 +70,8 @@ function ToastItem({ t, onRemove }: { t: Toast; onRemove: (id: number) => void }
       onClick={() => { setExiting(true); setTimeout(() => onRemove(t.id), 300); }}
     >
       <Icon size={20} color={colors.icon} style={{ flexShrink: 0 }} />
-      <span style={{ flex: 1, fontSize: 14, color: '#e0e0e0', lineHeight: 1.4 }}>{t.message}</span>
-      <X size={16} color="#666" style={{ flexShrink: 0 }} />
+      <span style={{ flex: 1, fontSize: 14, color: 'var(--text)', lineHeight: 1.4 }}>{t.message}</span>
+      <X size={16} color="var(--text3)" style={{ flexShrink: 0 }} />
     </div>
   );
 }
@@ -93,25 +94,19 @@ function ConfirmModal({ message, onResult }: { message: string; onResult: (ok: b
       animation: 'toast-in 0.2s ease',
     }} className="modal-overlay">
       <div className="modal-content" style={{
-        background: '#1a1f2e', borderRadius: 16, padding: '24px',
+        background: 'var(--card)', borderRadius: 16, padding: '24px',
         maxWidth: 400, width: '90%', margin: '0 12px',
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--border)',
         boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <AlertTriangle size={24} color="#FFA502" />
-          <span style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>Подтверждение</span>
+          <AlertTriangle size={24} color="var(--warn)" />
+          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>Подтверждение</span>
         </div>
-        <p style={{ fontSize: 14, color: '#b0b0b0', lineHeight: 1.6, margin: '0 0 24px' }}>{message}</p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-          <button onClick={() => onResult(false)} style={{
-            padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
-            background: 'transparent', color: '#b0b0b0', cursor: 'pointer', fontSize: 14,
-          }}>Отмена</button>
-          <button onClick={() => onResult(true)} style={{
-            padding: '10px 20px', borderRadius: 10, border: 'none',
-            background: '#FFE600', color: '#0a0f1a', cursor: 'pointer', fontSize: 14, fontWeight: 600,
-          }}>Подтвердить</button>
+        <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, margin: '0 0 24px' }}>{message}</p>
+        <div className="btn-row" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <button className="btn btn-secondary" onClick={() => onResult(false)}>Отмена</button>
+          <button className="btn btn-primary" onClick={() => onResult(true)}>Подтвердить</button>
         </div>
       </div>
     </div>

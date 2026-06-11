@@ -84,7 +84,7 @@ export default function WheelSettingsPage() {
   const addSegment = () => {
     if (segments.length >= 12) { toast("warning", "Максимум 12 сегментов"); return; }
     const usedColors = segments.map(s => s.color);
-    const freeColor = PRESET_COLORS.find(c => !usedColors.includes(c)) || "#999999";
+    const freeColor = PRESET_COLORS.find(c => !usedColors.includes(c)) || "#8899aa";
     setSegments([...segments, {
       id: segments.length + 1,
       label: "Новый",
@@ -116,9 +116,9 @@ export default function WheelSettingsPage() {
 
   // ─── Styles ───
   const colors = {
-    bg: "#07090f", cardBg: "#0d1117", border: "#1c2a3a",
-    accent: "#FFE600", text: "#e2eaf6", textMuted: "#8899aa",
-    danger: "#ef4444", success: "#22c55e",
+    bg: "var(--bg)", cardBg: "var(--bg2)", border: "var(--bg3)",
+    accent: "var(--accent)", text: "var(--text)", textMuted: "var(--text2)",
+    danger: "var(--danger)", success: "var(--success)",
   };
 
   if (loading) {
@@ -129,13 +129,13 @@ export default function WheelSettingsPage() {
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: 20, color: colors.text, fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 10 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 10 }}>
           <Disc3 size={24} /> Колесо удачи — Настройки
         </h1>
         <p style={{ color: colors.textMuted, fontSize: 15, margin: 0 }}>
           Управление сегментами, вероятностями и бонусами
           <span style={{
-            marginLeft: 12, padding: "2px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+            marginLeft: 12, padding: "2px 10px", borderRadius: 10, fontSize: 12, fontWeight: 600,
             background: source === "database" ? "rgba(34,197,94,0.15)" : "rgba(255,230,0,0.12)",
             color: source === "database" ? colors.success : colors.accent,
           }}>
@@ -153,19 +153,19 @@ export default function WheelSettingsPage() {
             marginBottom: 16, flexWrap: "wrap", gap: 8,
           }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={addSegment} style={btnStyle(colors.accent, "#0a0f1a")}>
+              <button onClick={addSegment} style={btnStyle(colors.accent, "var(--bg)")}>
                 <Plus size={16} /> Добавить
               </button>
-              <button onClick={autoBalance} style={btnStyle("#1c2a3a", colors.text)}>
+              <button onClick={autoBalance} style={btnStyle("var(--bg3)", colors.text)}>
                 Авто-баланс
               </button>
-              <button onClick={handleReset} style={btnStyle("#1c2a3a", colors.textMuted)}>
+              <button onClick={handleReset} style={btnStyle("var(--bg3)", colors.textMuted)}>
                 <RotateCcw size={14} /> Сброс
               </button>
             </div>
             <button
               onClick={() => setShowPreview(!showPreview)}
-              style={{ ...btnStyle("#1c2a3a", colors.text), opacity: 0.8 }}
+              style={{ ...btnStyle("var(--bg3)", colors.text), opacity: 0.8 }}
             >
               <Eye size={14} /> {showPreview ? "Скрыть" : "Показать"} превью
             </button>
@@ -173,7 +173,7 @@ export default function WheelSettingsPage() {
 
           {/* Probability bar */}
           <div style={{
-            background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12,
+            background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 10,
             padding: 16, marginBottom: 16,
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -185,7 +185,7 @@ export default function WheelSettingsPage() {
                 {(totalProbability * 100).toFixed(1)}% / 100%
               </span>
             </div>
-            <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: "#1c2a3a" }}>
+            <div style={{ display: "flex", height: 8, borderRadius: 10, overflow: "hidden", background: "var(--bg3)" }}>
               {segments.map((seg, i) => (
                 <div key={i} style={{
                   width: `${seg.probability * 100}%`, background: seg.color,
@@ -200,7 +200,7 @@ export default function WheelSettingsPage() {
             {segments.map((seg, idx) => (
               <div key={idx} style={{
                 background: colors.cardBg, border: `1px solid ${colors.border}`,
-                borderRadius: 12, padding: "12px 14px",
+                borderRadius: 10, padding: "12px 14px",
               }}>
               <div style={{
                 display: "grid",
@@ -220,7 +220,7 @@ export default function WheelSettingsPage() {
                     value={seg.color}
                     onChange={e => updateSegment(idx, "color", e.target.value)}
                     style={{
-                      width: 36, height: 36, borderRadius: 8, border: "2px solid " + colors.border,
+                      width: 36, height: 36, borderRadius: 10, border: "2px solid " + colors.border,
                       cursor: "pointer", padding: 0, background: "transparent",
                     }}
                   />
@@ -257,7 +257,7 @@ export default function WheelSettingsPage() {
                     ...inputStyle(colors),
                     cursor: "pointer", fontSize: 12, padding: "8px 6px",
                     appearance: "auto",
-                    color: seg.prize_type === "physical" ? "#a855f7"
+                    color: seg.prize_type === "physical" ? "var(--violet)"
                       : seg.prize_type === "bonus" || (!seg.prize_type && seg.value > 0) ? colors.success
                       : colors.textMuted,
                   }}
@@ -291,7 +291,7 @@ export default function WheelSettingsPage() {
                 <button
                   onClick={() => removeSegment(idx)}
                   style={{
-                    width: 36, height: 36, borderRadius: 8, border: "none",
+                    width: 36, height: 36, borderRadius: 10, border: "none",
                     background: "rgba(239,68,68,0.1)", color: colors.danger,
                     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                   }}
@@ -358,8 +358,8 @@ export default function WheelSettingsPage() {
               style={{
                 display: "flex", alignItems: "center", gap: 10,
                 background: isValid ? colors.accent : "#333",
-                color: isValid ? "#0a0f1a" : "#666",
-                border: "none", borderRadius: 12, padding: "16px 32px",
+                color: isValid ? "var(--bg)" : "#666",
+                border: "none", borderRadius: 10, padding: "16px 32px",
                 fontSize: 16, fontWeight: 700, cursor: isValid ? "pointer" : "not-allowed",
                 boxShadow: isValid ? "0 4px 20px rgba(255,230,0,0.3)" : "none",
                 opacity: saving ? 0.7 : 1, transition: "all 0.2s",
@@ -388,9 +388,9 @@ export default function WheelSettingsPage() {
                   padding: "6px 0", fontSize: 13,
                   borderBottom: i < segments.length - 1 ? `1px solid ${colors.border}` : "none",
                 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
+                  <div style={{ width: 12, height: 12, borderRadius: 10, background: seg.color, flexShrink: 0 }} />
                   <span style={{ flex: 1, color: colors.text }}>{seg.label}</span>
-                  <span style={{ color: seg.prize_type === "physical" ? "#a855f7" : colors.textMuted, fontWeight: 600 }}>
+                  <span style={{ color: seg.prize_type === "physical" ? "var(--violet)" : colors.textMuted, fontWeight: 600 }}>
                     {seg.prize_type === "physical" ? "Приз" : seg.value > 0 ? `+${seg.value}` : "—"}
                   </span>
                   <span style={{ color: colors.accent, fontWeight: 700, width: 45, textAlign: "right" }}>
@@ -438,7 +438,7 @@ function WheelPreview({ segments }: { segments: Segment[] }) {
         key={`p-${i}`}
         d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z`}
         fill={seg.color}
-        stroke="#0d1117"
+        stroke="var(--bg2)"
         strokeWidth={2}
       />
     );
@@ -473,13 +473,13 @@ function WheelPreview({ segments }: { segments: Segment[] }) {
       {paths}
       {labels}
       {/* Center circle */}
-      <circle cx={cx} cy={cy} r={22} fill="#0d1117" stroke="#1c2a3a" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={22} fill="var(--bg2)" stroke="var(--bg3)" strokeWidth={2} />
       <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
         style={{ fontSize: 10, fontWeight: 700, fill: "#FFE600" }}>
         SPIN
       </text>
       {/* Pointer */}
-      <polygon points={`${cx - 8},6 ${cx + 8},6 ${cx},22`} fill="#FFE600" stroke="#0d1117" strokeWidth={1} />
+      <polygon points={`${cx - 8},6 ${cx + 8},6 ${cx},22`} fill="#FFE600" stroke="var(--bg2)" strokeWidth={1} />
     </svg>
   );
 }
@@ -488,7 +488,7 @@ function WheelPreview({ segments }: { segments: Segment[] }) {
 function btnStyle(bg: string, color: string): React.CSSProperties {
   return {
     display: "flex", alignItems: "center", gap: 6,
-    background: bg, color, border: "none", borderRadius: 8,
+    background: bg, color, border: "none", borderRadius: 10,
     padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer",
   };
 }
@@ -496,7 +496,7 @@ function btnStyle(bg: string, color: string): React.CSSProperties {
 function inputStyle(colors: { bg: string; border: string; text: string }): React.CSSProperties {
   return {
     width: "100%", background: colors.bg, border: `1px solid ${colors.border}`,
-    borderRadius: 8, color: colors.text, padding: "8px 12px", fontSize: 14,
+    borderRadius: 10, color: colors.text, padding: "8px 12px", fontSize: 14,
     outline: "none", boxSizing: "border-box",
   };
 }

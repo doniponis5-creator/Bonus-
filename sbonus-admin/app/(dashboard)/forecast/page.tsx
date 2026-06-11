@@ -44,7 +44,7 @@ export default function ForecastPage() {
       <span style={{
         display: 'inline-flex', alignItems: 'center', gap: 2,
         fontSize: 12, fontWeight: 700,
-        color: isUp ? '#10b981' : '#ef4444',
+        color: isUp ? 'var(--success)' : 'var(--danger)',
       }}>
         {isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
         {Math.abs(value).toFixed(1)}%
@@ -95,10 +95,10 @@ export default function ForecastPage() {
       {/* Header */}
       <div className="page-header" style={{ marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)' }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)' }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 12,
-              background: 'linear-gradient(135deg, #10b981, #06b6d4)',
+              width: 40, height: 40, borderRadius: 10,
+              background: 'var(--success)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <Activity size={20} color="#fff" />
@@ -117,11 +117,11 @@ export default function ForecastPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mobile-tab-bar" style={{ display: 'flex', gap: 4, marginBottom: 20, padding: 4, background: 'var(--bg2)', borderRadius: 12, width: 'fit-content' }}>
+      <div className="mobile-tab-bar" style={{ display: 'flex', gap: 4, marginBottom: 20, padding: 4, background: 'var(--bg2)', borderRadius: 10, width: 'fit-content' }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id as any)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
-            borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600,
+            borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 600,
             cursor: 'pointer', transition: 'all 0.2s',
             background: tab === t.id ? 'var(--accent)' : 'transparent',
             color: tab === t.id ? '#fff' : 'var(--text3)',
@@ -141,29 +141,29 @@ export default function ForecastPage() {
                 label: 'Выручка (30д)',
                 value: fmt(summary.current_period.revenue) + ' сом',
                 change: summary.changes.revenue_pct,
-                icon: DollarSign, color: '#6366f1',
+                icon: DollarSign, color: 'var(--info)',
               },
               {
                 label: 'Транзакций',
                 value: fmt(summary.current_period.transactions),
                 change: summary.changes.transactions_pct,
-                icon: ShoppingCart, color: '#8b5cf6',
+                icon: ShoppingCart, color: 'var(--violet)',
               },
               {
                 label: 'Средний чек',
                 value: fmt(summary.current_period.avg_check) + ' сом',
                 change: summary.changes.avg_check_pct,
-                icon: BarChart3, color: '#06b6d4',
+                icon: BarChart3, color: 'var(--info)',
               },
               {
                 label: 'Новых клиентов',
                 value: fmt(summary.current_period.new_customers),
                 change: summary.changes.customers_pct,
-                icon: Users, color: '#10b981',
+                icon: Users, color: 'var(--success)',
               },
             ].map((kpi, i) => (
               <div key={i} style={{
-                background: 'var(--bg2)', borderRadius: 14, padding: 18,
+                background: 'var(--bg2)', borderRadius: 16, padding: 18,
                 border: '1px solid var(--border)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -176,7 +176,7 @@ export default function ForecastPage() {
                   </div>
                   <ChangeIndicator value={kpi.change} />
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{kpi.value}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{kpi.value}</div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{kpi.label}</div>
               </div>
             ))}
@@ -184,30 +184,30 @@ export default function ForecastPage() {
 
           {/* Forecast banner */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.06))',
+            background: 'var(--card)',
             borderRadius: 16, padding: 24, marginBottom: 24,
-            border: '1px solid rgba(16,185,129,0.2)',
+            border: '1px solid rgba(34,197,94,0.25)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <Zap size={22} color="#10b981" />
+              <Zap size={22} color="#22c55e" />
               <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Прогноз на 30 дней</h3>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Выручка</div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#10b981' }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--success)' }}>
                   {fmtK(summary.forecast_30d.projected_revenue)} сом
                 </div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Транзакций</div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#06b6d4' }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--info)' }}>
                   {fmt(summary.forecast_30d.projected_transactions)}
                 </div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Ср. чек</div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#8b5cf6' }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--violet)' }}>
                   {fmt(summary.forecast_30d.projected_avg_check)} сом
                 </div>
               </div>
@@ -216,7 +216,7 @@ export default function ForecastPage() {
 
           {/* Seasonality */}
           {revenue?.seasonality && (
-            <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+            <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 20, border: '1px solid var(--border)' }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Calendar size={18} color="#f59e0b" /> Сезонность (по дням недели)
               </h3>
@@ -228,13 +228,13 @@ export default function ForecastPage() {
                   return (
                     <div key={day} style={{
                       textAlign: 'center', padding: '12px 8px', borderRadius: 10,
-                      background: isHigh ? '#10b98122' : isLow ? '#ef444422' : 'var(--bg3)',
-                      border: `1px solid ${isHigh ? '#10b98133' : isLow ? '#ef444433' : 'var(--border)'}`,
+                      background: isHigh ? 'rgba(34,197,94,0.13)' : isLow ? 'rgba(239,68,68,0.13)' : 'var(--bg3)',
+                      border: `1px solid ${isHigh ? 'rgba(34,197,94,0.2)' : isLow ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
                     }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', marginBottom: 4 }}>{day}</div>
                       <div style={{
-                        fontSize: 18, fontWeight: 800,
-                        color: isHigh ? '#10b981' : isLow ? '#ef4444' : 'var(--text)',
+                        fontSize: 18, fontWeight: 700,
+                        color: isHigh ? 'var(--success)' : isLow ? 'var(--danger)' : 'var(--text)',
                       }}>
                         {(factor as number).toFixed(2)}x
                       </div>
@@ -249,13 +249,13 @@ export default function ForecastPage() {
 
       {/* Revenue Tab */}
       {tab === 'revenue' && revenue && (
-        <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+        <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 20, border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 4px' }}>
             Выручка: факт + прогноз
           </h3>
           <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 16 }}>
             Прогноз: {fmt(revenue.summary.forecast_total)} сом за {revenue.summary.forecast_days} дней
-            (тренд: <span style={{ color: revenue.summary.trend_direction === 'up' ? '#10b981' : '#ef4444' }}>
+            (тренд: <span style={{ color: revenue.summary.trend_direction === 'up' ? 'var(--success)' : 'var(--danger)' }}>
               {revenue.summary.trend_pct > 0 ? '+' : ''}{revenue.summary.trend_pct}%/мес
             </span>)
           </p>
@@ -264,25 +264,25 @@ export default function ForecastPage() {
               <ComposedChart data={revenueChartData}>
                 <defs>
                   <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="foreGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" tick={{ fill: 'var(--text3)', fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={{ fill: 'var(--text3)', fontSize: 11 }} tickFormatter={(v: number) => fmtK(v)} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" tick={{ fill: '#8899aa', fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
+                <YAxis tick={{ fill: '#8899aa', fontSize: 11 }} tickFormatter={(v: number) => fmtK(v)} />
+                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
                   formatter={(v: number, n: string) => [fmt(v) + ' сом', n === 'revenue' ? 'Выручка' : 'Прогноз']}
                   labelFormatter={(l: string) => l}
                 />
-                <Area type="monotone" dataKey="confidence_low" stroke="none" fill="#10b98111" />
-                <Area type="monotone" dataKey="confidence_high" stroke="none" fill="#10b98111" />
-                <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#histGrad)" strokeWidth={2} dot={false} />
+                <Area type="monotone" dataKey="confidence_low" stroke="none" fill="#22c55e11" />
+                <Area type="monotone" dataKey="confidence_high" stroke="none" fill="#22c55e11" />
+                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="url(#histGrad)" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -291,7 +291,7 @@ export default function ForecastPage() {
 
       {/* Customers Tab */}
       {tab === 'customers' && customers && (
-        <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+        <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 20, border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 4px' }}>
             Рост клиентской базы
           </h3>
@@ -302,16 +302,16 @@ export default function ForecastPage() {
           <div style={{ height: 350 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={customerChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" tick={{ fill: 'var(--text3)', fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={{ fill: 'var(--text3)', fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" tick={{ fill: '#8899aa', fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
+                <YAxis tick={{ fill: '#8899aa', fontSize: 11 }} />
+                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
                   formatter={(v: number) => [v, 'Новых клиентов']}
                 />
                 <Bar dataKey="new_customers" radius={[4, 4, 0, 0]}>
                   {customerChartData.map((d: any, i: number) => (
-                    <Cell key={i} fill={d.type === 'forecast' ? '#10b981' : '#6366f1'} fillOpacity={d.type === 'forecast' ? 0.6 : 0.8} />
+                    <Cell key={i} fill={d.type === 'forecast' ? '#22c55e' : '#3b82f6'} fillOpacity={d.type === 'forecast' ? 0.6 : 0.8} />
                   ))}
                 </Bar>
               </BarChart>

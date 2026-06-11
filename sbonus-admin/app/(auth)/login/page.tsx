@@ -54,8 +54,8 @@ export default function LoginPage() {
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',padding:24}}>
       <form onSubmit={handleLogin} style={{width:'100%',maxWidth:400}}>
         <div style={{textAlign:'center',marginBottom:40}}>
-          <img src="/icon-192.png" alt="S Bonus" width={72} height={72} style={{borderRadius:24,marginBottom:16}} />
-          <h1 style={{fontSize:28,fontWeight:900,color:'var(--text)',marginBottom:4}}>S Bonus</h1>
+          <img src="/icon-192.png" alt="S Bonus" width={72} height={72} style={{borderRadius:16,marginBottom:16}} />
+          <h1 className="h1" style={{color:'var(--text)',marginBottom:4}}>S Bonus</h1>
           <p style={{color:'var(--text2)',fontSize:14}}>Админ-панель • Смарт Центр</p>
         </div>
         <label htmlFor="admin-email" style={{display:'flex',alignItems:'center',gap:6,fontSize:13,color:'var(--text2)',fontWeight:600,marginBottom:6}}><Mail size={14} /> Email</label>
@@ -70,22 +70,22 @@ export default function LoginPage() {
         >
           <div style={{
             width:20,height:20,borderRadius:6,
-            border: remember ? 'none' : '2px solid var(--border)',
-            background: remember ? 'var(--primary)' : 'transparent',
+            border: remember ? '1px solid var(--accent)' : '1px solid var(--border-strong)',
+            background: remember ? 'var(--accent)' : 'transparent',
             display:'flex',alignItems:'center',justifyContent:'center',
             transition:'all 0.2s ease',
             flexShrink:0
           }}>
-            {remember && <Check size={14} color="#fff" strokeWidth={3} />}
+            {remember && <Check size={14} color="var(--on-accent)" strokeWidth={3} />}
           </div>
           <span style={{fontSize:13,color:'var(--text2)',fontWeight:500}}>Запомнить меня</span>
         </label>
 
         {error && <div style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:10,padding:12,marginTop:12,marginBottom:4,color:'var(--danger)',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:6}}><XCircle size={16} /> {error}</div>}
-        <button className="btn btn-primary" type="submit" disabled={loading} style={{width:'100%',marginTop:20,padding:'14px 0',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+        <button className="btn btn-primary" type="submit" disabled={loading} style={{width:'100%',marginTop:20,padding:'14px 0',fontSize:16}}>
           {loading ? <><Loader2 className="animate-spin" size={20} /> Вход...</> : 'Войти'}
         </button>
-        <p style={{textAlign:'center',marginTop:24,color:'var(--text3)',fontSize:12}}>Ошская обл., Аравандский р-н, ул. Ош-3000, 86</p>
+        <p className="caption" style={{textAlign:'center',marginTop:24}}>Ошская обл., Аравандский р-н, ул. Ош-3000, 86</p>
       </form>
     </div>
   );

@@ -13,14 +13,14 @@ import {
 } from 'lucide-react';
 
 const TX_CONFIG: Record<string, { Icon: any; color: string; label: string; sign: string }> = {
-  earn: { Icon: Coins, color: '#10b981', label: 'Покупка', sign: '+' },
-  spend: { Icon: ShoppingCart, color: '#ef4444', label: 'Списание', sign: '-' },
-  expire: { Icon: Clock, color: '#6b7280', label: 'Истекло', sign: '-' },
-  refund: { Icon: RotateCcw, color: '#f59e0b', label: 'Возврат', sign: '+' },
+  earn: { Icon: Coins, color: 'var(--success)', label: 'Покупка', sign: '+' },
+  spend: { Icon: ShoppingCart, color: 'var(--danger)', label: 'Списание', sign: '-' },
+  expire: { Icon: Clock, color: 'var(--text3)', label: 'Истекло', sign: '-' },
+  refund: { Icon: RotateCcw, color: 'var(--warn)', label: 'Возврат', sign: '+' },
   birthday: { Icon: Cake, color: '#ec4899', label: 'ДР', sign: '+' },
-  referral: { Icon: Users, color: '#8b5cf6', label: 'Реферал', sign: '+' },
-  promo: { Icon: Gift, color: '#06b6d4', label: 'Промо', sign: '+' },
-  campaign: { Icon: Megaphone, color: '#6366f1', label: 'Кампания', sign: '+' },
+  referral: { Icon: Users, color: 'var(--violet)', label: 'Реферал', sign: '+' },
+  promo: { Icon: Gift, color: 'var(--info)', label: 'Промо', sign: '+' },
+  campaign: { Icon: Megaphone, color: 'var(--info)', label: 'Кампания', sign: '+' },
 };
 
 export default function RealtimePage() {
@@ -75,19 +75,19 @@ export default function RealtimePage() {
       <div className="page-header" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: pulse ? 'linear-gradient(135deg, #ef4444, #f97316)' : 'linear-gradient(135deg, #10b981, #06b6d4)',
+            width: 40, height: 40, borderRadius: 10,
+            background: pulse ? 'var(--danger)' : 'var(--success)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'background 0.3s',
           }}>
             <Radio size={20} color="#fff" />
           </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
               Live Dashboard
               <span style={{
                 width: 8, height: 8, borderRadius: '50%',
-                background: autoRefresh ? '#10b981' : '#6b7280',
+                background: autoRefresh ? 'var(--success)' : 'var(--text3)',
                 display: 'inline-block',
                 animation: autoRefresh ? 'pulse 2s infinite' : 'none',
               }} />
@@ -102,8 +102,8 @@ export default function RealtimePage() {
           <button onClick={() => setAutoRefresh(!autoRefresh)} style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)',
-            background: autoRefresh ? '#10b98122' : 'transparent',
-            color: autoRefresh ? '#10b981' : 'var(--text3)', fontSize: 12, cursor: 'pointer',
+            background: autoRefresh ? 'rgba(34,197,94,0.13)' : 'transparent',
+            color: autoRefresh ? 'var(--success)' : 'var(--text3)', fontSize: 12, cursor: 'pointer',
           }}>
             {autoRefresh ? <Pause size={14} /> : <Play size={14} />}
             {autoRefresh ? 'Пауза' : 'Возобновить'}
@@ -121,14 +121,14 @@ export default function RealtimePage() {
       {/* Today KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
-          { label: 'Выручка сегодня', value: fmt(data.today.revenue) + ' сом', icon: DollarSign, color: '#6366f1' },
-          { label: 'Транзакций', value: fmt(data.today.tx_count), icon: ShoppingCart, color: '#8b5cf6' },
-          { label: 'Ср. чек', value: fmt(data.today.avg_check) + ' сом', icon: CreditCard, color: '#06b6d4' },
-          { label: 'Клиентов', value: fmt(data.today.active_customers), icon: Users, color: '#10b981' },
-          { label: 'Новых', value: fmt(data.today.new_registrations), icon: TrendingUp, color: '#f59e0b' },
+          { label: 'Выручка сегодня', value: fmt(data.today.revenue) + ' сом', icon: DollarSign, color: 'var(--info)' },
+          { label: 'Транзакций', value: fmt(data.today.tx_count), icon: ShoppingCart, color: 'var(--violet)' },
+          { label: 'Ср. чек', value: fmt(data.today.avg_check) + ' сом', icon: CreditCard, color: 'var(--info)' },
+          { label: 'Клиентов', value: fmt(data.today.active_customers), icon: Users, color: 'var(--success)' },
+          { label: 'Новых', value: fmt(data.today.new_registrations), icon: TrendingUp, color: 'var(--warn)' },
         ].map((kpi, i) => (
           <div key={i} style={{
-            background: 'var(--bg2)', borderRadius: 14, padding: 16,
+            background: 'var(--bg2)', borderRadius: 16, padding: 16,
             border: '1px solid var(--border)',
           }}>
             <div style={{
@@ -138,7 +138,7 @@ export default function RealtimePage() {
             }}>
               <kpi.icon size={17} color={kpi.color} />
             </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{kpi.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{kpi.value}</div>
             <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{kpi.label}</div>
           </div>
         ))}
@@ -146,24 +146,24 @@ export default function RealtimePage() {
 
       {/* Last Hour Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05))',
-        borderRadius: 14, padding: 16, marginBottom: 20,
-        border: '1px solid rgba(99,102,241,0.2)',
+        background: 'var(--card)',
+        borderRadius: 16, padding: 16, marginBottom: 20,
+        border: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Clock size={18} color="#6366f1" />
+          <Clock size={18} color="#3b82f6" />
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Последний час</span>
         </div>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: 'var(--text3)' }}>
-            <b style={{ color: '#6366f1' }}>{fmt(data.last_hour.revenue)}</b> сом
+            <b style={{ color: 'var(--info)' }}>{fmt(data.last_hour.revenue)}</b> сом
           </span>
           <span style={{ fontSize: 13, color: 'var(--text3)' }}>
-            <b style={{ color: '#8b5cf6' }}>{data.last_hour.tx_count}</b> операций
+            <b style={{ color: 'var(--violet)' }}>{data.last_hour.tx_count}</b> операций
           </span>
           <span style={{ fontSize: 13, color: 'var(--text3)' }}>
-            <b style={{ color: '#10b981' }}>{data.last_hour.unique_customers}</b> клиентов
+            <b style={{ color: 'var(--success)' }}>{data.last_hour.unique_customers}</b> клиентов
           </span>
         </div>
       </div>
@@ -171,34 +171,34 @@ export default function RealtimePage() {
       {/* Chart + Live Feed */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 20 }}>
         {/* Hourly chart */}
-        <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+        <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 20, border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Activity size={18} color="#6366f1" /> По часам
+            <Activity size={18} color="#3b82f6" /> По часам
           </h3>
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={hourlyData}>
                 <defs>
                   <linearGradient id="liveGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="label" tick={{ fill: 'var(--text3)', fontSize: 10 }} />
-                <YAxis tick={{ fill: 'var(--text3)', fontSize: 11 }} tickFormatter={(v: number) => fmtK(v)} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="label" tick={{ fill: '#8899aa', fontSize: 10 }} />
+                <YAxis tick={{ fill: '#8899aa', fontSize: 11 }} tickFormatter={(v: number) => fmtK(v)} />
                 <Tooltip
-                  contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
                   formatter={(v: number, n: string) => [n === 'revenue' ? fmt(v) + ' сом' : v, n === 'revenue' ? 'Выручка' : 'Операций']}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#liveGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="url(#liveGrad)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Live feed */}
-        <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 20, border: '1px solid var(--border)' }}>
+        <div style={{ background: 'var(--bg2)', borderRadius: 16, padding: 20, border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Zap size={18} color="#f59e0b" /> Live Feed
           </h3>
@@ -218,7 +218,7 @@ export default function RealtimePage() {
                     {isRecent && (
                       <span style={{
                         position: 'absolute', top: -2, right: -2, width: 6, height: 6,
-                        borderRadius: '50%', background: '#10b981',
+                        borderRadius: '50%', background: 'var(--success)',
                       }} />
                     )}
                   </span>

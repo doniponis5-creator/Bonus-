@@ -8,14 +8,14 @@ import {
 } from 'recharts';
 
 const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  earn: { label: 'Начисление', color: '#FFE600' },
-  spend: { label: 'Списание', color: '#f97316' },
-  expire: { label: 'Истечение', color: '#8899aa' },
-  promo: { label: 'Промокод', color: '#c084fc' },
-  referral: { label: 'Реферал', color: '#60a5fa' },
-  campaign: { label: 'Кампания', color: '#22c55e' },
-  refund: { label: 'Возврат', color: '#fb923c' },
-  birthday: { label: 'День рождения', color: '#fbbf24' },
+  earn: { label: 'Начисление', color: 'var(--accent)' },
+  spend: { label: 'Списание', color: 'var(--warn)' },
+  expire: { label: 'Истечение', color: 'var(--text2)' },
+  promo: { label: 'Промокод', color: 'var(--violet)' },
+  referral: { label: 'Реферал', color: 'var(--info)' },
+  campaign: { label: 'Кампания', color: 'var(--success)' },
+  refund: { label: 'Возврат', color: 'var(--warn)' },
+  birthday: { label: 'День рождения', color: 'var(--accent)' },
 };
 
 const PERIOD_OPTIONS = [
@@ -28,10 +28,10 @@ const PERIOD_OPTIONS = [
 const fmt = (v: number) => Number(v).toLocaleString('ru-RU') + ' сом';
 
 const tooltipStyle = {
-  background: '#141c2b',
-  border: '1px solid #1e293b',
+  background: 'var(--card)',
+  border: '1px solid var(--border)',
   borderRadius: 10,
-  color: '#e2eaf6',
+  color: 'var(--text)',
   fontSize: 13,
   boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
   padding: '10px 14px',
@@ -40,9 +40,9 @@ const tooltipStyle = {
 const BUCKET_COLORS: Record<string, string> = {
   '7_days': '#22c55e',
   '14_days': '#FFE600',
-  '30_days': '#f97316',
+  '30_days': '#f59e0b',
   '60_days': '#ef4444',
-  '90_days': '#dc2626',
+  '90_days': '#ef4444',
   'never': '#8899aa',
 };
 
@@ -74,16 +74,16 @@ export default function AnalyticsPage() {
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
           <BarChart3 size={24} /> Детальная аналитика
         </h1>
         <div className="period-selector" style={{ display: 'flex', gap: 4, background: 'var(--card)', borderRadius: 10, padding: 3 }}>
           {PERIOD_OPTIONS.map(opt => (
             <button key={opt.value} onClick={() => setPeriod(opt.value)}
               style={{
-                padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+                padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
                 background: period === opt.value ? 'var(--accent)' : 'transparent',
-                color: period === opt.value ? '#000' : 'var(--text2)',
+                color: period === opt.value ? 'var(--on-accent)' : 'var(--text2)',
               }}>
               {opt.label}
             </button>
@@ -95,17 +95,17 @@ export default function AnalyticsPage() {
       <div className="grid-4" style={{ marginBottom: 24 }}>
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Выручка</div>
-          <div style={{ fontSize: 22, fontWeight: 800 }}>{fmt(data.revenue_current)}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 13, fontWeight: 600, color: revenueUp ? '#22c55e' : '#ff4d4d' }}>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>{fmt(data.revenue_current)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 13, fontWeight: 600, color: revenueUp ? 'var(--success)' : 'var(--danger)' }}>
             {revenueUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
             {revenueUp ? '+' : ''}{data.revenue_change_pct}% vs пред. период
           </div>
         </div>
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Новые клиенты</div>
-          <div style={{ fontSize: 22, fontWeight: 800 }}>{data.new_customers_current}</div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>{data.new_customers_current}</div>
           {data.new_customers_previous > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 13, fontWeight: 600, color: custUp ? '#22c55e' : '#ff4d4d' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 13, fontWeight: 600, color: custUp ? 'var(--success)' : 'var(--danger)' }}>
               {custUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
               было {data.new_customers_previous}
             </div>
@@ -115,14 +115,14 @@ export default function AnalyticsPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>
             <Repeat size={13} /> Retention
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>{data.retention_rate}%</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success)' }}>{data.retention_rate}%</div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6 }}>
             {data.repeat_buyers} из {data.total_buyers} покупателей
           </div>
         </div>
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Средний LTV</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>{fmt(data.average_ltv)}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--accent)' }}>{fmt(data.average_ltv)}</div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6 }}>бонусов на клиента</div>
         </div>
       </div>
@@ -137,10 +137,10 @@ export default function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={data.hourly_activity}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-                <XAxis dataKey="hour" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(v: number) => `${v}:00`} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
+                <XAxis dataKey="hour" tick={{ fill: '#8899aa', fontSize: 10 }} tickFormatter={(v: number) => `${v}:00`} />
+                <YAxis tick={{ fill: '#8899aa', fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
+                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                   formatter={(value: number, name: string) => [
                     name === 'count' ? `${value} покупок` : fmt(value),
                     name === 'count' ? 'Транзакции' : 'Выручка'
@@ -164,7 +164,7 @@ export default function AnalyticsPage() {
             const pieData = data.transaction_types.map((t: any) => ({
               name: TYPE_LABELS[t.type]?.label || t.type,
               value: t.count,
-              color: TYPE_LABELS[t.type]?.color || '#8899aa',
+              color: TYPE_LABELS[t.type]?.color || 'var(--text2)',
             }));
             return (
               <ResponsiveContainer width="100%" height={250}>
@@ -177,7 +177,7 @@ export default function AnalyticsPage() {
                     formatter={(value: number, name: string) => [`${value} операций`, name]}
                   />
                   <Legend verticalAlign="bottom" iconType="circle" iconSize={8}
-                    formatter={(value: string) => <span style={{ color: '#94a3b8', fontSize: 11 }}>{value}</span>}
+                    formatter={(value: string) => <span style={{ color: 'var(--text2)', fontSize: 11 }}>{value}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -197,23 +197,23 @@ export default function AnalyticsPage() {
               <thead>
                 <tr>
                   {['Тип', 'Количество', 'Сумма'].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+                    <th key={h} style={{ padding: '10px 14px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 12 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {data.transaction_types.map((t: any) => {
-                  const meta = TYPE_LABELS[t.type] || { label: t.type, color: '#8899aa' };
+                  const meta = TYPE_LABELS[t.type] || { label: t.type, color: 'var(--text2)' };
                   return (
                     <tr key={t.type}>
-                      <td style={{ padding: '12px 14px', borderBottom: '1px solid #1c2a3a', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <td style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg3)', display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
                         <span style={{ fontSize: 13, fontWeight: 600 }}>{meta.label}</span>
                       </td>
-                      <td style={{ padding: '12px 14px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 600 }}>
+                      <td style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 600 }}>
                         {t.count.toLocaleString('ru-RU')}
                       </td>
-                      <td style={{ padding: '12px 14px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: meta.color }}>
+                      <td style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 700, color: meta.color }}>
                         {fmt(t.total)}
                       </td>
                     </tr>
@@ -228,7 +228,7 @@ export default function AnalyticsPage() {
       {/* SLEEPING CUSTOMERS */}
       {inactive && (
         <div style={{ marginTop: 24 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <Moon size={20} /> Спящие клиенты
           </h2>
 
@@ -236,17 +236,17 @@ export default function AnalyticsPage() {
           <div className="grid-3" style={{ marginBottom: 20 }}>
             <div className="card" style={{ padding: 20 }}>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Всего активных</div>
-              <div style={{ fontSize: 28, fontWeight: 800 }}>{inactive.total_active}</div>
+              <div style={{ fontSize: 26, fontWeight: 700 }}>{inactive.total_active}</div>
             </div>
             <div className="card" style={{ padding: 20 }}>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <AlertTriangle size={12} /> Спящих клиентов
               </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#f97316' }}>{inactive.total_sleeping}</div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--warn)' }}>{inactive.total_sleeping}</div>
             </div>
             <div className="card" style={{ padding: 20 }}>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>% спящих</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: inactive.sleeping_pct > 50 ? '#ef4444' : '#FFE600' }}>
+              <div style={{ fontSize: 26, fontWeight: 700, color: inactive.sleeping_pct > 50 ? 'var(--danger)' : 'var(--accent)' }}>
                 {inactive.sleeping_pct}%
               </div>
             </div>
@@ -258,16 +258,16 @@ export default function AnalyticsPage() {
               <div key={key} className="card" style={{ padding: 18 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: BUCKET_COLORS[key] || '#8899aa' }} />
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: BUCKET_COLORS[key] || 'var(--text2)' }} />
                     <span style={{ fontSize: 14, fontWeight: 700 }}>{bucket.label}</span>
                   </div>
-                  <span style={{ fontSize: 22, fontWeight: 800, color: BUCKET_COLORS[key] || '#8899aa' }}>{bucket.count}</span>
+                  <span style={{ fontSize: 22, fontWeight: 700, color: BUCKET_COLORS[key] || 'var(--text2)' }}>{bucket.count}</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
                   Бонусов на счетах: <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{bucket.total_balance.toLocaleString('ru-RU')} сом</span>
                 </div>
                 {bucket.customers.length > 0 && (
-                  <div style={{ borderTop: '1px solid #1c2a3a', paddingTop: 10 }}>
+                  <div style={{ borderTop: '1px solid var(--bg3)', paddingTop: 10 }}>
                     {bucket.customers.map((c: any) => (
                       <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', fontSize: 12 }}>
                         <div>

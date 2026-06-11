@@ -67,68 +67,68 @@ export default function CouponsPage() {
 
   return (
     <div>
-      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 800, marginBottom: 24, flexWrap: 'wrap' as any }}>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 700, marginBottom: 24, flexWrap: 'wrap' as any }}>
         <Tag size={24} /> Купоны
       </h1>
 
       {/* Table */}
-      <div style={{ overflowX: 'auto', background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 16, marginBottom: 32 }}>
+      <div style={{ overflowX: 'auto', background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 16, marginBottom: 32 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
               {['Код', 'Название', 'Клиент', 'Бонус', 'Мин. покупка', 'Статус', 'Истекает', 'Создан', ''].map(h => (
-                <th key={h} style={{ padding: '14px 16px', color: '#8899aa', fontWeight: 600, borderBottom: '1px solid #1c2a3a', fontSize: 12 }}>{h}</th>
+                <th key={h} style={{ padding: '14px 16px', color: 'var(--text2)', fontWeight: 600, borderBottom: '1px solid var(--bg3)', fontSize: 12 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>
+              <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>
                 <Loader2 className="animate-spin" style={{ marginRight: 8, display: 'inline' }} size={16} /> Загрузка...
               </td></tr>
             )}
             {!loading && items.length === 0 && (
-              <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#8899aa' }}>Купонов нет</td></tr>
+              <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>Купонов нет</td></tr>
             )}
             {!loading && items.map(c => {
               const expired = c.expires_at && new Date(c.expires_at) < new Date();
               const inactive = !c.is_active || c.is_used || expired;
               return (
                 <tr key={c.id}>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: '#FFE600' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
                     {c.code}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#e2eaf6', fontWeight: 600 }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
                     {c.title}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: c.customer_id ? '#60a5fa' : '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: c.customer_id ? 'var(--info)' : 'var(--text2)' }}>
                     {c.customer_name}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 14, fontWeight: 700, color: '#22c55e' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 14, fontWeight: 700, color: 'var(--success)' }}>
                     +{Number(c.bonus_amount).toLocaleString('ru-RU')} сом
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 13, color: '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 13, color: 'var(--text2)' }}>
                     {Number(c.min_purchase) > 0 ? `${Number(c.min_purchase).toLocaleString('ru-RU')} сом` : '—'}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
                     <span style={{
-                      background: c.is_used ? '#60a5fa18' : inactive ? '#ff4d4d18' : '#22c55e18',
-                      color: c.is_used ? '#60a5fa' : inactive ? '#ff4d4d' : '#22c55e',
-                      padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 700,
+                      background: c.is_used ? 'rgba(59,130,246,0.12)' : inactive ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
+                      color: c.is_used ? 'var(--info)' : inactive ? 'var(--danger)' : 'var(--success)',
+                      padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
                     }}>
                       {c.is_used ? 'Использован' : expired ? 'Истёк' : c.is_active ? 'Активен' : 'Отключён'}
                     </span>
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12, color: 'var(--text2)' }}>
                     {c.expires_at ? new Date(c.expires_at).toLocaleDateString('ru-RU') : '—'}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a', fontSize: 12, color: '#8899aa' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)', fontSize: 12, color: 'var(--text2)' }}>
                     {new Date(c.created_at).toLocaleDateString('ru-RU')}
                   </td>
-                  <td style={{ padding: '14px 16px', borderBottom: '1px solid #1c2a3a' }}>
+                  <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--bg3)' }}>
                     {c.is_active && !c.is_used && (
                       <button onClick={() => handleDelete(c.id)} disabled={deleting === c.id}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff4d4d', opacity: deleting === c.id ? 0.4 : 0.7, padding: 4 }}>
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', opacity: deleting === c.id ? 0.4 : 0.7, padding: 4 }}>
                         <Trash2 size={15} />
                       </button>
                     )}
@@ -181,28 +181,28 @@ export default function CouponsPage() {
           style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
         >
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Название купона *</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Название купона *</label>
             <input className="input" name="title" placeholder="Скидка на весеннюю коллекцию" required />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Описание (необязательно)</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Описание (необязательно)</label>
             <input className="input" name="description" placeholder="Действует при покупке от 1000 сом" />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Бонус (сом) *</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Бонус (сом) *</label>
               <input className="input" name="bonus_amount" type="number" min="1" step="1" placeholder="500" required />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Мин. покупка (сом)</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Мин. покупка (сом)</label>
               <input className="input" name="min_purchase" type="number" min="0" step="1" placeholder="0" />
             </div>
           </div>
 
           {/* Customer selector */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>
               Клиент (пусто = для всех)
             </label>
             {selectedCust ? (
@@ -212,18 +212,18 @@ export default function CouponsPage() {
                 borderRadius: 10, padding: '10px 14px',
               }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#e2eaf6' }}>{selectedCust.name}</div>
-                  <div style={{ fontSize: 12, color: '#8899aa' }}>{selectedCust.phone}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{selectedCust.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>{selectedCust.phone}</div>
                 </div>
                 <button type="button" onClick={() => { setSelectedCust(null); setCustSearch(''); }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff4d4d', padding: 4 }}>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: 4 }}>
                   <XCircle size={18} />
                 </button>
               </div>
             ) : (
               <div style={{ position: 'relative' }}>
                 <div style={{ position: 'relative' }}>
-                  <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#8899aa' }} />
+                  <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text2)' }} />
                   <input
                     className="input"
                     value={custSearch}
@@ -235,7 +235,7 @@ export default function CouponsPage() {
                 {custResults.length > 0 && (
                   <div style={{
                     position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
-                    background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 10,
+                    background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 10,
                     maxHeight: 200, overflowY: 'auto', marginTop: 4,
                   }}>
                     {custResults.map(c => (
@@ -248,16 +248,16 @@ export default function CouponsPage() {
                         style={{
                           width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                           padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer',
-                          borderBottom: '1px solid #1c2a3a', textAlign: 'left',
+                          borderBottom: '1px solid var(--bg3)', textAlign: 'left',
                         }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#e2eaf6' }}>{c.full_name}</span>
-                        <span style={{ fontSize: 12, color: '#8899aa' }}>{c.phone}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{c.full_name}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text2)' }}>{c.phone}</span>
                       </button>
                     ))}
                   </div>
                 )}
                 {custSearching && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#0d1117', border: '1px solid #1c2a3a', borderRadius: 10, padding: 12, textAlign: 'center', color: '#8899aa', fontSize: 12, marginTop: 4 }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg2)', border: '1px solid var(--bg3)', borderRadius: 10, padding: 12, textAlign: 'center', color: 'var(--text2)', fontSize: 12, marginTop: 4 }}>
                     Поиск...
                   </div>
                 )}
@@ -266,7 +266,7 @@ export default function CouponsPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Истекает (необязательно)</label>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Истекает (необязательно)</label>
             <input className="input" name="expires_at" type="datetime-local" />
           </div>
 

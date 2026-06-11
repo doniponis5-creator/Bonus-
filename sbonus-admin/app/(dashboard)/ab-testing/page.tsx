@@ -52,25 +52,25 @@ export default function ABTestingPage() {
 
   const statusBadge = (s: string) => {
     const map: Record<string, { bg: string; color: string; label: string }> = {
-      active: { bg: '#22c55e18', color: '#22c55e', label: 'Активный' },
-      completed: { bg: '#3b82f618', color: '#3b82f6', label: 'Завершён' },
-      cancelled: { bg: '#8899aa18', color: '#8899aa', label: 'Отменён' },
+      active: { bg: 'rgba(34,197,94,0.12)', color: 'var(--success)', label: 'Активный' },
+      completed: { bg: 'rgba(59,130,246,0.12)', color: 'var(--info)', label: 'Завершён' },
+      cancelled: { bg: 'rgba(136,153,170,0.12)', color: 'var(--text2)', label: 'Отменён' },
     };
     const m = map[s] || map.cancelled;
-    return <span style={{ background: m.bg, color: m.color, padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 700 }}>{m.label}</span>;
+    return <span style={{ background: m.bg, color: m.color, padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{m.label}</span>;
   };
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
           <FlaskConical size={24} /> A/B Тестирование
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ display: 'flex', gap: 4, background: 'var(--card)', borderRadius: 10, padding: 3 }}>
             {[{ l: 'Все', v: '' }, { l: 'Активные', v: 'active' }, { l: 'Завершённые', v: 'completed' }].map(f => (
               <button key={f.v} onClick={() => setFilter(f.v)} style={{
-                padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+                padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
                 background: filter === f.v ? 'var(--accent)' : 'transparent',
                 color: filter === f.v ? '#000' : 'var(--text2)',
               }}>{f.l}</button>
@@ -88,27 +88,27 @@ export default function ABTestingPage() {
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Создать A/B тест</h3>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Название теста *</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Название теста *</label>
               <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Тест приветственного сообщения" required />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Вариант A (сообщение) *</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Вариант A (сообщение) *</label>
               <textarea className="input" value={varA} onChange={e => setVarA(e.target.value)} placeholder="Привет! У вас 500 бонусов — потратьте сегодня!" required rows={2} style={{ resize: 'vertical' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Вариант B (сообщение) *</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Вариант B (сообщение) *</label>
               <textarea className="input" value={varB} onChange={e => setVarB(e.target.value)} placeholder="Скидка ждёт! Приходите и используйте свои бонусы 🎁" required rows={2} style={{ resize: 'vertical' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#8899aa', marginBottom: 6 }}>Описание</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Описание</label>
               <input className="input" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Цель: увеличить конверсию..." />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Создание...' : 'Создать тест'}</button>
-              <button type="button" onClick={() => setShowForm(false)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>Отмена</button>
+              <button type="button" onClick={() => setShowForm(false)} style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>Отмена</button>
             </div>
           </form>
-          {msg && <div style={{ marginTop: 12, color: msg.startsWith('Ошибка') ? 'var(--danger)' : '#22c55e', fontSize: 13, fontWeight: 600 }}>{msg}</div>}
+          {msg && <div style={{ marginTop: 12, color: msg.startsWith('Ошибка') ? 'var(--danger)' : 'var(--success)', fontSize: 13, fontWeight: 600 }}>{msg}</div>}
         </div>
       )}
 
@@ -137,7 +137,7 @@ export default function ABTestingPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {statusBadge(t.status)}
                     {t.winner && (
-                      <span style={{ background: '#FFE60018', color: '#FFE600', padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Trophy size={12} /> Победитель: {t.winner}
                       </span>
                     )}
@@ -146,39 +146,39 @@ export default function ABTestingPage() {
 
                 {/* Variants comparison */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  <div style={{ padding: 16, background: 'rgba(59,130,246,0.06)', borderRadius: 12, border: '1px solid rgba(59,130,246,0.15)' }}>
-                    <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 700, marginBottom: 8 }}>ВАРИАНТ A</div>
+                  <div style={{ padding: 16, background: 'rgba(59,130,246,0.06)', borderRadius: 10, border: '1px solid rgba(59,130,246,0.15)' }}>
+                    <div style={{ fontSize: 11, color: 'var(--info)', fontWeight: 700, marginBottom: 8 }}>ВАРИАНТ A</div>
                     <p style={{ fontSize: 13, color: 'var(--text)', margin: '0 0 12px', lineHeight: 1.5 }}>{t.variant_a_message}</p>
                     <div style={{ display: 'flex', gap: 16 }}>
-                      <div><div style={{ fontSize: 10, color: 'var(--text3)' }}>Отправлено</div><div style={{ fontSize: 18, fontWeight: 800 }}>{t.variant_a_sent}</div></div>
-                      <div><div style={{ fontSize: 10, color: 'var(--text3)' }}>Конверсия</div><div style={{ fontSize: 18, fontWeight: 800, color: '#3b82f6' }}>{t.variant_a_rate}%</div></div>
+                      <div><div style={{ fontSize: 10, color: 'var(--text3)' }}>Отправлено</div><div style={{ fontSize: 18, fontWeight: 700 }}>{t.variant_a_sent}</div></div>
+                      <div><div style={{ fontSize: 10, color: 'var(--text3)' }}>Конверсия</div><div style={{ fontSize: 18, fontWeight: 700, color: 'var(--info)' }}>{t.variant_a_rate}%</div></div>
                     </div>
                   </div>
-                  <div style={{ padding: 16, background: 'rgba(249,115,22,0.06)', borderRadius: 12, border: '1px solid rgba(249,115,22,0.15)' }}>
-                    <div style={{ fontSize: 11, color: '#f97316', fontWeight: 700, marginBottom: 8 }}>ВАРИАНТ B</div>
+                  <div style={{ padding: 16, background: 'rgba(249,115,22,0.06)', borderRadius: 10, border: '1px solid rgba(249,115,22,0.15)' }}>
+                    <div style={{ fontSize: 11, color: 'var(--warn)', fontWeight: 700, marginBottom: 8 }}>ВАРИАНТ B</div>
                     <p style={{ fontSize: 13, color: 'var(--text)', margin: '0 0 12px', lineHeight: 1.5 }}>{t.variant_b_message}</p>
                     <div style={{ display: 'flex', gap: 16 }}>
-                      <div><div style={{ fontSize: 10, color: 'var(--text3)' }}>Отправлено</div><div style={{ fontSize: 18, fontWeight: 800 }}>{t.variant_b_sent}</div></div>
-                      <div><div style={{ fontSize: 10, color: 'var(--text3)' }}>Конверсия</div><div style={{ fontSize: 18, fontWeight: 800, color: '#f97316' }}>{t.variant_b_rate}%</div></div>
+                      <div><div style={{ fontSize: 10, color: 'var(--text3)' }}>Отправлено</div><div style={{ fontSize: 18, fontWeight: 700 }}>{t.variant_b_sent}</div></div>
+                      <div><div style={{ fontSize: 10, color: 'var(--text3)' }}>Конверсия</div><div style={{ fontSize: 18, fontWeight: 700, color: 'var(--warn)' }}>{t.variant_b_rate}%</div></div>
                     </div>
                   </div>
                 </div>
 
                 {/* Progress bar */}
                 {total > 0 && (
-                  <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex', marginBottom: 12 }}>
-                    <div style={{ width: `${aWidth}%`, background: '#3b82f6', transition: 'width 0.3s' }} />
-                    <div style={{ flex: 1, background: '#f97316' }} />
+                  <div style={{ height: 8, borderRadius: 10, overflow: 'hidden', display: 'flex', marginBottom: 12 }}>
+                    <div style={{ width: `${aWidth}%`, background: 'var(--info)', transition: 'width 0.3s' }} />
+                    <div style={{ flex: 1, background: 'var(--warn)' }} />
                   </div>
                 )}
 
                 {/* Actions */}
                 {t.status === 'active' && (
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => handleComplete(t.id)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: '1px solid #22c55e33', background: '#22c55e12', color: '#22c55e', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button onClick={() => handleComplete(t.id)} style={{ padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, border: '1px solid rgba(34,197,94,0.2)', background: 'rgba(34,197,94,0.08)', color: 'var(--success)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <CheckCircle2 size={14} /> Завершить
                     </button>
-                    <button onClick={() => handleCancel(t.id)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: '1px solid #8899aa33', background: '#8899aa12', color: '#8899aa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button onClick={() => handleCancel(t.id)} style={{ padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, border: '1px solid rgba(136,153,170,0.2)', background: 'rgba(136,153,170,0.08)', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <XCircle size={14} /> Отменить
                     </button>
                   </div>

@@ -79,9 +79,9 @@ function DesktopSidebar({ path }: { path: string }) {
       overflowY: 'auto',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px', marginBottom: 28 }}>
-        <img src="/icon-192.png" alt="S" width={38} height={38} style={{ borderRadius: 12 }} />
+        <img src="/icon-192.png" alt="S" width={38} height={38} style={{ borderRadius: 10 }} />
         <div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>S Bonus</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>S Bonus</div>
           <div style={{ fontSize: 11, color: 'var(--text2)' }}>Смарт Центр</div>
         </div>
       </div>
@@ -89,16 +89,16 @@ function DesktopSidebar({ path }: { path: string }) {
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
         {/* Хаб всех разделов */}
         <Link href="/menu" style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 10,
-          borderRadius: 10, fontSize: 13, fontWeight: 700,
+          display: 'flex', alignItems: 'center', gap: 10, height: 40, padding: '0 12px', marginBottom: 10,
+          borderRadius: 10, fontSize: 13, fontWeight: 600,
           color: path === '/menu' ? 'var(--accent)' : 'var(--text)',
-          background: path === '/menu' ? 'rgba(255,230,0,0.10)' : 'rgba(99,102,241,0.12)',
-          border: `1px solid ${path === '/menu' ? 'rgba(255,230,0,0.25)' : 'rgba(99,102,241,0.22)'}`,
+          background: path === '/menu' ? 'var(--accent-dim)' : 'var(--bg3)',
+          border: `1px solid ${path === '/menu' ? 'var(--accent-border)' : 'var(--border)'}`,
         }}>
           <LayoutGrid size={18} /> Все разделы
         </Link>
         {/* Быстрый доступ — часто используемое. Остальное — в «Все разделы». */}
-        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#5a6a7a', padding: '6px 12px', marginTop: 4 }}>
+        <div className="label" style={{ padding: '6px 12px', marginTop: 4 }}>
           Быстрый доступ
         </div>
         {QUICK_NAV.map(n => {
@@ -106,11 +106,11 @@ function DesktopSidebar({ path }: { path: string }) {
           const Icon = n.icon;
           return (
             <Link key={n.href} href={n.href} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-              borderRadius: 10, fontSize: 13, fontWeight: active ? 700 : 500,
+              display: 'flex', alignItems: 'center', gap: 10, height: 38, padding: '0 12px',
+              borderRadius: 10, fontSize: 13, fontWeight: 600,
               color: active ? 'var(--accent)' : 'var(--text2)',
-              background: active ? 'rgba(255,230,0,0.08)' : 'transparent',
-              transition: 'all 0.15s',
+              background: active ? 'var(--accent-dim)' : 'transparent',
+              transition: 'background 0.15s, color 0.15s',
             }}>
               <Icon size={18} />{n.label}
             </Link>
@@ -119,7 +119,7 @@ function DesktopSidebar({ path }: { path: string }) {
       </nav>
 
       <button onClick={logout} style={{
-        display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+        display: 'flex', alignItems: 'center', gap: 8, height: 40, padding: '0 12px',
         borderRadius: 10, fontSize: 13, color: 'var(--danger)', background: 'transparent',
         border: 'none', cursor: 'pointer', fontWeight: 600, marginTop: 8,
       }}>
@@ -180,7 +180,7 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
                 justifyContent: 'center', gap: 3,
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: active ? 'var(--accent)' : 'var(--text3)',
-                fontSize: 11, fontWeight: active ? 700 : 500,
+                fontSize: 11, fontWeight: 600,
                 padding: '6px 0', flex: 1,
                 transition: 'color 0.2s',
                 WebkitTapHighlightColor: 'transparent',
@@ -190,8 +190,8 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
               <div style={{
                 position: 'relative',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 48, height: 30, borderRadius: 15,
-                background: active ? 'rgba(255,230,0,0.12)' : 'transparent',
+                width: 48, height: 30, borderRadius: 999,
+                background: active ? 'var(--accent-dim)' : 'transparent',
                 transition: 'background 0.2s',
               }}>
                 <Icon size={22} strokeWidth={active ? 2.5 : 2} />
@@ -227,7 +227,7 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
           }}>
             {/* Handle */}
             <div style={{
-              width: 36, height: 4, borderRadius: 2, background: 'var(--border)',
+              width: 36, height: 4, borderRadius: 999, background: 'var(--border)',
               margin: '4px auto 12px',
             }} />
 
@@ -238,7 +238,7 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
             }}>
               <img src="/icon-192.png" alt="S" width={30} height={30} style={{ borderRadius: 8 }} />
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>S Bonus Admin</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>S Bonus Admin</div>
                 <div style={{ fontSize: 11, color: 'var(--text2)' }}>Смарт Центр</div>
               </div>
             </div>
@@ -249,10 +249,7 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
               if (groupItems.length === 0) return null;
               return (
                 <div key={group.title} style={{ marginBottom: 12 }}>
-                  <div style={{
-                    fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                    color: '#5a6a7a', padding: '8px 12px 4px',
-                  }}>
+                  <div className="label" style={{ padding: '8px 12px 4px' }}>
                     {group.title}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '2px 4px' }}>
@@ -262,21 +259,21 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
                       return (
                         <Link key={n.href} href={n.href} onClick={() => setMoreOpen(false)} style={{
                           display: 'flex', flexDirection: 'column', alignItems: 'center',
-                          gap: 6, padding: '14px 6px', borderRadius: 14,
-                          background: active ? 'rgba(255,230,0,0.1)' : 'rgba(255,255,255,0.02)',
-                          border: active ? '1px solid rgba(255,230,0,0.2)' : '1px solid transparent',
-                          transition: 'all 0.15s',
+                          gap: 6, padding: '14px 6px', borderRadius: 16,
+                          background: active ? 'var(--accent-dim)' : 'rgba(255,255,255,0.02)',
+                          border: active ? '1px solid var(--accent-border)' : '1px solid transparent',
+                          transition: 'background 0.15s, border-color 0.15s',
                           WebkitTapHighlightColor: 'transparent',
                         }}>
                           <div style={{
-                            width: 40, height: 40, borderRadius: 12, display: 'flex',
+                            width: 40, height: 40, borderRadius: 10, display: 'flex',
                             alignItems: 'center', justifyContent: 'center',
-                            background: active ? 'rgba(255,230,0,0.15)' : 'rgba(136,153,170,0.08)',
+                            background: active ? 'var(--accent-dim)' : 'rgba(136,153,170,0.08)',
                           }}>
                             <Icon size={20} color={active ? 'var(--accent)' : 'var(--text2)'} />
                           </div>
                           <span style={{
-                            fontSize: 11, fontWeight: active ? 700 : 500, textAlign: 'center',
+                            fontSize: 11, fontWeight: 600, textAlign: 'center',
                             color: active ? 'var(--accent)' : 'var(--text)',
                             lineHeight: 1.2,
                           }}>
@@ -293,7 +290,7 @@ function MobileNav({ path, moreOpen, setMoreOpen }: {
             {/* Logout */}
             <button onClick={logout} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '14px', borderRadius: 12, marginTop: 10,
+              padding: '14px', borderRadius: 10, marginTop: 10,
               background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)',
               cursor: 'pointer', width: '100%',
               WebkitTapHighlightColor: 'transparent',

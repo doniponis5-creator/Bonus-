@@ -38,15 +38,16 @@ const fmtShort = (v: number) => {
 };
 
 const tooltipStyle = {
-  background: '#141c2b',
-  border: '1px solid #1e293b',
+  background: 'var(--card)',
+  border: '1px solid var(--border)',
   borderRadius: 10,
-  color: '#e2eaf6',
+  color: 'var(--text)',
   fontSize: 13,
   boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
   padding: '10px 14px',
 };
 
+// Recharts SVG fills — hex literals required (CSS vars do not work in SVG attrs)
 const TIER_COLORS: Record<string, string> = {
   Bronze: '#CD7F32', Silver: '#C0C0C0', Gold: '#FFD700', Platinum: '#B9F2FF',
 };
@@ -103,14 +104,14 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 className="h1" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <LayoutDashboard size={24} /> Дашборд
           </h1>
           <p style={{ color: 'var(--text2)', fontSize: 14, marginTop: 4 }}>Смарт Центр • S Bonus</p>
         </div>
         <div className="page-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Period selector */}
-          <div className="period-selector" style={{ display: 'flex', gap: 4, background: 'var(--card)', borderRadius: 10, padding: 3 }}>
+          <div className="period-selector" style={{ display: 'flex', gap: 4, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: 3 }}>
             {PERIOD_OPTIONS.map(opt => (
               <button
                 key={opt.value}
@@ -118,7 +119,7 @@ export default function DashboardPage() {
                 style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
                   background: period === opt.value ? 'var(--accent)' : 'transparent',
-                  color: period === opt.value ? '#000' : 'var(--text2)',
+                  color: period === opt.value ? 'var(--on-accent)' : 'var(--text2)',
                   transition: 'all 0.2s',
                 }}
               >
@@ -134,8 +135,8 @@ export default function DashboardPage() {
       <div className="grid-4" style={{ marginBottom: 24 }}>
         <StatsCard icon={<Users size={20} />} label="Клиенты" value={stats.total_customers} sub={`Активных: ${stats.active_customers}`} />
         <StatsCard icon={<Coins size={20} />} label="Выдано бонусов" value={fmt(stats.total_bonus_issued)} color="var(--accent)" />
-        <StatsCard icon={<CreditCard size={20} />} label="Использовано" value={fmt(stats.total_bonus_spent)} color="var(--accent3)" />
-        <StatsCard icon={<Landmark size={20} />} label="Баланс на счетах" value={fmt(stats.total_balance)} color="var(--accent2)" />
+        <StatsCard icon={<CreditCard size={20} />} label="Использовано" value={fmt(stats.total_bonus_spent)} color="var(--violet)" />
+        <StatsCard icon={<Landmark size={20} />} label="Баланс на счетах" value={fmt(stats.total_balance)} color="var(--accent)" />
       </div>
 
       {/* Quick Stats Row */}
@@ -149,17 +150,17 @@ export default function DashboardPage() {
       {/* Notification Stats */}
       {notifStats && (
         <div className="grid-4" style={{ marginBottom: 24 }}>
-          <StatsCard icon={<Bell size={20} />} label="WhatsApp отправлено" value={notifStats.sent || 0} sub="за 7 дней" color="#25D366" />
+          <StatsCard icon={<Bell size={20} />} label="WhatsApp отправлено" value={notifStats.sent || 0} sub="за 7 дней" color="var(--success)" />
           <StatsCard icon={<Bell size={20} />} label="Ошибки" value={notifStats.failed || 0} sub="за 7 дней" color="var(--danger)" />
-          <StatsCard icon={<Bell size={20} />} label="В ожидании" value={notifStats.pending || 0} sub="в очереди" color="#f59e0b" />
-          <StatsCard icon={<Bell size={20} />} label="Успешность" value={notifStats.total > 0 ? `${Math.round((notifStats.sent / notifStats.total) * 100)}%` : '—'} sub="доставки" color="#22c55e" />
+          <StatsCard icon={<Bell size={20} />} label="В ожидании" value={notifStats.pending || 0} sub="в очереди" color="var(--warn)" />
+          <StatsCard icon={<Bell size={20} />} label="Успешность" value={notifStats.total > 0 ? `${Math.round((notifStats.sent / notifStats.total) * 100)}%` : '—'} sub="доставки" color="var(--success)" />
         </div>
       )}
 
       {/* Earn/Spend Trends Chart */}
       {trends && trends.daily.length > 0 && (
         <div className="card" style={{ marginBottom: 24 }}>
-          <h3 style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <h3 className="h3" style={{ color: 'var(--text)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
             <TrendingUp size={16} /> Тренд начисления и использования бонусов
           </h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -170,25 +171,25 @@ export default function DashboardPage() {
                   <stop offset="95%" stopColor="#FFE600" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
               <XAxis
                 dataKey="date"
-                tick={{ fill: '#64748b', fontSize: 11 }}
+                tick={{ fill: '#8899aa', fontSize: 11 }}
                 tickFormatter={(v: string) => { const d = new Date(v); return `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`; }}
                 interval={Math.max(0, Math.floor(trends.daily.length / 8))}
               />
-              <YAxis tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={fmtShort} />
+              <YAxis tick={{ fill: '#8899aa', fontSize: 11 }} tickFormatter={fmtShort} />
               <Tooltip
-                contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
+                contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                 formatter={(value: number, name: string) => [fmt(value), name === 'earn' ? 'Начислено' : 'Использовано']}
                 labelFormatter={(label: string) => new Date(label).toLocaleDateString('ru-RU')}
               />
               <Area type="monotone" dataKey="earn" stroke="#FFE600" fill="url(#earnGrad)" strokeWidth={2} name="earn" />
-              <Area type="monotone" dataKey="spend" stroke="#f97316" fill="url(#spendGrad)" strokeWidth={2} name="spend" />
+              <Area type="monotone" dataKey="spend" stroke="#f59e0b" fill="url(#spendGrad)" strokeWidth={2} name="spend" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -198,7 +199,7 @@ export default function DashboardPage() {
       {trends && trends.daily.length > 0 && (
         <div className="grid-2" style={{ marginBottom: 24 }}>
           <div className="card">
-            <h3 style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <h3 className="h3" style={{ color: 'var(--text)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Users size={16} /> Новые клиенты
             </h3>
             <ResponsiveContainer width="100%" height={200}>
@@ -206,13 +207,13 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: '#64748b', fontSize: 10 }}
+                  tick={{ fill: '#8899aa', fontSize: 10 }}
                   tickFormatter={(v: string) => { const d = new Date(v); return `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`; }}
                   interval={Math.max(0, Math.floor(trends.daily.length / 6))}
                 />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} allowDecimals={false} />
+                <YAxis tick={{ fill: '#8899aa', fontSize: 10 }} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
+                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                   formatter={(value: number) => [`${value} клиентов`, 'Новые']}
                   labelFormatter={(label: string) => new Date(label).toLocaleDateString('ru-RU')}
                 />
@@ -222,7 +223,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <h3 className="h3" style={{ color: 'var(--text)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
               <BarChart3 size={16} /> Количество транзакций
             </h3>
             <ResponsiveContainer width="100%" height={200}>
@@ -230,17 +231,17 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: '#64748b', fontSize: 10 }}
+                  tick={{ fill: '#8899aa', fontSize: 10 }}
                   tickFormatter={(v: string) => { const d = new Date(v); return `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`; }}
                   interval={Math.max(0, Math.floor(trends.daily.length / 6))}
                 />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} allowDecimals={false} />
+                <YAxis tick={{ fill: '#8899aa', fontSize: 10 }} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
+                  contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                   labelFormatter={(label: string) => new Date(label).toLocaleDateString('ru-RU')}
                 />
                 <Bar dataKey="earn_count" fill="#FFE600" radius={[4, 4, 0, 0]} name="Начислений" />
-                <Bar dataKey="spend_count" fill="#f97316" radius={[4, 4, 0, 0]} name="Списаний" />
+                <Bar dataKey="spend_count" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Списаний" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -251,7 +252,7 @@ export default function DashboardPage() {
       <div className="grid-2" style={{ marginBottom: 24 }}>
         {/* Tier Distribution Donut */}
         <div className="card">
-          <h3 style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <h3 className="h3" style={{ color: 'var(--text)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Trophy size={16} /> Распределение по уровням
           </h3>
           {(() => {
@@ -267,11 +268,11 @@ export default function DashboardPage() {
                     {tierData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip
-                    contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,230,0,0.06)' }}
+                    contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     formatter={(value: number, name: string) => [`${value} клиентов`, name]}
                   />
                   <Legend verticalAlign="bottom" iconType="circle" iconSize={8}
-                    formatter={(value: string) => <span style={{ color: '#94a3b8', fontSize: 12 }}>{value}</span>}
+                    formatter={(value: string) => <span style={{ color: 'var(--text2)', fontSize: 12 }}>{value}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -281,7 +282,7 @@ export default function DashboardPage() {
 
         {/* Top Customers */}
         <div className="card">
-          <h3 style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <h3 className="h3" style={{ color: 'var(--text)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Trophy size={16} /> Топ-5 клиентов за период
           </h3>
           {trends && trends.top_customers.length > 0 ? (
@@ -291,23 +292,23 @@ export default function DashboardPage() {
                   key={i}
                   style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    background: 'rgba(30,41,59,0.5)', borderRadius: 10, padding: '12px 14px',
+                    background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{
-                      width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'rgba(148,163,184,0.2)',
-                      color: i < 3 ? '#000' : '#94a3b8', fontSize: 12, fontWeight: 700,
-                    }}>
+                      width: 28, height: 28, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: i === 0 ? 'var(--accent)' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'var(--bg3)',
+                      color: i < 3 ? 'var(--on-accent)' : 'var(--text2)', fontSize: 12, fontWeight: 700,
+                    }} className="numeric">
                       {i + 1}
                     </div>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{c.name}</div>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>{c.phone} • {c.transactions} покупок</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>{c.phone} • {c.transactions} покупок</div>
                     </div>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>
+                  <div className="numeric" style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>
                     {fmt(c.total_purchase)}
                   </div>
                 </div>
