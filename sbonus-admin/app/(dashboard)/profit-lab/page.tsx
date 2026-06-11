@@ -114,7 +114,10 @@ export default function ProfitLabPage() {
     const newPrice = price * (1 - discount / 100);
     const newMargin = newPrice - cost;
     const upliftNeeded = newMargin > 0 ? (marginUnit / newMargin - 1) * 100 : Infinity;
-    return { price, cost, dailySales, marginUnit, newPrice, newMargin, upliftNeeded };
+    // Себестоимость считаем валидной, только если она > 0 и меньше цены.
+    // В 1С часто себестоимость не заполнена или продублирована ценой.
+    const costValid = cost > 0 && cost < price;
+    return { price, cost, dailySales, marginUnit, newPrice, newMargin, upliftNeeded, costValid };
   }, [product, discount]);
 
   // ── Расчёт комбо ──
@@ -127,7 +130,9 @@ export default function ProfitLabPage() {
     // Себестоимость ищем в margins по имени
     const findCost = (name: string) => {
       const hit = margins.find((m: any) => m.name === name);
-      return hit ? Number(hit.cost_price || 0) : null;
+      if (!hit) return null;
+      const c = Number(hit.cost_price || 0), p = Number(hit.price || 0);
+      return c > 0 && c < p ? c : null; // невалидную себестоимость игнорируем
     };
     const ca = findCost(combo.product_a?.name), cb = findCost(combo.product_b?.name);
     const costKnown = ca != null && cb != null && (ca > 0 || cb > 0);
@@ -155,7 +160,14 @@ export default function ProfitLabPage() {
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = margins.filter((m: any) => Number(m.price) > 0);
+    const isValid = (m: any) => {
+      const p = Number(m.price || 0), c = Number(m.cost_price || 0);
+      return c > 0 && c < p;
+    };
+    // Товары с корректной себестоимостью — первыми
+    const base = margins
+      .filter((m: any) => Number(m.price) > 0)
+      .sort((a: any, b: any) => Number(isValid(b)) - Number(isValid(a)));
     if (!q) return base.slice(0, 8);
     return base.filter((m: any) => (m.name || '').toLowerCase().includes(q)).slice(0, 8);
   }, [margins, query]);
@@ -179,7 +191,9 @@ export default function ProfitLabPage() {
         </div>
       </div>
 
-      <div className="grid-2" style={{ alignItems: 'start' }}>
+      {/* Две независимые колонки — карточки прижаты друг к другу без дыр */}
+      <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
         {/* ═══ 1. СКИДКА-СИМУЛЯТОР ═══ */}
         <div className="card fade-up">
           <h2 className="h2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -213,7 +227,7 @@ export default function ProfitLabPage() {
                 style={{ width: '100%', accentColor: 'var(--accent)', marginBottom: 12 }} />
 
               <Row label="Цена" value={`${fmt(disc.price)} → ${fmt(Math.round(disc.newPrice))} сом`} />
-              {disc.cost > 0 ? (
+              {disc.costValid ? (
                 <>
                   <Row label="Прибыль с 1 шт" value={`${fmt(Math.round(disc.marginUnit))} → ${fmt(Math.round(disc.newMargin))} сом`}
                     accent={disc.newMargin <= 0 ? 'var(--danger)' : disc.newMargin < disc.marginUnit * 0.5 ? 'var(--warn)' : 'var(--success)'} />
@@ -232,7 +246,9 @@ export default function ProfitLabPage() {
                   )}
                 </>
               ) : (
-                <Verdict tone="ok" text="У товара нет себестоимости в 1С — добавьте её, и расчёт прибыли заработает." />
+                <Verdict tone="ok" text={disc.cost <= 0
+                  ? 'У этого товара не заполнена себестоимость в 1С. Заполните закупочную цену в карточке товара — и расчёт прибыли заработает.'
+                  : 'Себестоимость в 1С равна цене продажи (или выше) — похоже, заполнена неверно. Исправьте закупочную цену в 1С, и симулятор посчитает реальную прибыль.'} />
               )}
             </>
           )}
@@ -246,9 +262,17 @@ export default function ProfitLabPage() {
           <p className="caption" style={{ marginBottom: 12 }}>Пары, которые УЖЕ покупают вместе (по чекам 1С) — упакуйте в комплект.</p>
 
           {combos.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--text2)', padding: '16px 0' }}>
-              Пока мало данных по парным покупкам. Появятся после накопления чеков с позициями из 1С.
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+              <div className="icon-tile">
+                <Layers size={17} color="var(--text3)" />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Собираем данные о парных покупках</div>
+                <div className="caption" style={{ marginTop: 2, lineHeight: 1.45 }}>
+                  Нужно минимум 3 чека, где два товара куплены вместе. Данные копятся автоматически из чеков 1С — загляните через пару недель.
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
@@ -297,6 +321,8 @@ export default function ProfitLabPage() {
           )}
         </div>
 
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
         {/* ═══ 3. ЦЕНА ЛОЯЛЬНОСТИ ═══ */}
         <div className="card fade-up" style={{ animationDelay: '120ms' }}>
           <h2 className="h2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -313,15 +339,23 @@ export default function ProfitLabPage() {
             </div>
           </div>
           {marketing?.referral && (
-            <Row label="Реферальная программа ROI" value={`${refRoi > 0 ? '+' : ''}${fmt(refRoi)}%`} accent={refRoi >= 0 ? 'var(--success)' : 'var(--danger)'} />
+            Number(marketing.referral.revenue_from_referred || 0) > 0 ? (
+              <Row label="Реферальная программа ROI" value={`${refRoi > 0 ? '+' : ''}${fmt(refRoi)}%`} accent={refRoi >= 0 ? 'var(--success)' : 'var(--danger)'} />
+            ) : (
+              <Row label="Реферальная программа" value="приглашённые ещё не покупали" accent="var(--text2)" />
+            )
           )}
+          <p className="caption" style={{ marginTop: 8, lineHeight: 1.5 }}>
+            В «бонусы от выручки» входят и подарочные бонусы (колесо, кампании, welcome, дни рождения) —
+            при активных акциях процент временно выше реального кешбэка.
+          </p>
           <Verdict
-            tone={burn > 7 ? 'bad' : burn > 3 ? 'ok' : 'good'}
-            text={burn > 7
-              ? `Бонусы съедают ${burn.toFixed(1)}% выручки — это много. Проверьте проценты уровней и щедрость колеса.`
-              : burn > 3
-              ? `${burn.toFixed(1)}% выручки на бонусы — нормально для розницы (3-7%). Следите, чтобы не росло.`
-              : `Программа стоит всего ${burn.toFixed(1)}% выручки — дёшево для удержания клиентов. Есть запас для более щедрых акций.`}
+            tone={burn > 12 ? 'bad' : burn > 5 ? 'ok' : 'good'}
+            text={burn > 12
+              ? `Бонусы составляют ${burn.toFixed(1)}% выручки — много даже с учётом акций. Проверьте проценты уровней, щедрость колеса и суммы кампаний.`
+              : burn > 5
+              ? `${burn.toFixed(1)}% выручки на бонусы — выше базового кешбэка из-за акций и подарков. Приемлемо, но следите за динамикой.`
+              : `Программа стоит ${burn.toFixed(1)}% выручки — здоровый уровень. Есть запас для более щедрых акций.`}
           />
         </div>
 
@@ -347,6 +381,7 @@ export default function ProfitLabPage() {
           <Link href="/settings" className="btn btn-secondary" style={{ marginTop: 14, width: '100%' }}>
             <SettingsIcon size={15} /> Настроить <ChevronRight size={14} />
           </Link>
+        </div>
         </div>
       </div>
 
