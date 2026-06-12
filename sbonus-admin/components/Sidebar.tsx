@@ -79,7 +79,7 @@ function DesktopSidebar({ path }: { path: string }) {
       overflowY: 'auto',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px', marginBottom: 28 }}>
-        <img src="/icon-192.png" alt="S" width={38} height={38} style={{ borderRadius: 10 }} />
+        <img src="/icon-192.png" alt="S" width={38} height={38} style={{ borderRadius: 10, boxShadow: '0 0 18px -4px rgba(255,230,0,0.35)' }} />
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>S Bonus</div>
           <div style={{ fontSize: 11, color: 'var(--text2)' }}>Смарт Центр</div>
@@ -88,22 +88,10 @@ function DesktopSidebar({ path }: { path: string }) {
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
         {/* Дашборд — всегда сверху */}
-        <Link href="/" style={{
-          display: 'flex', alignItems: 'center', gap: 10, height: 38, padding: '0 12px',
-          borderRadius: 10, fontSize: 13, fontWeight: 600,
-          color: path === '/' ? 'var(--accent)' : 'var(--text2)',
-          background: path === '/' ? 'var(--accent-dim)' : 'transparent',
-          transition: 'background 0.15s, color 0.15s',
-        }}>
+        <Link href="/" className={`snav ${path === '/' ? 'active' : ''}`} style={{ height: 38 }}>
           <LayoutDashboard size={18} /> Дашборд
         </Link>
-        <Link href="/menu" style={{
-          display: 'flex', alignItems: 'center', gap: 10, height: 38, padding: '0 12px', marginBottom: 8,
-          borderRadius: 10, fontSize: 13, fontWeight: 600,
-          color: path === '/menu' ? 'var(--accent)' : 'var(--text2)',
-          background: path === '/menu' ? 'var(--accent-dim)' : 'transparent',
-          transition: 'background 0.15s, color 0.15s',
-        }}>
+        <Link href="/menu" className={`snav ${path === '/menu' ? 'active' : ''}`} style={{ height: 38, marginBottom: 8 }}>
           <LayoutGrid size={18} /> Все разделы
         </Link>
 
@@ -127,13 +115,7 @@ function DesktopSidebar({ path }: { path: string }) {
                 const active = path === n.href || (n.href !== '/' && path.startsWith(n.href));
                 const Icon = n.icon;
                 return (
-                  <Link key={n.href} href={n.href} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 12px',
-                    borderRadius: 10, fontSize: 13, fontWeight: 600,
-                    color: active ? 'var(--accent)' : 'var(--text2)',
-                    background: active ? 'var(--accent-dim)' : 'transparent',
-                    transition: 'background 0.15s, color 0.15s',
-                  }}>
+                  <Link key={n.href} href={n.href} className={`snav ${active ? 'active' : ''}`} style={{ height: 34 }}>
                     <Icon size={16} />{n.label}
                   </Link>
                 );

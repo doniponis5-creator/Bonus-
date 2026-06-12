@@ -1,9 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-interface Props { icon: React.ReactNode; label: string; value: string | number; sub?: string; color?: string; }
+interface Props {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  sub?: string;
+  color?: string;
+  /** Опционально: изменение в % (стрелка вверх/вниз) */
+  trend?: number;
+}
 
 /** Count-up для числовых значений (уважает prefers-reduced-motion). */
-function useCountUp(target: number, dur = 600): number {
+function useCountUp(target: number, dur = 700): number {
   const [v, setV] = useState(0);
   const prev = useRef(0);
   useEffect(() => {
@@ -23,17 +31,36 @@ function useCountUp(target: number, dur = 600): number {
   return v;
 }
 
-export default function StatsCard({ icon, label, value, sub, color = 'var(--accent)' }: Props) {
+export default function StatsCard({ icon, label, value, sub, color = 'var(--accent)', trend }: Props) {
   const isNum = typeof value === 'number';
   const animated = useCountUp(isNum ? (value as number) : 0);
+  const trendUp = typeof trend === 'number' && trend >= 0;
   return (
-    <div className="card fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>{label}</span>
-        <span style={{ fontSize: 20, display: 'flex', color: 'var(--text3)' }}>{icon}</span>
+    <div
+      className="card kpi-card"
+      style={{ ['--c' as any]: color, display: 'flex', flexDirection: 'column', gap: 10, padding: '18px 20px' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, letterSpacing: '0.02em' }}>{label}</span>
+        <div className="kpi-icon">{icon}</div>
       </div>
-      <div className="stat-value numeric" style={{ fontSize: 26, fontWeight: 700, color }}>
-        {isNum ? animated.toLocaleString('ru-RU') : value}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        <div className="stat-value numeric" style={{ fontSize: 26, fontWeight: 700, color, lineHeight: 1.1 }}>
+          {isNum ? animated.toLocaleString('ru-RU') : value}
+        </div>
+        {typeof trend === 'number' && (
+          <span
+            className="numeric"
+            style={{
+              fontSize: 12, fontWeight: 700,
+              color: trendUp ? 'var(--success)' : 'var(--danger)',
+              background: trendUp ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+              padding: '2px 8px', borderRadius: 999,
+            }}
+          >
+            {trendUp ? '↑' : '↓'} {Math.abs(trend).toFixed(1)}%
+          </span>
+        )}
       </div>
       {sub && <div style={{ fontSize: 12, color: 'var(--text3)' }}>{sub}</div>}
     </div>
