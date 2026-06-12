@@ -145,7 +145,15 @@ export default function ProfitLabPage() {
     const newMargin = newPrice - purchase;
     const upliftNeeded = newMargin > 0 ? (marginUnit / newMargin - 1) * 100 : Infinity;
     const maxSafeDiscount = retail > 0 ? Math.floor((1 - purchase / retail) * 100) : 0;
-    return { purchase, retail, pct, fromMarkup, dailySales, marginUnit, newPrice, newMargin, upliftNeeded, maxSafeDiscount };
+    // Месячная рамка — понятнее процентов
+    const perMonth = dailySales * 30;
+    const neededPerMonth = newMargin > 0 ? perMonth * (1 + upliftNeeded / 100) : Infinity;
+    const profitMonthNow = marginUnit * perMonth;
+    const profitMonthAfter = newMargin * perMonth; // при том же объёме
+    return {
+      purchase, retail, pct, fromMarkup, dailySales, marginUnit, newPrice, newMargin,
+      upliftNeeded, maxSafeDiscount, perMonth, neededPerMonth, profitMonthNow, profitMonthAfter,
+    };
   }, [product, discount, mk]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Расчёт комбо (розница с наценкой, прибыль против закупки) ──
@@ -171,6 +179,21 @@ export default function ProfitLabPage() {
   const revenue = Number(biz?.revenue || 0);
   const animRevenue = useCountUp(revenue);
   const refRoi = Number(marketing?.referral?.roi || 0);
+
+  // Разбивка: куда уходят бонусы (оценка из имеющихся данных)
+  const bonusBreakdown = useMemo(() => {
+    const total = revenue * burn / 100;
+    if (total <= 0) return null;
+    const campaigns = (marketing?.campaigns || []).reduce((s: number, c: any) => s + Number(c.bonus_cost || 0), 0);
+    const referral = Number(marketing?.referral?.bonus_cost || 0);
+    const cashback = Math.max(0, total - campaigns - referral);
+    const parts = [
+      { label: 'Кампании и подарки', value: campaigns, color: 'var(--violet)' },
+      { label: 'Рефералы', value: referral, color: 'var(--info)' },
+      { label: 'Кешбэк за покупки и прочее', value: cashback, color: 'var(--accent)' },
+    ].filter(p => p.value > 0);
+    return { total, parts };
+  }, [revenue, burn, marketing]);
 
   // ── Автопилот ──
   const AUTO_ITEMS = settings ? [
@@ -267,29 +290,70 @@ export default function ProfitLabPage() {
               </div>
               <input type="range" min={0} max={50} step={1} value={discount}
                 onChange={e => setDiscount(Number(e.target.value))}
-                style={{ width: '100%', accentColor: 'var(--accent)', marginBottom: 12 }} />
+                style={{ width: '100%', accentColor: 'var(--accent)', marginBottom: 8 }} />
+              {/* Быстрые пресеты + безубыточный максимум */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+                {[5, 10, 15, 20, 30].map(d => (
+                  <button key={d} onClick={() => setDiscount(d)} className={`chip ${discount === d ? 'active' : ''}`}>{d}%</button>
+                ))}
+                {disc.maxSafeDiscount > 0 && (
+                  <button onClick={() => setDiscount(Math.max(0, disc.maxSafeDiscount - 1))}
+                    className="chip" style={{ border: '1px solid var(--accent-border)', color: 'var(--accent)', background: 'var(--accent-dim)' }}>
+                    макс без убытка: {disc.maxSafeDiscount}%
+                  </button>
+                )}
+              </div>
 
-              <Row label="Закупка (1С)" value={`${fmt(disc.purchase)} сом`} />
+              {/* Визуально: из чего состоит цена — закупка + прибыль */}
+              <div style={{ marginBottom: 12 }}>
+                {[
+                  { label: 'Сейчас', price: disc.retail, margin: disc.marginUnit },
+                  { label: `Со скидкой ${discount}%`, price: Math.round(disc.newPrice), margin: disc.newMargin },
+                ].map((b, i) => {
+                  const total = Math.max(b.price, disc.purchase + Math.max(0, b.margin));
+                  const purchW = total > 0 ? (disc.purchase / total) * 100 : 100;
+                  const margW = total > 0 ? (Math.max(0, b.margin) / total) * 100 : 0;
+                  const mColor = b.margin <= 0 ? 'var(--danger)' : i === 0 ? 'var(--success)' : (b.margin < disc.marginUnit * 0.5 ? 'var(--warn)' : 'var(--success)');
+                  return (
+                    <div key={i} style={{ marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text3)', marginBottom: 3 }}>
+                        <span>{b.label}</span>
+                        <span className="numeric">{fmt(Math.round(b.price))} сом{b.margin > 0 ? ` · прибыль ${fmt(Math.round(b.margin))}` : b.margin < 0 ? ` · убыток ${fmt(Math.round(-b.margin))}` : ''}</span>
+                      </div>
+                      <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', background: 'var(--bg3)' }}>
+                        <div style={{ width: `${purchW}%`, background: 'var(--bg3)', borderRight: '2px solid var(--bg)', display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
+                          <span style={{ fontSize: 9, color: 'var(--text3)', whiteSpace: 'nowrap' }}>закупка</span>
+                        </div>
+                        <div style={{ width: `${margW}%`, background: mColor, transition: 'width 0.25s' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <Row label="Закупка (1С)" value={`${fmt(Math.round(disc.purchase))} сом`} />
               <Row label={`Цена продажи (наценка ${disc.pct}%)`} value={`${fmt(disc.retail)} сом`} accent="var(--text)" />
               <Row label={`Со скидкой ${discount}%`} value={`${fmt(Math.round(disc.newPrice))} сом`} accent="var(--accent)" />
               <Row label="Прибыль с 1 шт" value={`${fmt(Math.round(disc.marginUnit))} → ${fmt(Math.round(disc.newMargin))} сом`}
                 accent={disc.newMargin <= 0 ? 'var(--danger)' : disc.newMargin < disc.marginUnit * 0.5 ? 'var(--warn)' : 'var(--success)'} />
-              <Row label="Продажи сейчас" value={`~${disc.dailySales.toFixed(1)} шт/день`} />
-              {disc.newMargin > 0 && (
-                <Row label="Чтобы не потерять прибыль" value={`+${Math.round(disc.upliftNeeded)}% продаж (≈${(disc.dailySales * (1 + disc.upliftNeeded / 100)).toFixed(1)} шт/день)`} />
+              <Row label="Продажи сейчас" value={disc.perMonth >= 6 ? `~${disc.dailySales.toFixed(1)} шт/день (${Math.round(disc.perMonth)} шт/мес)` : `~${Math.max(1, Math.round(disc.perMonth))} шт/мес`} />
+              {disc.newMargin > 0 && isFinite(disc.neededPerMonth) && (
+                <Row label="Чтобы не потерять прибыль" value={`нужно ~${Math.ceil(disc.neededPerMonth)} шт/мес (сейчас ~${Math.max(1, Math.round(disc.perMonth))})`} />
               )}
               {disc.newMargin <= 0 ? (
-                <Verdict tone="bad" text={`Скидка ${discount}% продаёт НИЖЕ закупки (${fmt(disc.purchase)} сом). Максимум безубыточной скидки: ${disc.maxSafeDiscount}%`} />
+                <Verdict tone="bad" text={`Скидка ${discount}% продаёт НИЖЕ закупки (${fmt(Math.round(disc.purchase))} сом). Максимум безубыточной скидки: ${disc.maxSafeDiscount}%`} />
+              ) : disc.perMonth < 2 ? (
+                <Verdict tone="ok" text={`Товар штучный (~${Math.max(1, Math.round(disc.perMonth))} шт/мес) — проценты тут не главное. Скидка ${discount}% оставляет ${fmt(Math.round(disc.newMargin))} сом прибыли с штуки: нормально, если цель — быстрее продать остаток.`} />
               ) : disc.upliftNeeded <= 30 ? (
-                <Verdict tone="good" text={`Рабочая скидка: достаточно +${Math.round(disc.upliftNeeded)}% продаж — акция с WhatsApp-рассылкой обычно даёт больше. Запас до убытка: скидка ${disc.maxSafeDiscount}%.`} />
+                <Verdict tone="good" text={`Рабочая скидка: вместо ~${Math.round(disc.perMonth)} шт/мес нужно ~${Math.ceil(disc.neededPerMonth)} — акция с WhatsApp-рассылкой обычно даёт больше. Запас до убытка: ${disc.maxSafeDiscount}%.`} />
               ) : disc.upliftNeeded <= 70 ? (
-                <Verdict tone="ok" text={`Осторожно: нужно +${Math.round(disc.upliftNeeded)}% продаж. Подойдёт для распродажи неликвида, но не для хитов.`} />
+                <Verdict tone="ok" text={`Осторожно: вместо ~${Math.round(disc.perMonth)} шт/мес нужно ~${Math.ceil(disc.neededPerMonth)}. Подойдёт для распродажи неликвида, но не для хитов.`} />
               ) : (
-                <Verdict tone="bad" text={`Невыгодно: нужно +${Math.round(disc.upliftNeeded)}% продаж, чтобы выйти в ноль. Попробуйте меньшую скидку или бонусы вместо скидки.`} />
+                <Verdict tone="bad" text={`Невыгодно: нужно ~${Math.ceil(disc.neededPerMonth)} шт/мес вместо ~${Math.round(disc.perMonth)} — нереалистично. Попробуйте меньшую скидку или бонусы вместо скидки.`} />
               )}
               {disc.fromMarkup && (
                 <p className="caption" style={{ marginTop: 8, lineHeight: 1.45 }}>
-                  Цена продажи рассчитана: закупка из 1С + наценка {disc.pct}% (категория/класс товара). Наценки настраиваются выше.
+                  Цена продажи = закупка из 1С + наценка {disc.pct}% (категория/класс товара). Наценки настраиваются выше.
                 </p>
               )}
             </>
@@ -379,6 +443,27 @@ export default function ProfitLabPage() {
               <div className="numeric" style={{ fontSize: 20, fontWeight: 700, marginTop: 2, color: burn > 7 ? 'var(--danger)' : burn > 3 ? 'var(--warn)' : 'var(--success)' }}>{burn.toFixed(1)}%</div>
             </div>
           </div>
+          {/* Куда уходят бонусы — разбивка в сомах */}
+          {bonusBreakdown && (
+            <div style={{ margin: '10px 0 4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>
+                <span>Бонусы за 30 дней — куда ушли</span>
+                <span className="numeric" style={{ fontWeight: 600, color: 'var(--text)' }}>≈ {fmt(Math.round(bonusBreakdown.total))} сом</span>
+              </div>
+              <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'var(--bg3)', marginBottom: 8 }}>
+                {bonusBreakdown.parts.map((p, i) => (
+                  <div key={i} style={{ width: `${(p.value / bonusBreakdown.total) * 100}%`, background: p.color }} />
+                ))}
+              </div>
+              {bonusBreakdown.parts.map((p, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, padding: '3px 0' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color, flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text2)', flex: 1 }}>{p.label}</span>
+                  <span className="numeric" style={{ fontWeight: 600 }}>{fmt(Math.round(p.value))} сом · {Math.round((p.value / bonusBreakdown.total) * 100)}%</span>
+                </div>
+              ))}
+            </div>
+          )}
           {marketing?.referral && (
             Number(marketing.referral.revenue_from_referred || 0) > 0 ? (
               <Row label="Реферальная программа ROI" value={`${refRoi > 0 ? '+' : ''}${fmt(refRoi)}%`} accent={refRoi >= 0 ? 'var(--success)' : 'var(--danger)'} />
@@ -388,7 +473,8 @@ export default function ProfitLabPage() {
           )}
           <p className="caption" style={{ marginTop: 8, lineHeight: 1.5 }}>
             В «бонусы от выручки» входят и подарочные бонусы (колесо, кампании, welcome, дни рождения) —
-            при активных акциях процент временно выше реального кешбэка.
+            при активных акциях процент временно выше реального кешбэка. Помните: бонус — не скидка,
+            клиент возвращается, чтобы его потратить.
           </p>
           <Verdict
             tone={burn > 12 ? 'bad' : burn > 5 ? 'ok' : 'good'}
