@@ -1,5 +1,5 @@
 'use client';
-import { Gift, Loader2, Plus, XCircle, CheckCircle2, Send, Trash2, Search, Disc } from 'lucide-react';
+import { Gift, Loader2, Plus, XCircle, CheckCircle2, Send, Trash2, Search, Disc, StopCircle, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { adminAPI, customersAPI } from '@/lib/api';
@@ -108,10 +108,10 @@ export default function CampaignsPage() {
   };
 
   const onCancel = async (id: string) => {
-    if (!await confirm('Отменить кампанию?')) return;
+    if (!await confirm('Остановить кампанию? Уже отправленные сообщения не отзываются, остальные не будут отправлены. Позже можно возобновить.')) return;
     try {
       await adminAPI.cancelCampaign(id);
-      toast('success', 'Кампания отменена');
+      toast('success', 'Кампания остановлена');
       load();
     } catch (er: any) {
       toast('error', er?.response?.data?.detail?.message || 'Ошибка');
@@ -193,6 +193,16 @@ export default function CampaignsPage() {
                             Отменить
                           </button>
                         </>
+                      )}
+                      {c.status === 'processing' && (
+                        <button onClick={() => onCancel(c.id)} className="btn btn-danger" style={{ padding: '4px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <StopCircle size={12} /> Остановить
+                        </button>
+                      )}
+                      {c.status === 'cancelled' && (
+                        <button onClick={() => onSendNow(c.id, c.name)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, color: 'var(--success)' }}>
+                          <RotateCcw size={12} /> Возобновить
+                        </button>
                       )}
                       {(c.status === 'pending' || c.status === 'cancelled') && (
                         <button onClick={() => onDelete(c.id)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: 12, color: 'var(--danger)' }}>

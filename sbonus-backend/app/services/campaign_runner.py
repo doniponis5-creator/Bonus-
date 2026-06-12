@@ -106,8 +106,25 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
     total_batches = (len(pending) + BATCH_SIZE - 1) // BATCH_SIZE if pending else 0
     txn_note = f"Кампания: {campaign.name}" + (f" — {campaign.reason}" if campaign.reason else "")
 
+    async def _is_cancelled() -> bool:
+        """Свежий статус из БД: админ мог нажать «Остановить» во время рассылки."""
+        res = await db.execute(
+            select(BonusCampaign.status).where(BonusCampaign.id == campaign.id)
+        )
+        return res.scalar() == CampaignStatus.CANCELLED
+
+    async def _stop_cancelled() -> int:
+        campaign.sent_count = (campaign.sent_count or 0) + sent_count
+        campaign.status = CampaignStatus.CANCELLED
+        await db.commit()
+        logger.info(f"Кампания «{campaign.name}» остановлена админом: {sent_count} отправлено")
+        return sent_count
+
     for batch_num, i in enumerate(range(0, len(pending), BATCH_SIZE), 1):
         batch = pending[i : i + BATCH_SIZE]
+
+        if await _is_cancelled():
+            return await _stop_cancelled()
 
         logger.info(f"  Батч {batch_num}/{total_batches}: отправка {len(batch)} сообщений...")
         batch_customer_ids = [r.customer_id for r in batch]
@@ -131,7 +148,11 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
 
         is_wheel = getattr(campaign, "campaign_type", "bonus") == "wheel"
 
-        for rec in batch:
+        for rec_idx, rec in enumerate(batch):
+            # Каждые 10 сообщений — проверка «Остановить» (быстрая реакция)
+            if rec_idx > 0 and rec_idx % 10 == 0 and await _is_cancelled():
+                await db.commit()  # сохраняем уже отмеченные «sent» в этом батче
+                return await _stop_cancelled()
             try:
                 customer = customers_by_id.get(rec.customer_id)
                 if not customer:
@@ -244,6 +265,9 @@ async def process_campaign(db: AsyncSession, campaign: BonusCampaign) -> int:
         if BATCH_PAUSE > 0 and i + BATCH_SIZE < len(pending):
             logger.info(f"  Пауза {BATCH_PAUSE}с перед следующим батчем...")
             await asyncio.sleep(BATCH_PAUSE)
+
+    if await _is_cancelled():
+        return await _stop_cancelled()
 
     logger.info(f"Кампания «{campaign.name}» завершена: {sent_count}/{len(pending)} отправлено")
     # sent_count аккумулируем (возобновлённый запуск не затирает прошлый счётчик)

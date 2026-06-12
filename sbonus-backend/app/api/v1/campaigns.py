@@ -221,17 +221,18 @@ async def send_campaign_now(
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=404, detail={"code": "CAMPAIGN_NOT_FOUND"})
-    if campaign.status not in (CampaignStatus.PENDING,):
+    if campaign.status not in (CampaignStatus.PENDING, CampaignStatus.CANCELLED):
         raise HTTPException(status_code=400, detail={"code": "CAMPAIGN_NOT_PENDING", "message": f"Статус: {campaign.status.value}"})
 
-    # АТОМАРНЫЙ claim: UPDATE ... WHERE status='pending'.
+    # АТОМАРНЫЙ claim: UPDATE ... WHERE status IN ('pending','cancelled').
     # Двойной клик / гонка с cron не запустят кампанию дважды.
+    # CANCELLED → возобновление: уже отправленные (status='sent') пропускаются.
     from sqlalchemy import update as sa_update
     claim = await db.execute(
         sa_update(BonusCampaign)
         .where(
             BonusCampaign.id == campaign_id,
-            BonusCampaign.status == CampaignStatus.PENDING,
+            BonusCampaign.status.in_([CampaignStatus.PENDING, CampaignStatus.CANCELLED]),
         )
         .values(status=CampaignStatus.PROCESSING)
     )
@@ -256,17 +257,28 @@ async def cancel_campaign(
     campaign_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Отменить pending кампанию."""
+    """Отменить pending или ОСТАНОВИТЬ processing кампанию.
+
+    Для processing: runner проверяет статус перед каждым сообщением и
+    останавливается. Уже отправленные получатели не дублируются при
+    повторном запуске (возобновлении).
+    """
     result = await db.execute(select(BonusCampaign).where(BonusCampaign.id == campaign_id))
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(status_code=404, detail={"code": "CAMPAIGN_NOT_FOUND"})
-    if campaign.status != CampaignStatus.PENDING:
-        raise HTTPException(status_code=400, detail={"code": "CAMPAIGN_NOT_PENDING"})
+    if campaign.status not in (CampaignStatus.PENDING, CampaignStatus.PROCESSING):
+        raise HTTPException(status_code=400, detail={"code": "CAMPAIGN_NOT_CANCELLABLE", "message": f"Статус: {campaign.status.value}"})
 
-    campaign.status = CampaignStatus.CANCELLED
+    # Атомарно через UPDATE — обходит кэш ORM-сессии runner'а
+    from sqlalchemy import update as sa_update
+    await db.execute(
+        sa_update(BonusCampaign)
+        .where(BonusCampaign.id == campaign_id)
+        .values(status=CampaignStatus.CANCELLED)
+    )
     await db.commit()
-    return {"success": True}
+    return {"success": True, "message": "Кампания остановлена"}
 
 
 @router.delete(

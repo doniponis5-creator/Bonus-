@@ -175,14 +175,14 @@ export default function ProfitLabPage() {
   }, [combo, comboDiscount, margins, mk]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── ROI лояльности ──
-  const burn = Number(biz?.burn_rate || 0); // % выручки, уходящий на бонусы
+  const burn = Number(biz?.bonus_cost_pct || 0); // % выручки, уходящий на бонусы (все типы начислений)
   const revenue = Number(biz?.revenue || 0);
   const animRevenue = useCountUp(revenue);
   const refRoi = Number(marketing?.referral?.roi || 0);
 
   // Разбивка: куда уходят бонусы (оценка из имеющихся данных)
   const bonusBreakdown = useMemo(() => {
-    const total = revenue * burn / 100;
+    const total = Number(biz?.bonus_issued_all || 0); // реальная сумма начисленных бонусов за 30 дн
     if (total <= 0) return null;
     const campaigns = (marketing?.campaigns || []).reduce((s: number, c: any) => s + Number(c.bonus_cost || 0), 0);
     const referral = Number(marketing?.referral?.bonus_cost || 0);
@@ -193,7 +193,7 @@ export default function ProfitLabPage() {
       { label: 'Кешбэк за покупки и прочее', value: cashback, color: 'var(--accent)' },
     ].filter(p => p.value > 0);
     return { total, parts };
-  }, [revenue, burn, marketing]);
+  }, [biz, marketing]);
 
   // ── Автопилот ──
   const AUTO_ITEMS = settings ? [
@@ -463,6 +463,9 @@ export default function ProfitLabPage() {
                 </div>
               ))}
             </div>
+          )}
+          {biz?.burn_rate != null && (
+            <Row label="Клиенты использовали из начисленных" value={`${Number(biz.burn_rate).toFixed(1)}%`} accent="var(--info)" />
           )}
           {marketing?.referral && (
             Number(marketing.referral.revenue_from_referred || 0) > 0 ? (

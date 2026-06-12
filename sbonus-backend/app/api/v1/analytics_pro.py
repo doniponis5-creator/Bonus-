@@ -105,6 +105,21 @@ async def business_overview(
 
     burn_rate = round(float(c.bonus_spent) / max(float(c.bonus_issued), 1) * 100, 1)
 
+    # Сколько стоит бонусная программа: ВСЕ начисленные бонусы (включая подарочные)
+    # как % от выручки за период. Не путать с burn_rate (= % использования бонусов).
+    bonus_issued_all_q = await db.execute(
+        select(func.coalesce(func.sum(Transaction.amount), 0)).where(and_(
+            Transaction.created_at >= current_start,
+            Transaction.type.in_([
+                TransactionType.EARN, TransactionType.BIRTHDAY, TransactionType.REFERRAL,
+                TransactionType.PROMO, TransactionType.CAMPAIGN,
+            ]),
+            Transaction.amount > 0,
+        ))
+    )
+    bonus_issued_all = float(bonus_issued_all_q.scalar() or 0)
+    bonus_cost_pct = round(bonus_issued_all / float(c.revenue) * 100, 1) if float(c.revenue) > 0 else 0.0
+
     prev_burn_issued = await db.execute(
         select(func.coalesce(func.sum(case(
             (Transaction.type == TransactionType.EARN, Transaction.amount), else_=Decimal(0)
@@ -133,6 +148,10 @@ async def business_overview(
         "prev_ltv": round(prev_ltv, 0),
         "burn_rate": burn_rate,
         "prev_burn_rate": prev_burn_rate,
+        "bonus_issued": float(c.bonus_issued),
+        "bonus_spent": float(c.bonus_spent),
+        "bonus_issued_all": bonus_issued_all,
+        "bonus_cost_pct": bonus_cost_pct,
     }
 
 
