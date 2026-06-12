@@ -74,6 +74,37 @@ export default function ProfitLabPage() {
   const [product, setProduct] = useState<any>(null);
   const [discount, setDiscount] = useState(15);
 
+  // Розничная наценка (цена в 1С — закупочная): крупная/средняя/мелкая техника
+  const [mk, setMk] = useState({ large: 20, medium: 25, small: 30 });
+
+  /** Процент наценки: по категории, иначе по ценовому классу закупки. */
+  const markupPct = (purchase: number, category?: string | null): number => {
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('крупн')) return mk.large;
+    if (cat.includes('средн')) return mk.medium;
+    if (cat.includes('мелк')) return mk.small;
+    if (purchase >= 30000) return mk.large;
+    if (purchase >= 10000) return mk.medium;
+    return mk.small;
+  };
+
+  /**
+   * Экономика товара из данных 1С:
+   * - если cost_price валидна (0 < cost < price) — данные настоящие: закупка=cost, розница=price
+   * - иначе price = ЗАКУПКА → розница = закупка × (1 + наценка), округление до 10 вверх
+   */
+  const econOf = (m: any) => {
+    const price = Number(m?.price || 0);
+    const cost = Number(m?.cost_price || 0);
+    if (cost > 0 && cost < price) {
+      return { purchase: cost, retail: price, pct: Math.round((price / cost - 1) * 100), fromMarkup: false };
+    }
+    const purchase = price;
+    const pct = markupPct(purchase, m?.category);
+    const retail = Math.ceil((purchase * (1 + pct / 100)) / 10) * 10;
+    return { purchase, retail, pct, fromMarkup: true };
+  };
+
   // Комбо
   const [combo, setCombo] = useState<any>(null);
   const [comboDiscount, setComboDiscount] = useState(8);
@@ -103,43 +134,37 @@ export default function ProfitLabPage() {
     });
   }, []);
 
-  // ── Расчёт скидки ──
+  // ── Расчёт скидки (от РОЗНИЧНОЙ цены, прибыль против ЗАКУПКИ) ──
   const disc = useMemo(() => {
     if (!product) return null;
-    const price = Number(product.price || 0);
-    const cost = Number(product.cost_price || 0);
+    const { purchase, retail, pct, fromMarkup } = econOf(product);
     const days = 90;
     const dailySales = Number(product.total_sold || 0) / days;
-    const marginUnit = price - cost;
-    const newPrice = price * (1 - discount / 100);
-    const newMargin = newPrice - cost;
+    const marginUnit = retail - purchase;
+    const newPrice = retail * (1 - discount / 100);
+    const newMargin = newPrice - purchase;
     const upliftNeeded = newMargin > 0 ? (marginUnit / newMargin - 1) * 100 : Infinity;
-    // Себестоимость считаем валидной, только если она > 0 и меньше цены.
-    // В 1С часто себестоимость не заполнена или продублирована ценой.
-    const costValid = cost > 0 && cost < price;
-    return { price, cost, dailySales, marginUnit, newPrice, newMargin, upliftNeeded, costValid };
-  }, [product, discount]);
+    const maxSafeDiscount = retail > 0 ? Math.floor((1 - purchase / retail) * 100) : 0;
+    return { purchase, retail, pct, fromMarkup, dailySales, marginUnit, newPrice, newMargin, upliftNeeded, maxSafeDiscount };
+  }, [product, discount, mk]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Расчёт комбо ──
+  // ── Расчёт комбо (розница с наценкой, прибыль против закупки) ──
   const comboCalc = useMemo(() => {
     if (!combo) return null;
-    const pa = Number(combo.product_a?.price || 0);
-    const pb = Number(combo.product_b?.price || 0);
-    const full = pa + pb;
-    const bundle = round10(full * (1 - comboDiscount / 100));
-    // Себестоимость ищем в margins по имени
-    const findCost = (name: string) => {
-      const hit = margins.find((m: any) => m.name === name);
-      if (!hit) return null;
-      const c = Number(hit.cost_price || 0), p = Number(hit.price || 0);
-      return c > 0 && c < p ? c : null; // невалидную себестоимость игнорируем
+    // Экономика каждого товара пары: ищем в margins по имени, иначе из данных комбо
+    const econFor = (p: any) => {
+      const hit = margins.find((m: any) => m.name === p?.name);
+      return econOf(hit || { price: p?.price, cost_price: 0, category: p?.category });
     };
-    const ca = findCost(combo.product_a?.name), cb = findCost(combo.product_b?.name);
-    const costKnown = ca != null && cb != null && (ca > 0 || cb > 0);
-    const bundleMargin = costKnown ? bundle - (ca! + cb!) : null;
-    const fullMargin = costKnown ? full - (ca! + cb!) : null;
-    return { pa, pb, full, bundle, saving: full - bundle, bundleMargin, fullMargin, times: Number(combo.times_together || 0) };
-  }, [combo, comboDiscount, margins]);
+    const ea = econFor(combo.product_a);
+    const eb = econFor(combo.product_b);
+    const full = ea.retail + eb.retail;            // розница по отдельности
+    const purchase = ea.purchase + eb.purchase;    // суммарная закупка
+    const bundle = round10(full * (1 - comboDiscount / 100));
+    const bundleMargin = bundle - purchase;
+    const fullMargin = full - purchase;
+    return { full, purchase, bundle, saving: full - bundle, bundleMargin, fullMargin, times: Number(combo.times_together || 0) };
+  }, [combo, comboDiscount, margins, mk]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── ROI лояльности ──
   const burn = Number(biz?.burn_rate || 0); // % выручки, уходящий на бонусы
@@ -199,7 +224,25 @@ export default function ProfitLabPage() {
           <h2 className="h2" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Percent size={17} color="var(--accent)" /> Скидка-симулятор
           </h2>
-          <p className="caption" style={{ marginBottom: 12 }}>Сколько прибыли останется, если дать скидку — и сколько нужно продать, чтобы не потерять.</p>
+          <p className="caption" style={{ marginBottom: 10 }}>Сколько прибыли останется, если дать скидку — и сколько нужно продать, чтобы не потерять.</p>
+
+          {/* Наценки магазина (цена в 1С = закупочная) */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+            <span className="caption" style={{ marginRight: 4 }}>Наценка:</span>
+            {([
+              { key: 'large', label: 'Крупная' },
+              { key: 'medium', label: 'Средняя' },
+              { key: 'small', label: 'Мелкая' },
+            ] as { key: 'large' | 'medium' | 'small'; label: string }[]).map(t => (
+              <label key={t.key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text2)' }}>
+                {t.label}
+                <input type="number" min={0} max={200} value={mk[t.key]}
+                  onChange={e => setMk(prev => ({ ...prev, [t.key]: Number(e.target.value) || 0 }))}
+                  style={{ width: 52, padding: '5px 7px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, fontFamily: 'inherit', outline: 'none' }} />
+                <span style={{ color: 'var(--text3)' }}>%</span>
+              </label>
+            ))}
+          </div>
 
           {/* Поиск товара */}
           <div style={{ position: 'relative', marginBottom: 10 }}>
@@ -226,29 +269,28 @@ export default function ProfitLabPage() {
                 onChange={e => setDiscount(Number(e.target.value))}
                 style={{ width: '100%', accentColor: 'var(--accent)', marginBottom: 12 }} />
 
-              <Row label="Цена" value={`${fmt(disc.price)} → ${fmt(Math.round(disc.newPrice))} сом`} />
-              {disc.costValid ? (
-                <>
-                  <Row label="Прибыль с 1 шт" value={`${fmt(Math.round(disc.marginUnit))} → ${fmt(Math.round(disc.newMargin))} сом`}
-                    accent={disc.newMargin <= 0 ? 'var(--danger)' : disc.newMargin < disc.marginUnit * 0.5 ? 'var(--warn)' : 'var(--success)'} />
-                  <Row label="Продажи сейчас" value={`~${disc.dailySales.toFixed(1)} шт/день`} />
-                  {disc.newMargin > 0 && (
-                    <Row label="Чтобы не потерять прибыль" value={`+${Math.round(disc.upliftNeeded)}% продаж (≈${(disc.dailySales * (1 + disc.upliftNeeded / 100)).toFixed(1)} шт/день)`} />
-                  )}
-                  {disc.newMargin <= 0 ? (
-                    <Verdict tone="bad" text={`Скидка ${discount}% продаёт В УБЫТОК (себестоимость ${fmt(disc.cost)} сом). Максимум безубыточной скидки: ${Math.floor((1 - disc.cost / disc.price) * 100)}%`} />
-                  ) : disc.upliftNeeded <= 30 ? (
-                    <Verdict tone="good" text={`Рабочая скидка: достаточно +${Math.round(disc.upliftNeeded)}% продаж — акция с WhatsApp-рассылкой обычно даёт больше.`} />
-                  ) : disc.upliftNeeded <= 70 ? (
-                    <Verdict tone="ok" text={`Осторожно: нужно +${Math.round(disc.upliftNeeded)}% продаж. Подойдёт для распродажи мёртвого товара, но не для хитов.`} />
-                  ) : (
-                    <Verdict tone="bad" text={`Невыгодно: нужно +${Math.round(disc.upliftNeeded)}% продаж, чтобы выйти в ноль. Попробуйте меньшую скидку или бонусы вместо скидки.`} />
-                  )}
-                </>
+              <Row label="Закупка (1С)" value={`${fmt(disc.purchase)} сом`} />
+              <Row label={`Цена продажи (наценка ${disc.pct}%)`} value={`${fmt(disc.retail)} сом`} accent="var(--text)" />
+              <Row label={`Со скидкой ${discount}%`} value={`${fmt(Math.round(disc.newPrice))} сом`} accent="var(--accent)" />
+              <Row label="Прибыль с 1 шт" value={`${fmt(Math.round(disc.marginUnit))} → ${fmt(Math.round(disc.newMargin))} сом`}
+                accent={disc.newMargin <= 0 ? 'var(--danger)' : disc.newMargin < disc.marginUnit * 0.5 ? 'var(--warn)' : 'var(--success)'} />
+              <Row label="Продажи сейчас" value={`~${disc.dailySales.toFixed(1)} шт/день`} />
+              {disc.newMargin > 0 && (
+                <Row label="Чтобы не потерять прибыль" value={`+${Math.round(disc.upliftNeeded)}% продаж (≈${(disc.dailySales * (1 + disc.upliftNeeded / 100)).toFixed(1)} шт/день)`} />
+              )}
+              {disc.newMargin <= 0 ? (
+                <Verdict tone="bad" text={`Скидка ${discount}% продаёт НИЖЕ закупки (${fmt(disc.purchase)} сом). Максимум безубыточной скидки: ${disc.maxSafeDiscount}%`} />
+              ) : disc.upliftNeeded <= 30 ? (
+                <Verdict tone="good" text={`Рабочая скидка: достаточно +${Math.round(disc.upliftNeeded)}% продаж — акция с WhatsApp-рассылкой обычно даёт больше. Запас до убытка: скидка ${disc.maxSafeDiscount}%.`} />
+              ) : disc.upliftNeeded <= 70 ? (
+                <Verdict tone="ok" text={`Осторожно: нужно +${Math.round(disc.upliftNeeded)}% продаж. Подойдёт для распродажи неликвида, но не для хитов.`} />
               ) : (
-                <Verdict tone="ok" text={disc.cost <= 0
-                  ? 'У этого товара не заполнена себестоимость в 1С. Заполните закупочную цену в карточке товара — и расчёт прибыли заработает.'
-                  : 'Себестоимость в 1С равна цене продажи (или выше) — похоже, заполнена неверно. Исправьте закупочную цену в 1С, и симулятор посчитает реальную прибыль.'} />
+                <Verdict tone="bad" text={`Невыгодно: нужно +${Math.round(disc.upliftNeeded)}% продаж, чтобы выйти в ноль. Попробуйте меньшую скидку или бонусы вместо скидки.`} />
+              )}
+              {disc.fromMarkup && (
+                <p className="caption" style={{ marginTop: 8, lineHeight: 1.45 }}>
+                  Цена продажи рассчитана: закупка из 1С + наценка {disc.pct}% (категория/класс товара). Наценки настраиваются выше.
+                </p>
               )}
             </>
           )}
@@ -302,18 +344,17 @@ export default function ProfitLabPage() {
                     onChange={e => setComboDiscount(Number(e.target.value))}
                     style={{ width: '100%', accentColor: 'var(--accent)', marginBottom: 12 }} />
 
-                  <Row label="По отдельности" value={`${fmt(comboCalc.full)} сом`} />
+                  <Row label="Закупка пары (1С)" value={`${fmt(Math.round(comboCalc.purchase))} сом`} />
+                  <Row label="Розница по отдельности" value={`${fmt(Math.round(comboCalc.full))} сом`} />
                   <Row label="Цена комплекта" value={`${fmt(comboCalc.bundle)} сом`} accent="var(--accent)" />
-                  <Row label="Клиент экономит" value={`${fmt(comboCalc.saving)} сом`} accent="var(--success)" />
-                  {comboCalc.bundleMargin != null && (
-                    <Row label="Ваша прибыль с комплекта" value={`${fmt(Math.round(comboCalc.fullMargin!))} → ${fmt(Math.round(comboCalc.bundleMargin))} сом`}
-                      accent={comboCalc.bundleMargin <= 0 ? 'var(--danger)' : 'var(--success)'} />
-                  )}
+                  <Row label="Клиент экономит" value={`${fmt(Math.round(comboCalc.saving))} сом`} accent="var(--success)" />
+                  <Row label="Ваша прибыль с комплекта" value={`${fmt(Math.round(comboCalc.fullMargin))} → ${fmt(Math.round(comboCalc.bundleMargin))} сом`}
+                    accent={comboCalc.bundleMargin <= 0 ? 'var(--danger)' : 'var(--success)'} />
                   <Verdict
-                    tone={comboCalc.bundleMargin != null && comboCalc.bundleMargin <= 0 ? 'bad' : 'good'}
-                    text={comboCalc.bundleMargin != null && comboCalc.bundleMargin <= 0
+                    tone={comboCalc.bundleMargin <= 0 ? 'bad' : 'good'}
+                    text={comboCalc.bundleMargin <= 0
                       ? 'Комплект в убыток — уменьшите скидку.'
-                      : `Спрос уже есть: ${comboCalc.times} совместных покупок. Поставьте комплект на кассе и в WhatsApp-рассылке — каждая допродажа = +${fmt(Math.round(comboCalc.bundle))} сом к чеку.`}
+                      : `Спрос уже есть: ${comboCalc.times} совместных покупок. Каждая продажа комплекта = +${fmt(Math.round(comboCalc.bundleMargin))} сом чистой прибыли и +${fmt(comboCalc.bundle)} сом к чеку.`}
                   />
                 </>
               )}
