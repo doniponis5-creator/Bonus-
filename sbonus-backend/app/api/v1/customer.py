@@ -192,6 +192,31 @@ async def get_tiers(
     }
 
 
+def _retail_markup_percent(price: float, category: str | None, cfg: dict) -> float:
+    """
+    Наценка для отображения клиенту (цена из 1С = закупочная).
+    Крупная бытовая техника +20%, средняя +25%, мелкая +30%.
+    Сначала по названию категории, иначе по ценовому классу.
+    Настройки: RECO_MARKUP_LARGE / RECO_MARKUP_MEDIUM / RECO_MARKUP_SMALL.
+    """
+    large = float(cfg.get("RECO_MARKUP_LARGE") or 20)
+    medium = float(cfg.get("RECO_MARKUP_MEDIUM") or 25)
+    small = float(cfg.get("RECO_MARKUP_SMALL") or 30)
+    cat = (category or "").lower()
+    if "крупн" in cat:
+        return large
+    if "средн" in cat:
+        return medium
+    if "мелк" in cat:
+        return small
+    # Fallback по цене: дорогое = крупная техника
+    if price >= 30000:
+        return large
+    if price >= 10000:
+        return medium
+    return small
+
+
 @router.get("/recommendations")
 async def get_recommendations(
     db: AsyncSession = Depends(get_db),
@@ -279,6 +304,18 @@ async def get_recommendations(
             {"name": r.name, "price": float(r.price or 0), "category": r.category}
             for r in result.all()
         ]
+
+    # Розничная наценка для отображения (цена в 1С — закупочная)
+    markup_cfg_result = await db.execute(
+        select(Setting).where(Setting.key.in_([
+            "RECO_MARKUP_LARGE", "RECO_MARKUP_MEDIUM", "RECO_MARKUP_SMALL",
+        ]))
+    )
+    markup_cfg = {x.key: x.value for x in markup_cfg_result.scalars().all()}
+    for item in suggestions:
+        pct = _retail_markup_percent(item["price"], item.get("category"), markup_cfg)
+        # округление до 10 сом вверх — красивая розничная цена
+        item["price"] = float(int((item["price"] * (1 + pct / 100) + 9) // 10 * 10))
 
     return {"items": suggestions, "source": source}
 
