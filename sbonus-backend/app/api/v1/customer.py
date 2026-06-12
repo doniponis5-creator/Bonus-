@@ -192,6 +192,97 @@ async def get_tiers(
     }
 
 
+@router.get("/recommendations")
+async def get_recommendations(
+    db: AsyncSession = Depends(get_db),
+    current: dict = Depends(get_current_customer),
+) -> dict:
+    """
+    «Подобрано для вас» — персональные товарные рекомендации:
+    co-occurrence по чекам клиента (что покупают вместе с его товарами).
+    Fallback: топ-продажи в наличии. Только активные товары с остатком.
+    """
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import and_, desc
+    from sqlalchemy.orm import aliased
+    from app.models import Product, PurchaseItem
+
+    customer_id = uuid.UUID(current["sub"])
+    since = datetime.now(timezone.utc) - timedelta(days=90)
+    limit = 4
+
+    cust_products_result = await db.execute(
+        select(PurchaseItem.product_id)
+        .join(Transaction, Transaction.id == PurchaseItem.transaction_id)
+        .where(
+            Transaction.customer_id == customer_id,
+            PurchaseItem.created_at >= since,
+            PurchaseItem.product_id != None,  # noqa: E711
+        )
+        .group_by(PurchaseItem.product_id)
+    )
+    cust_product_ids = [r[0] for r in cust_products_result.all()]
+
+    suggestions = []
+    source = "personal"
+
+    if cust_product_ids:
+        PI_A = aliased(PurchaseItem)
+        PI_B = aliased(PurchaseItem)
+        result = await db.execute(
+            select(
+                Product.id, Product.name, Product.price, Product.category,
+                func.count().label("times"),
+            )
+            .select_from(PI_A)
+            .join(PI_B, and_(
+                PI_A.receipt_number == PI_B.receipt_number,
+                PI_A.product_id != PI_B.product_id,
+            ))
+            .join(Product, Product.id == PI_B.product_id)
+            .where(
+                PI_A.product_id.in_(cust_product_ids),
+                PI_B.product_id.notin_(cust_product_ids),
+                PI_A.created_at >= since,
+                PI_A.receipt_number != None,  # noqa: E711
+                Product.is_active == True,  # noqa: E712
+                Product.current_stock > 0,
+            )
+            .group_by(Product.id, Product.name, Product.price, Product.category)
+            .order_by(desc("times"))
+            .limit(limit)
+        )
+        suggestions = [
+            {"name": r.name, "price": float(r.price or 0), "category": r.category}
+            for r in result.all()
+        ]
+
+    if not suggestions:
+        source = "popular"
+        result = await db.execute(
+            select(
+                Product.id, Product.name, Product.price, Product.category,
+                func.count().label("times"),
+            )
+            .select_from(PurchaseItem)
+            .join(Product, Product.id == PurchaseItem.product_id)
+            .where(
+                PurchaseItem.created_at >= since,
+                Product.is_active == True,  # noqa: E712
+                Product.current_stock > 0,
+            )
+            .group_by(Product.id, Product.name, Product.price, Product.category)
+            .order_by(desc("times"))
+            .limit(limit)
+        )
+        suggestions = [
+            {"name": r.name, "price": float(r.price or 0), "category": r.category}
+            for r in result.all()
+        ]
+
+    return {"items": suggestions, "source": source}
+
+
 @router.get("/transactions")
 async def get_transactions(
     page: int = Query(1, ge=1),

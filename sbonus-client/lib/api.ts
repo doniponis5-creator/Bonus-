@@ -96,6 +96,8 @@ export const customerAPI = {
     api.get(`/api/v1/customer/leaderboard?period=${period}`),
   coupons: () =>
     api.get('/api/v1/customer/coupons'),
+  recommendations: () =>
+    api.get('/api/v1/customer/recommendations'),
   tiers: () =>
     api.get<{ tiers: { name: string; min_total: number; bonus_percent: number; max_spend_pct: number }[] }>('/api/v1/customer/tiers'),
   activateCoupon: (code: string) =>

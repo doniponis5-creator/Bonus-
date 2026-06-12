@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   LogOut, Loader2, RefreshCw, Home, History, User, Gift,
   Clock, Ticket, ChevronLeft, ChevronRight, ArrowLeft, Disc3, Trophy,
-  CheckCircle2, XCircle, Crown, Receipt, CreditCard, Flame,
+  CheckCircle2, XCircle, Crown, Receipt, CreditCard, Flame, Sparkles,
 } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import DebtCard from '@/components/DebtCard';
@@ -104,6 +104,17 @@ function DashboardPage() {
   const [txDetail, setTxDetail] = useState<any | null>(null);
   const [hasNewCoupons, setHasNewCoupons] = useState(false);
   const couponCheckedRef = useRef(false);
+
+  // «Подобрано для вас» — персональные рекомендации (загружаем при первом открытии Бонусов)
+  const [recs, setRecs] = useState<{ name: string; price: number; category?: string }[]>([]);
+  const recsLoadedRef = useRef(false);
+  useEffect(() => {
+    if (tab !== 'promo' || recsLoadedRef.current) return;
+    recsLoadedRef.current = true;
+    customerAPI.recommendations()
+      .then(r => setRecs(r.data?.items || []))
+      .catch(() => {});
+  }, [tab]);
 
   useEffect(() => {
     if (!data || couponCheckedRef.current) return;
@@ -485,6 +496,35 @@ function DashboardPage() {
 
           {/* Coupons */}
           <MyCoupons onBalanceChange={fetchData} />
+
+          {/* Подобрано для вас */}
+          {recs.length > 0 && (
+            <div className="card">
+              <h3 className="h3" style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={15} color="var(--accent)" /> Подобрано для вас
+              </h3>
+              <p className="caption" style={{ marginBottom: 10 }}>На основе ваших покупок в Смарт Центр</p>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {recs.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: i < recs.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                    <div className="icon-tile" style={{ background: 'var(--accent-dim)' }}>
+                      <Sparkles size={15} color="var(--accent)" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                      {p.category && <div className="caption" style={{ marginTop: 1 }}>{p.category}</div>}
+                    </div>
+                    {p.price > 0 && (
+                      <div className="numeric" style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        {Math.round(p.price).toLocaleString('ru-RU')} <span style={{ fontSize: 12, color: 'var(--text-2)' }}>сом</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="caption" style={{ marginTop: 10 }}>Покажите кассиру — поможем найти в магазине</p>
+            </div>
+          )}
 
           {/* Referral — приглашай друзей */}
           <Referral referralCode={data.referral_code} onBalanceChange={fetchData} />
