@@ -1,5 +1,5 @@
 'use client';
-import { Banknote, DollarSign, Minus, Plus, Lock, Unlock, Clock, CheckCircle2, AlertTriangle, Loader2, PlayCircle } from 'lucide-react';
+import { Banknote, DollarSign, Minus, Plus, Lock, Unlock, Clock, CheckCircle2, AlertTriangle, Loader2, PlayCircle, Trash2, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { shiftsAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
@@ -170,10 +170,18 @@ export default function ShiftPanel({ onChanged }: { onChanged?: () => void }) {
                 <button className="btn btn-secondary" style={{ padding: 0, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setQty(d, -1)}><Minus size={14} /></button>
                 <input className="input" style={{ width: 56, textAlign: 'center', padding: '6px 4px' }} type="number" min={0} value={qty || ''} placeholder="0" onFocus={(e) => e.target.select()} onChange={(e) => setExact(d, e.target.value)} />
                 <button className="btn btn-secondary" style={{ padding: 0, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setQty(d, 1)}><Plus size={14} /></button>
-                <span style={{ width: 76, textAlign: 'right', color: 'var(--text2)', fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt(d * qty)}</span>
+                <span style={{ width: 70, textAlign: 'right', color: qty ? 'var(--text)' : 'var(--text2)', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmt(d * qty)}</span>
+                <button className="btn btn-secondary" title="Очистить" disabled={qty === 0} onClick={() => setCounts((p) => ({ ...p, [String(d)]: 0 }))} style={{ padding: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: qty === 0 ? 0.3 : 1 }}><Trash2 size={13} /></button>
               </div>
             );
           })}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+          <button className="btn btn-secondary" onClick={() => setCounts(Object.fromEntries(DENOMS.map((x) => [String(x), 0])))} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><RotateCcw size={14} /> Очистить всё</button>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 12, color: 'var(--text2)' }}>Итого{bills ? ` • ${bills} купюр` : ''}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>{fmt(total)} сом</div>
+          </div>
         </div>
       </div>
 

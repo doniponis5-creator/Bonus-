@@ -8,7 +8,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Banknote, CheckCircle2, DollarSign, Lock, Minus, Plus, TriangleAlert } from 'lucide-react-native';
+import { Banknote, CheckCircle2, DollarSign, Lock, Minus, Plus, RotateCcw, Trash2, TriangleAlert } from 'lucide-react-native';
 import { shiftsAPI } from '@/api/client';
 import { COLORS } from '@/constants/theme';
 
@@ -146,9 +146,22 @@ export default function ShiftCloseScreen() {
                 <Plus size={16} color={COLORS.text} />
               </TouchableOpacity>
               <Text style={styles.rowSum}>{fmt(d * qty)}</Text>
+              <TouchableOpacity style={styles.clearBtn} onPress={() => setExact(d, '0')} disabled={qty === 0} activeOpacity={0.7}>
+                <Trash2 size={15} color={qty === 0 ? COLORS.text3 : COLORS.danger} />
+              </TouchableOpacity>
             </View>
           );
         })}
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.clearAllBtn} onPress={() => setCounts(Object.fromEntries(DENOMS.map((x) => [String(x), 0])))} activeOpacity={0.7}>
+            <RotateCcw size={14} color={COLORS.text2} />
+            <Text style={styles.clearAllText}>Очистить всё</Text>
+          </TouchableOpacity>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.footerLabel}>Итого{billsCount ? ` • ${billsCount} купюр` : ''}</Text>
+            <Text style={styles.footerTotal}>{fmt(total)} сом</Text>
+          </View>
+        </View>
       </View>
 
       {/* Комментарий */}
@@ -242,7 +255,13 @@ const styles = StyleSheet.create({
     color: COLORS.text, fontSize: 16, fontWeight: '700', textAlign: 'center',
     borderWidth: 1, borderColor: COLORS.cardBorder,
   },
-  rowSum: { width: 76, textAlign: 'right', color: COLORS.text2, fontSize: 13, fontWeight: '600' },
+  rowSum: { width: 62, textAlign: 'right', color: COLORS.text2, fontSize: 13, fontWeight: '600' },
+  clearBtn: { width: 30, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.08)' },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: COLORS.cardBorder },
+  clearAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.bg2, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.cardBorder },
+  clearAllText: { color: COLORS.text2, fontSize: 13, fontWeight: '600' },
+  footerLabel: { color: COLORS.text2, fontSize: 12 },
+  footerTotal: { color: COLORS.accent, fontSize: 22, fontWeight: '900' },
 
   label: { color: COLORS.text2, fontSize: 13, fontWeight: '600', marginBottom: 8 },
   noteInput: {
