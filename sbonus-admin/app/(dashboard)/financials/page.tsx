@@ -326,7 +326,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
 
 function KpiCard({ icon: Icon, label, value, sub, color = '#FFE600', trend }: {
   icon: any; label: string; value: string | number; sub?: string; color?: string;
-  trend?: { value: number; label: string };
+  trend?: { value: number | null; label: string };
 }) {
   return (
     <div style={{
@@ -344,7 +344,7 @@ function KpiCard({ icon: Icon, label, value, sub, color = '#FFE600', trend }: {
         <div style={{ color: 'var(--text)', fontSize: 20, fontWeight: 700 }}>{value}</div>
         {sub && <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 2 }}>{sub}</div>}
       </div>
-      {trend && trend.value !== 0 && (
+      {trend && typeof trend.value === 'number' && trend.value !== 0 && (
         <div style={{ textAlign: 'right' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 2,
@@ -530,15 +530,16 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 24 }}>
         <KpiCard icon={TrendingUp} label="Выручка" value={fmtMoney(summary.revenue)}
-          sub={`${summary.receipts} чеков · ср. ${fmtMoney(summary.avg_receipt)}`}
+          sub={`${summary.receipts} чеков · ср. ${fmtMoney(summary.avg_receipt)}${summary.revenue_source === 'transactions' ? ' · из транзакций (нет строк 1С)' : ''}`}
           color="#22c55e" trend={{ value: vs.revenue_change_pct, label: 'vs прошлый мес' }} />
         <KpiCard icon={DollarSign} label="Валовая прибыль" value={fmtMoney(summary.gross_profit)}
-          sub={`Маржа ${summary.gross_margin_pct}%`} color="#3b82f6" />
+          sub={`Маржа ${summary.gross_margin_pct}%${summary.revenue_source === 'items' && summary.cost_coverage_pct < 100 ? ` · себест. известна ${summary.cost_coverage_pct}%` : ''}`}
+          color="#3b82f6" />
         <KpiCard icon={Wallet} label="Расходы" value={fmtMoney(summary.total_expenses)}
-          sub={`Опер: ${fmtMoney(summary.operating_expenses)} · Бонусы: ${fmtMoney(summary.bonus_expenses)}`}
+          sub={`Постоянные: ${fmtMoney(summary.recurring_expenses)}${summary.one_off_expenses > 0 ? ` · Разовые: ${fmtMoney(summary.one_off_expenses)}` : ''} · Бонусы: ${fmtMoney(summary.bonus_expenses)}`}
           color="#f59e0b" />
         <KpiCard icon={BarChart3} label="Чистая прибыль" value={fmtMoney(summary.net_profit)}
-          sub={`Маржа ${summary.net_margin_pct}%`}
+          sub={`Маржа ${summary.net_margin_pct}%${summary.one_off_expenses > 0 ? ` · без разовых: ${fmtMoney(summary.operating_net_profit)}` : ''}`}
           color={summary.net_profit >= 0 ? '#22c55e' : '#ef4444'}
           trend={{ value: vs.profit_change_pct, label: 'vs прошлый мес' }} />
       </div>
@@ -634,6 +635,11 @@ function PnlSection({ data }: { data: any }) {
       <h3 style={{ color: 'var(--text)', fontSize: 16, fontWeight: 700, marginBottom: 20 }}>
         P&L — {data.month}
       </h3>
+      {data.revenue_source === 'transactions' && (
+        <div style={{ fontSize: 11.5, color: 'var(--warn)', marginTop: -12, marginBottom: 16, lineHeight: 1.5 }}>
+          Выручка взята из транзакций — строки чеков 1С за этот месяц отсутствуют, себестоимость не учтена.
+        </div>
+      )}
       <div style={{ display: 'grid', gap: 0 }}>
         {lines.map((line, i) => (
           <div key={i}>
@@ -650,6 +656,16 @@ function PnlSection({ data }: { data: any }) {
           <PnlRow key={i} label={`  ${line.label}`} amount={-line.amount} indent />
         ))}
         <PnlRow label="Итого опер. расходы" amount={opex.total} bold />
+        {r.one_off_expenses > 0 && (
+          <PnlRow label="  в т.ч. разовые (одноразовые)" amount={-r.one_off_expenses} indent />
+        )}
+
+        {r.operating_net_profit && r.one_off_expenses > 0 && (
+          <>
+            <div style={{ borderTop: '2px solid var(--border)', margin: '8px 0' }} />
+            <PnlRow label={r.operating_net_profit.label} amount={r.operating_net_profit.amount} bold margin={r.operating_net_profit.margin_pct} />
+          </>
+        )}
 
         <div style={{ borderTop: '3px solid var(--accent)', margin: '8px 0' }} />
         <PnlRow label={r.net_profit.label} amount={r.net_profit.amount} bold big margin={r.net_profit.margin_pct} />
@@ -725,6 +741,13 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
     if (!confirm('Удалить расход?')) return;
     await financialsAPI.deleteExpense(id);
     onReload();
+  };
+
+  const handleToggleRecurring = async (e: any) => {
+    try {
+      await financialsAPI.updateExpense(e.id, { is_recurring: !e.is_recurring });
+      onReload();
+    } catch {}
   };
 
   if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Загрузка...</div>;
@@ -847,7 +870,23 @@ function ExpensesSection({ data, byCategory, month, onReload }: {
                     <span style={{ color: 'var(--text)', fontWeight: 500 }}>{e.category_label}</span>
                   </div>
                 </td>
-                <td style={{ padding: '10px 16px', color: 'var(--text2)' }}>{e.description || '—'}</td>
+                <td style={{ padding: '10px 16px', color: 'var(--text2)' }}>
+                  <span>{e.description || '—'}</span>
+                  {e.source === 'manual' ? (
+                    <button onClick={() => handleToggleRecurring(e)} title="Переключить: постоянный / разовый"
+                      style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999, cursor: 'pointer',
+                        background: e.is_recurring ? 'rgba(139,92,246,0.15)' : 'rgba(245,158,11,0.15)',
+                        color: e.is_recurring ? '#8b5cf6' : 'var(--warn)', border: '1px solid transparent' }}>
+                      {e.is_recurring ? 'Постоянный' : 'Разовый'}
+                    </button>
+                  ) : (
+                    <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+                      background: e.is_recurring ? 'rgba(139,92,246,0.15)' : 'rgba(245,158,11,0.15)',
+                      color: e.is_recurring ? '#8b5cf6' : 'var(--warn)' }}>
+                      {e.is_recurring ? 'Постоянный' : 'Разовый'}
+                    </span>
+                  )}
+                </td>
                 <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--danger)', fontWeight: 600 }}>{fmtMoney(e.amount)}</td>
                 <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                   <span style={{

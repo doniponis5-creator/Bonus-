@@ -62,18 +62,21 @@ class ExpenseUpdate(BaseModel):
 
 # ─── Helpers ───
 
+BISHKEK_TZ = timezone(timedelta(hours=6))  # Asia/Bishkek — границы месяца по местному времени
+
+
 def _month_range(month_str: str):
-    """'2026-05' → (start_dt, end_dt) UTC."""
+    """'2026-05' → (start_dt, end_dt) по времени магазина (+6)."""
     y, m = int(month_str[:4]), int(month_str[5:7])
-    start = datetime(y, m, 1, tzinfo=timezone.utc)
+    start = datetime(y, m, 1, tzinfo=BISHKEK_TZ)
     if m == 12:
-        end = datetime(y + 1, 1, 1, tzinfo=timezone.utc)
+        end = datetime(y + 1, 1, 1, tzinfo=BISHKEK_TZ)
     else:
-        end = datetime(y, m + 1, 1, tzinfo=timezone.utc)
+        end = datetime(y, m + 1, 1, tzinfo=BISHKEK_TZ)
     return start, end
 
 def _current_month() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m")
+    return datetime.now(BISHKEK_TZ).strftime("%Y-%m")
 
 def _prev_month(month_str: str) -> str:
     y, m = int(month_str[:4]), int(month_str[5:7])
@@ -88,38 +91,70 @@ MONTH_NAMES_RU = {
 
 
 async def _get_revenue_data(db: AsyncSession, start: datetime, end: datetime) -> dict:
-    """Выручка и себестоимость из purchase_items за период."""
+    """
+    Выручка и себестоимость из purchase_items за период.
+    COGS = quantity × COALESCE(item.cost_price, product.cost_price, 0) — LEFT join,
+    позиции без себестоимости остаются в выручке (считаем «покрытие себестоимостью»).
+    Если строк чека за месяц нет (1С их не синхронил) — выручка берётся из
+    транзакций (Transaction.purchase_amount), себестоимость неизвестна.
+    """
+    cost_price_expr = func.coalesce(PurchaseItem.cost_price, Product.cost_price)
     result = await db.execute(
         select(
             func.coalesce(func.sum(PurchaseItem.total), 0).label("revenue"),
-            func.coalesce(func.sum(PurchaseItem.quantity * PurchaseItem.cost_price), 0).label("cost"),
+            func.coalesce(func.sum(PurchaseItem.quantity * func.coalesce(cost_price_expr, 0)), 0).label("cost"),
+            func.coalesce(func.sum(case((cost_price_expr.isnot(None), PurchaseItem.total), else_=0)), 0).label("revenue_with_cost"),
             func.coalesce(func.sum(PurchaseItem.quantity), 0).label("items_sold"),
             func.count(func.distinct(PurchaseItem.receipt_number)).label("receipts"),
         )
-        .join(Product, Product.id == PurchaseItem.product_id)
-        .where(
-            PurchaseItem.created_at >= start,
-            PurchaseItem.created_at < end,
-        )
+        .select_from(PurchaseItem)
+        .join(Product, Product.id == PurchaseItem.product_id, isouter=True)
+        .where(PurchaseItem.created_at >= start, PurchaseItem.created_at < end)
     )
     row = result.one()
     revenue = float(row.revenue or 0)
     cost = float(row.cost or 0)
+    revenue_with_cost = float(row.revenue_with_cost or 0)
+    items_sold = float(row.items_sold or 0)
+    receipts = row.receipts or 0
+    source = "items"
 
-    # Также считаем выручку БЕЗ фильтра cost_price (полная выручка)
-    full_rev = await db.execute(
-        select(func.coalesce(func.sum(PurchaseItem.total), 0))
-        .where(PurchaseItem.created_at >= start, PurchaseItem.created_at < end)
-    )
-    full_revenue = float(full_rev.scalar() or 0)
+    if revenue <= 0:
+        tx = await db.execute(
+            select(
+                func.coalesce(func.sum(Transaction.purchase_amount), 0).label("revenue"),
+                func.count(Transaction.id).label("receipts"),
+            ).where(
+                Transaction.type == TransactionType.EARN,
+                Transaction.created_at >= start,
+                Transaction.created_at < end,
+                Transaction.purchase_amount > 0,
+            )
+        )
+        trow = tx.one()
+        revenue = float(trow.revenue or 0)
+        receipts = trow.receipts or 0
+        cost = 0.0
+        revenue_with_cost = 0.0
+        if revenue > 0:
+            source = "transactions"
+
+    if source == "transactions":
+        cost_coverage_pct = 0.0
+    elif revenue > 0:
+        cost_coverage_pct = round(revenue_with_cost / revenue * 100, 1)
+    else:
+        cost_coverage_pct = 0.0
 
     return {
-        "revenue": full_revenue,
+        "revenue": revenue,
         "cost_of_goods": cost,
-        "gross_profit": full_revenue - cost,
-        "items_sold": float(row.items_sold or 0),
-        "receipts": row.receipts or 0,
-        "avg_receipt": round(full_revenue / row.receipts, 0) if row.receipts else 0,
+        "gross_profit": revenue - cost,
+        "items_sold": items_sold,
+        "receipts": receipts,
+        "avg_receipt": round(revenue / receipts, 0) if receipts else 0,
+        "revenue_source": source,
+        "cost_coverage_pct": cost_coverage_pct,
     }
 
 
@@ -130,6 +165,23 @@ async def _get_expenses_total(db: AsyncSession, month: str) -> float:
         .where(Expense.month == month)
     )
     return float(result.scalar() or 0)
+
+
+async def _get_expenses_split(db: AsyncSession, month: str) -> dict:
+    """Расходы за месяц: постоянные (is_recurring=True) и разовые (False)."""
+    result = await db.execute(
+        select(Expense.is_recurring, func.coalesce(func.sum(Expense.amount), 0))
+        .where(Expense.month == month)
+        .group_by(Expense.is_recurring)
+    )
+    recurring = 0.0
+    one_off = 0.0
+    for is_rec, amt in result.all():
+        if is_rec:
+            recurring += float(amt)
+        else:
+            one_off += float(amt)
+    return {"recurring": recurring, "one_off": one_off, "total": recurring + one_off}
 
 
 async def _get_bonus_expense(db: AsyncSession, start: datetime, end: datetime) -> float:
@@ -168,10 +220,11 @@ async def financials_summary(
     # Доход
     rev_data = await _get_revenue_data(db, start, end)
 
-    # Расходы
-    expenses_total = await _get_expenses_total(db, target_month)
+    # Расходы: постоянные / разовые
+    exp = await _get_expenses_split(db, target_month)
+    expenses_total = exp["total"]
 
-    # Бонусы (тоже расход)
+    # Бонусы (информативно; в расходы не входят)
     bonus_expense = await _get_bonus_expense(db, start, end)
 
     # Расходы по категориям
@@ -186,32 +239,42 @@ async def financials_summary(
         for r in cat_result.all()
     ]
 
-    total_expenses = expenses_total  # Бонусы НЕ входят в расходы
-    net_profit = rev_data["gross_profit"] - total_expenses
-    margin_pct = round((net_profit / rev_data["revenue"]) * 100, 1) if rev_data["revenue"] > 0 else 0
+    gross = rev_data["gross_profit"]
+    revenue = rev_data["revenue"]
+    total_expenses = expenses_total  # бонусы НЕ входят
+    net_profit = gross - total_expenses                  # полная (честная) прибыль
+    operating_net_profit = gross - exp["recurring"]      # без разовых (операционная)
+    margin_pct = round(net_profit / revenue * 100, 1) if revenue > 0 else 0
+    operating_margin_pct = round(operating_net_profit / revenue * 100, 1) if revenue > 0 else 0
 
-    # Предыдущий месяц для сравнения
+    # Предыдущий месяц
     prev = _prev_month(target_month)
     prev_start, prev_end = _month_range(prev)
     prev_rev = await _get_revenue_data(db, prev_start, prev_end)
-    prev_expenses = await _get_expenses_total(db, prev)
-    prev_bonus = await _get_bonus_expense(db, prev_start, prev_end)
-    prev_net = prev_rev["gross_profit"] - prev_expenses  # Без бонусов
+    prev_exp = await _get_expenses_split(db, prev)
+    prev_net = prev_rev["gross_profit"] - prev_exp["total"]
 
-    rev_change = round(((rev_data["revenue"] - prev_rev["revenue"]) / prev_rev["revenue"]) * 100, 1) if prev_rev["revenue"] > 0 else 0
-    profit_change = round(((net_profit - prev_net) / abs(prev_net)) * 100, 1) if prev_net != 0 else 0
+    rev_change = round((revenue - prev_rev["revenue"]) / prev_rev["revenue"] * 100, 1) if prev_rev["revenue"] > 0 else None
+    # % прибыли корректен только при положительной базе прошлого месяца
+    profit_change = round((net_profit - prev_net) / abs(prev_net) * 100, 1) if prev_net > 0 else None
 
     return {
         "month": target_month,
-        "revenue": rev_data["revenue"],
+        "revenue": revenue,
         "cost_of_goods": rev_data["cost_of_goods"],
-        "gross_profit": rev_data["gross_profit"],
-        "gross_margin_pct": round((rev_data["gross_profit"] / rev_data["revenue"]) * 100, 1) if rev_data["revenue"] > 0 else 0,
-        "operating_expenses": expenses_total,
+        "gross_profit": gross,
+        "gross_margin_pct": round(gross / revenue * 100, 1) if revenue > 0 else 0,
+        "operating_expenses": total_expenses,
+        "recurring_expenses": exp["recurring"],
+        "one_off_expenses": exp["one_off"],
         "bonus_expenses": bonus_expense,
         "total_expenses": total_expenses,
         "net_profit": net_profit,
         "net_margin_pct": margin_pct,
+        "operating_net_profit": operating_net_profit,
+        "operating_margin_pct": operating_margin_pct,
+        "revenue_source": rev_data["revenue_source"],
+        "cost_coverage_pct": rev_data["cost_coverage_pct"],
         "receipts": rev_data["receipts"],
         "avg_receipt": rev_data["avg_receipt"],
         "items_sold": rev_data["items_sold"],
@@ -236,33 +299,38 @@ async def monthly_breakdown(
     current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
 ) -> dict:
     """Помесячная динамика: доход, расход, прибыль."""
-    now = datetime.now(timezone.utc)
     data = []
 
-    for i in range(months - 1, -1, -1):
-        # Вычисляем месяц
-        target = now - timedelta(days=i * 30)
-        m_str = target.strftime("%Y-%m")
-        start, end = _month_range(m_str)
+    # Список месяцев строго по календарю (без дрейфа 30-дневных шагов)
+    month_list = [_current_month()]
+    for _ in range(months - 1):
+        month_list.append(_prev_month(month_list[-1]))
+    month_list.reverse()  # от старых к новым
 
+    for m_str in month_list:
+        start, end = _month_range(m_str)
         rev = await _get_revenue_data(db, start, end)
-        expenses = await _get_expenses_total(db, m_str)
+        exp = await _get_expenses_split(db, m_str)
         bonus = await _get_bonus_expense(db, start, end)
-        total_exp = expenses  # Без бонусов
+        total_exp = exp["total"]  # Без бонусов
         net = rev["gross_profit"] - total_exp
+        operating_net = rev["gross_profit"] - exp["recurring"]
 
         y, m = int(m_str[:4]), int(m_str[5:7])
-
         data.append({
             "month": m_str,
             "month_label": f"{MONTH_NAMES_RU.get(m, m_str)} {y}",
             "revenue": rev["revenue"],
             "cost_of_goods": rev["cost_of_goods"],
             "gross_profit": rev["gross_profit"],
-            "operating_expenses": expenses,
+            "operating_expenses": total_exp,
+            "recurring_expenses": exp["recurring"],
+            "one_off_expenses": exp["one_off"],
             "bonus_expenses": bonus,
             "total_expenses": total_exp,
             "net_profit": net,
+            "operating_net_profit": operating_net,
+            "revenue_source": rev["revenue_source"],
             "receipts": rev["receipts"],
             "avg_receipt": rev["avg_receipt"],
         })
@@ -334,33 +402,39 @@ async def pnl_report(
     cogs = rev["cost_of_goods"]
     gross = revenue - cogs
     opex = float(total_opex)
-    net = gross - opex  # Без бонусов
+    net = gross - opex  # полная прибыль (без бонусов)
+
+    exp_split = await _get_expenses_split(db, target)
+    operating_net = gross - exp_split["recurring"]  # без разовых
 
     return {
         "month": target,
+        "revenue_source": rev["revenue_source"],
+        "cost_coverage_pct": rev["cost_coverage_pct"],
         "report": {
-            "revenue": {
-                "label": "Выручка (продажи)",
-                "amount": revenue,
-            },
-            "cost_of_goods": {
-                "label": "Себестоимость товаров",
-                "amount": -cogs,
-            },
+            "revenue": {"label": "Выручка (продажи)", "amount": revenue},
+            "cost_of_goods": {"label": "Себестоимость товаров", "amount": -cogs},
             "gross_profit": {
                 "label": "Валовая прибыль",
                 "amount": gross,
-                "margin_pct": round((gross / revenue) * 100, 1) if revenue > 0 else 0,
+                "margin_pct": round(gross / revenue * 100, 1) if revenue > 0 else 0,
             },
             "operating_expenses": {
                 "label": "Операционные расходы",
                 "total": -opex,
                 "lines": expense_lines,
             },
+            "one_off_expenses": exp_split["one_off"],
+            "recurring_expenses": exp_split["recurring"],
+            "operating_net_profit": {
+                "label": "Операционная прибыль (без разовых)",
+                "amount": operating_net,
+                "margin_pct": round(operating_net / revenue * 100, 1) if revenue > 0 else 0,
+            },
             "net_profit": {
                 "label": "Чистая прибыль",
                 "amount": net,
-                "margin_pct": round((net / revenue) * 100, 1) if revenue > 0 else 0,
+                "margin_pct": round(net / revenue * 100, 1) if revenue > 0 else 0,
             },
         },
     }
