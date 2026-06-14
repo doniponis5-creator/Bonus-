@@ -159,11 +159,11 @@ export default function ShiftPanel({ onChanged }: { onChanged?: () => void }) {
           <Banknote size={18} color="var(--accent)" />
           <span style={{ fontWeight: 700, fontSize: 15 }}>Пересчёт купюр</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10 }}>
+        <div style={{ columns: '320px 5', columnGap: 12 }}>
           {DENOMS.map((d) => {
             const qty = counts[String(d)] || 0;
             return (
-              <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg2)', borderRadius: 12, padding: '8px 10px', border: '1px solid var(--border)' }}>
+              <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg2)', borderRadius: 12, padding: '8px 10px', border: '1px solid var(--border)', breakInside: 'avoid', marginBottom: 10 }}>
                 <span style={{ width: 54, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{d.toLocaleString('ru-RU')}</span>
                 <span style={{ color: 'var(--text3)', fontSize: 11 }}>сом</span>
                 <div style={{ flex: 1 }} />
