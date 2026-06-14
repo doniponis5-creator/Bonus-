@@ -2,11 +2,12 @@
 /**
  * Печать ценников со скидкой — формат «как в магазине» (по умолчанию 58×40 мм).
  * Рамка делится на две части: сверху — название, снизу — цена.
+ * Название и цены можно править вручную (независимо от товара).
  * При скидке: старая цена зачёркнута + новая крупно + угловой бейдж «−X%».
  * Печать в отдельном окне с точным @page size (мм) — термопринтер / лист.
  */
-import { useState } from 'react';
-import { Printer, Tag } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Printer, Tag, RotateCcw } from 'lucide-react';
 
 const fmtPrice = (n: number) =>
   (Math.round(Number(n) || 0)).toLocaleString('ru-RU').replace(/\s/g, ' ');
@@ -41,6 +42,35 @@ const BOLD = [
 export default function PriceTagPrint({
   name, oldPrice, newPrice, discount,
 }: { name: string; oldPrice: number; newPrice: number; discount: number }) {
+  // ── Редактируемые данные ценника (можно править руками) ──
+  const [eName, setEName] = useState(name);
+  const [eOld, setEOld] = useState<number>(Math.round(oldPrice));
+  const [eNew, setENew] = useState<number>(Math.round(newPrice));
+  const dirty = useRef(false); // тронул ли пользователь поля вручную
+
+  // Смена товара (имя) — сбрасываем правки и тянем свежие данные.
+  useEffect(() => {
+    setEName(name);
+    setEOld(Math.round(oldPrice));
+    setENew(Math.round(newPrice));
+    dirty.current = false;
+  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Двигают ползунок скидки у того же товара — обновляем цены, пока их не трогали.
+  useEffect(() => {
+    if (!dirty.current) {
+      setEOld(Math.round(oldPrice));
+      setENew(Math.round(newPrice));
+    }
+  }, [oldPrice, newPrice]);
+
+  const resetFromProduct = () => {
+    setEName(name);
+    setEOld(Math.round(oldPrice));
+    setENew(Math.round(newPrice));
+    dirty.current = false;
+  };
+
   const [w, setW] = useState(58);
   const [h, setH] = useState(40);
   const [cell, setCell] = useState(3);
@@ -50,7 +80,9 @@ export default function PriceTagPrint({
   const [boldIdx, setBoldIdx] = useState(1); // по умолчанию «Жирный»
   const [fontScale, setFontScale] = useState(1); // масштаб шрифта 0.7–1.5
 
-  const hasDiscount = discount > 0 && newPrice < oldPrice;
+  // Скидка считается из самих цен — корректно даже после ручной правки.
+  const calcDiscount = eOld > 0 && eNew < eOld ? Math.round((1 - eNew / eOld) * 100) : 0;
+  const hasDiscount = calcDiscount > 0;
   const withOld = hasDiscount && showOld;
   const withBadge = hasDiscount && showBadge;
   const b = BOLD[boldIdx];
@@ -60,10 +92,10 @@ export default function PriceTagPrint({
   const newFontMm = withOld ? 8.5 * (w / 58) : 10 * (w / 58);
 
   const tagHtml = () => {
-    const old = withOld ? `<div class="old">${fmtPrice(oldPrice)}с</div>` : '';
-    const badge = withBadge ? `<div class="badge">−${Math.round(discount)}%</div>` : '';
-    return `<div class="tag">${badge}<div class="name">${escapeHtml(name)}</div>` +
-      `<div class="price">${old}<div class="new">${fmtPrice(newPrice)}с</div></div></div>`;
+    const old = withOld ? `<div class="old">${fmtPrice(eOld)}с</div>` : '';
+    const badge = withBadge ? `<div class="badge">−${calcDiscount}%</div>` : '';
+    return `<div class="tag">${badge}<div class="name">${escapeHtml(eName)}</div>` +
+      `<div class="price">${old}<div class="new">${fmtPrice(eNew)}с</div></div></div>`;
   };
 
   const handlePrint = () => {
@@ -80,7 +112,8 @@ export default function PriceTagPrint({
       `border-radius:${(cell * 0.6).toFixed(2)}mm;display:flex;flex-direction:column;overflow:hidden;page-break-after:always;}` +
       '.tag:last-child{page-break-after:auto;}' +
       `.name{flex:1;display:flex;align-items:center;padding:0 2.5mm;font-weight:${b.nameW};${strokeCss(b.stroke)}` +
-      `font-size:${(nameFontMm(name, w) * fontScale).toFixed(2)}mm;line-height:1.05;color:#1a1a1a;}` +
+      `font-size:${(nameFontMm(eName, w) * fontScale).toFixed(2)}mm;line-height:1.08;color:#1a1a1a;` +
+      'word-break:break-word;overflow:hidden;}' +
       '.price{flex:1;border-top:1.5px solid #1a1a1a;display:flex;flex-direction:column;' +
       'align-items:center;justify-content:center;gap:0.4mm;}' +
       `.old{font-size:${(3.4 * fontScale).toFixed(2)}mm;font-weight:${b.oldW};color:#555;text-decoration:line-through;}` +
@@ -100,6 +133,7 @@ export default function PriceTagPrint({
     borderRadius: 9, color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', outline: 'none',
     textAlign: 'right', fontWeight: 600,
   };
+  const fldL: React.CSSProperties = { ...fld, textAlign: 'left' };
   const fldWrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 5 };
   const fldLbl: React.CSSProperties = { fontSize: 11, color: 'var(--text3)', fontWeight: 600, letterSpacing: 0.2, textTransform: 'uppercase' };
 
@@ -109,10 +143,16 @@ export default function PriceTagPrint({
         <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Tag size={15} color="var(--accent)" />
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.2 }}>Печать ценника со скидкой</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text3)' }}>Формат как в магазине · точный размер в мм</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text3)' }}>Название и цены можно править вручную</div>
         </div>
+        <button onClick={resetFromProduct} title="Сбросить из товара"
+          style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
+            color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <RotateCcw size={13} /> Из товара
+        </button>
       </div>
 
       <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -133,24 +173,25 @@ export default function PriceTagPrint({
                 position: 'absolute', top: 0, right: 0, background: '#e11d48', color: '#fff',
                 fontWeight: 800, fontSize: Math.max(9, 3 * PX * 0.42), padding: '2px 6px',
                 borderBottomLeftRadius: 6,
-              }}>−{Math.round(discount)}%</div>
+              }}>−{calcDiscount}%</div>
             )}
             <div style={{
               flex: 1, display: 'flex', alignItems: 'center', padding: '0 9px',
-              fontSize: nameFontMm(name, w) * PX * fontScale, lineHeight: 1.05, color: '#1a1a1a', overflow: 'hidden',
+              fontSize: nameFontMm(eName, w) * PX * fontScale, lineHeight: 1.08, color: '#1a1a1a', overflow: 'hidden',
               fontWeight: b.nameW, WebkitTextStroke: b.stroke ? `${(b.stroke * PX).toFixed(2)}px #1a1a1a` : undefined,
-            }}>{name}</div>
+              wordBreak: 'break-word',
+            }}>{eName}</div>
             <div style={{
               flex: 1, borderTop: '1.5px solid #1a1a1a', display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center', gap: 2,
             }}>
               {withOld && (
                 <div style={{ fontSize: 13 * fontScale, fontWeight: b.oldW, color: '#555', textDecoration: 'line-through' }}>
-                  {fmtPrice(oldPrice)}с
+                  {fmtPrice(eOld)}с
                 </div>
               )}
               <div style={{ fontWeight: b.newW, fontSize: newFontMm * PX * fontScale, color: '#1a1a1a', letterSpacing: -1, WebkitTextStroke: b.stroke ? `${(b.stroke * PX).toFixed(2)}px #1a1a1a` : undefined }}>
-                {fmtPrice(newPrice)}с
+                {fmtPrice(eNew)}с
               </div>
             </div>
           </div>
@@ -159,6 +200,25 @@ export default function PriceTagPrint({
 
         {/* ── Настройки ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 230, flex: 1 }}>
+          {/* Данные ценника — название и цены отдельно */}
+          <div style={fldWrap}>
+            <span style={fldLbl}>Название</span>
+            <input type="text" value={eName}
+              onChange={e => { dirty.current = true; setEName(e.target.value); }}
+              placeholder="Название товара" style={fldL} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={fldWrap}><span style={fldLbl}>Старая цена</span>
+              <input type="number" min={0} value={eOld}
+                onChange={e => { dirty.current = true; setEOld(Number(e.target.value) || 0); }} style={fld} /></div>
+            <div style={fldWrap}><span style={{ ...fldLbl, color: 'var(--accent)' }}>Цена со скидкой</span>
+              <input type="number" min={0} value={eNew}
+                onChange={e => { dirty.current = true; setENew(Number(e.target.value) || 0); }}
+                style={{ ...fld, borderColor: 'var(--accent-border)' }} /></div>
+          </div>
+
+          <div style={{ height: 1, background: 'var(--border)', margin: '2px 0' }} />
+
           {/* Пресеты размеров */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {PRESETS.map(p => (
@@ -195,7 +255,7 @@ export default function PriceTagPrint({
             </div>
           </div>
 
-          {/* Поля */}
+          {/* Поля размеров */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={fldWrap}><span style={fldLbl}>Ширина, мм</span>
               <input type="number" min={20} max={120} value={w} onChange={e => setW(Number(e.target.value) || 0)} style={fld} /></div>
@@ -215,7 +275,7 @@ export default function PriceTagPrint({
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: 'var(--text2)', cursor: 'pointer' }}>
               <input type="checkbox" checked={showBadge} onChange={e => setShowBadge(e.target.checked)} style={{ accentColor: 'var(--accent)', width: 16, height: 16 }} />
-              Бейдж «−{Math.round(discount)}%»
+              Бейдж «−{calcDiscount}%»
             </label>
           </div>
 
