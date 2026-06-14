@@ -187,21 +187,24 @@ export default function ProfitLabPage() {
   const revenue = Number(biz?.revenue || 0);
   const animRevenue = useCountUp(revenue);
   const refRoi = Number(marketing?.referral?.roi || 0);
+  const realCost = Number(biz?.bonus_real_cost_pct || 0); // % выручки, РЕАЛЬНО потраченный (SPEND)
+  const bonusSpent = Number(biz?.bonus_spent || 0);
+  const bonusIssuedAll = Number(biz?.bonus_issued_all || 0);
 
-  // Разбивка: куда уходят бонусы (оценка из имеющихся данных)
+  // Разбивка начисленных бонусов — ТОЧНО по типу транзакции (с бэкенда).
   const bonusBreakdown = useMemo(() => {
-    const total = Number(biz?.bonus_issued_all || 0); // реальная сумма начисленных бонусов за 30 дн
-    if (total <= 0) return null;
-    const campaigns = (marketing?.campaigns || []).reduce((s: number, c: any) => s + Number(c.bonus_cost || 0), 0);
-    const referral = Number(marketing?.referral?.bonus_cost || 0);
-    const cashback = Math.max(0, total - campaigns - referral);
+    const bd = biz?.bonus_breakdown;
+    if (!bd) return null;
     const parts = [
-      { label: 'Кампании и подарки', value: campaigns, color: 'var(--violet)' },
-      { label: 'Рефералы', value: referral, color: 'var(--info)' },
-      { label: 'Кешбэк за покупки и прочее', value: cashback, color: 'var(--accent)' },
-    ].filter(p => p.value > 0);
-    return { total, parts };
-  }, [biz, marketing]);
+      { label: 'Кешбэк за покупки', value: Number(bd.cashback || 0), color: 'var(--accent)' },
+      { label: 'Колесо и промокоды', value: Number(bd.wheel_promo || 0), color: 'var(--violet)' },
+      { label: 'Дни рождения', value: Number(bd.birthday || 0), color: 'var(--info)' },
+      { label: 'Кампании и подарки', value: Number(bd.campaigns || 0), color: '#ec4899' },
+      { label: 'Рефералы', value: Number(bd.referral || 0), color: 'var(--success)' },
+    ].filter(p => p.value > 0).sort((a, b) => b.value - a.value);
+    const total = parts.reduce((sum, p) => sum + p.value, 0);
+    return total > 0 ? { total, parts } : null;
+  }, [biz]);
 
   // ── Автопилот ──
   const AUTO_ITEMS = settings ? [
@@ -454,15 +457,16 @@ export default function ProfitLabPage() {
               <div className="numeric" style={{ fontSize: 20, fontWeight: 700, marginTop: 2 }}>{fmt(animRevenue)} <span style={{ fontSize: 12, color: 'var(--text3)' }}>сом</span></div>
             </div>
             <div style={{ background: 'var(--bg2)', borderRadius: 10, padding: '12px 14px' }}>
-              <div className="caption">Бонусы от выручки</div>
+              <div className="caption">Начислено (от выручки)</div>
               <div className="numeric" style={{ fontSize: 20, fontWeight: 700, marginTop: 2, color: burn > 7 ? 'var(--danger)' : burn > 3 ? 'var(--warn)' : 'var(--success)' }}>{burn.toFixed(1)}%</div>
+              <div className="caption" style={{ marginTop: 2, color: 'var(--text3)' }}>реально потрачено: {realCost.toFixed(1)}%</div>
             </div>
           </div>
           {/* Куда уходят бонусы — разбивка в сомах */}
           {bonusBreakdown && (
             <div style={{ margin: '10px 0 4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>
-                <span>Бонусы за 30 дней — куда ушли</span>
+                <span>Начислено за 30 дней — на что</span>
                 <span className="numeric" style={{ fontWeight: 600, color: 'var(--text)' }}>≈ {fmt(Math.round(bonusBreakdown.total))} сом</span>
               </div>
               <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'var(--bg3)', marginBottom: 8 }}>
@@ -479,8 +483,10 @@ export default function ProfitLabPage() {
               ))}
             </div>
           )}
+          <Row label="Реально потрачено клиентами (расход кэшем)"
+            value={`${fmt(Math.round(bonusSpent))} сом · ${realCost.toFixed(1)}%`} accent="var(--success)" />
           {biz?.burn_rate != null && (
-            <Row label="Клиенты использовали из начисленных" value={`${Number(biz.burn_rate).toFixed(1)}%`} accent="var(--info)" />
+            <Row label="Погашено от начислений (ликвидность)" value={`${Number(biz.burn_rate).toFixed(1)}%`} accent="var(--info)" />
           )}
           {marketing?.referral && (
             Number(marketing.referral.revenue_from_referred || 0) > 0 ? (
@@ -490,17 +496,18 @@ export default function ProfitLabPage() {
             )
           )}
           <p className="caption" style={{ marginTop: 8, lineHeight: 1.5 }}>
-            В «бонусы от выручки» входят и подарочные бонусы (колесо, кампании, welcome, дни рождения) —
-            при активных акциях процент временно выше реального кешбэка. Помните: бонус — не скидка,
-            клиент возвращается, чтобы его потратить.
+            <b style={{ color: 'var(--text2)' }}>Начислено</b> — сколько бонусов выдано (максимальная стоимость, обязательство).
+            <b style={{ color: 'var(--text2)' }}> Реально потрачено</b> — сколько клиенты списали кэшем за период (фактический расход).
+            Разрыв между ними — отложенный расход: он «выстрелит», когда клиенты придут тратить накопленное.
+            Бонус — не скидка: клиент возвращается, чтобы его потратить.
           </p>
           <Verdict
             tone={burn > 12 ? 'bad' : burn > 5 ? 'ok' : 'good'}
             text={burn > 12
-              ? `Бонусы составляют ${burn.toFixed(1)}% выручки — много даже с учётом акций. Проверьте проценты уровней, щедрость колеса и суммы кампаний.`
+              ? `Риск высокий: начислено ${burn.toFixed(1)}% выручки. Реально потрачено пока ${realCost.toFixed(1)}%, остальное — накопленное обязательство, которое выстрелит при массовом списании. Снизьте проценты уровней, щедрость колеса и суммы кампаний.`
               : burn > 5
-              ? `${burn.toFixed(1)}% выручки на бонусы — выше базового кешбэка из-за акций и подарков. Приемлемо, но следите за динамикой.`
-              : `Программа стоит ${burn.toFixed(1)}% выручки — здоровый уровень. Есть запас для более щедрых акций.`}
+              ? `Риск средний: начислено ${burn.toFixed(1)}% (реально потрачено ${realCost.toFixed(1)}%). Часть — подарочные акции. Приемлемо, но следите за разрывом — это отложенный расход.`
+              : `Риск низкий: начислено ${burn.toFixed(1)}% выручки, реально потрачено ${realCost.toFixed(1)}%. Программа под контролем — даже при полном списании расход не превысит ~${burn.toFixed(1)}% выручки. Есть запас для щедрых акций.`}
           />
         </div>
 

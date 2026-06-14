@@ -4,6 +4,7 @@ S Bonus+ — PRO Analytics API.
 маркетинг ROI, и real-time мониторинг.
 """
 
+import uuid
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Optional
@@ -23,6 +24,16 @@ from app.models import (
 router = APIRouter(prefix="/analytics-pro", tags=["analytics-pro"])
 
 
+def _txn_branch_cond(user: dict):
+    """Условие фильтра транзакций по филиалу (branch-админ видит только свой)."""
+    if user and user.get("role") == UserRole.BRANCH_ADMIN.value and user.get("branch_id"):
+        try:
+            return Transaction.branch_id == uuid.UUID(str(user["branch_id"]))
+        except (ValueError, TypeError):
+            return None
+    return None
+
+
 
 
 # ═══════════════════════════════════════════════════
@@ -33,10 +44,24 @@ router = APIRouter(prefix="/analytics-pro", tags=["analytics-pro"])
 async def business_overview(
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
     now = datetime.now(timezone.utc)
     current_start = now - timedelta(days=days)
     prev_start = current_start - timedelta(days=days)
+    bcond = _txn_branch_cond(user)  # None для super-admin → вся сеть
+
+    def _cur(*extra):
+        conds = [Transaction.created_at >= current_start, *extra]
+        if bcond is not None:
+            conds.append(bcond)
+        return and_(*conds)
+
+    def _prev(*extra):
+        conds = [Transaction.created_at >= prev_start, Transaction.created_at < current_start, *extra]
+        if bcond is not None:
+            conds.append(bcond)
+        return and_(*conds)
 
     cur = await db.execute(
         select(
@@ -56,7 +81,7 @@ async def business_overview(
             func.count(distinct(case(
                 (Transaction.type == TransactionType.EARN, Transaction.customer_id),
             ))).label("active_buyers"),
-        ).where(Transaction.created_at >= current_start)
+        ).where(_cur())
     )
     c = cur.one()
 
@@ -70,15 +95,14 @@ async def business_overview(
             func.count(distinct(case(
                 (Transaction.type == TransactionType.EARN, Transaction.customer_id),
             ))).label("active_buyers"),
-        ).where(and_(Transaction.created_at >= prev_start, Transaction.created_at < current_start))
+        ).where(_prev())
     )
     p = prev.one()
 
     avg_check_cur = float(c.revenue) / max(c.tx_count, 1)
     avg_check_prev_q = await db.execute(
         select(func.coalesce(func.avg(Transaction.purchase_amount), 0)).where(
-            and_(Transaction.created_at >= prev_start, Transaction.created_at < current_start,
-                 Transaction.type == TransactionType.EARN, Transaction.purchase_amount > 0)
+            _prev(Transaction.type == TransactionType.EARN, Transaction.purchase_amount > 0)
         )
     )
     avg_check_prev = float(avg_check_prev_q.scalar() or 0)
@@ -103,32 +127,60 @@ async def business_overview(
     prev_total_cust = prev_total_cust_q.scalar() or 1
     prev_ltv = float(prev_ltv_q.scalar() or 0) / max(prev_total_cust, 1)
 
+    # % использования: потрачено / начислено (грубая ликвидность, не когортная)
     burn_rate = round(float(c.bonus_spent) / max(float(c.bonus_issued), 1) * 100, 1)
 
-    # Сколько стоит бонусная программа: ВСЕ начисленные бонусы (включая подарочные)
-    # как % от выручки за период. Не путать с burn_rate (= % использования бонусов).
-    bonus_issued_all_q = await db.execute(
-        select(func.coalesce(func.sum(Transaction.amount), 0)).where(and_(
-            Transaction.created_at >= current_start,
-            Transaction.type.in_([
-                TransactionType.EARN, TransactionType.BIRTHDAY, TransactionType.REFERRAL,
-                TransactionType.PROMO, TransactionType.CAMPAIGN,
-            ]),
-            Transaction.amount > 0,
-        ))
+    # ── Разбивка ВСЕХ начисленных бонусов строго по типу транзакции ──
+    # (точная атрибуция вместо хрупкого поиска по тексту заметки)
+    bd_rows = await db.execute(
+        select(Transaction.type, func.coalesce(func.sum(Transaction.amount), 0)).where(
+            _cur(
+                Transaction.type.in_([
+                    TransactionType.EARN, TransactionType.PROMO, TransactionType.BIRTHDAY,
+                    TransactionType.CAMPAIGN, TransactionType.REFERRAL,
+                ]),
+                Transaction.amount > 0,
+            )
+        ).group_by(Transaction.type)
     )
-    bonus_issued_all = float(bonus_issued_all_q.scalar() or 0)
-    bonus_cost_pct = round(bonus_issued_all / float(c.revenue) * 100, 1) if float(c.revenue) > 0 else 0.0
+    bd_map = {row[0]: float(row[1]) for row in bd_rows.all()}
+    bonus_breakdown = {
+        "cashback": bd_map.get(TransactionType.EARN, 0.0),       # кешбэк за покупки
+        "wheel_promo": bd_map.get(TransactionType.PROMO, 0.0),   # колесо + промокоды
+        "birthday": bd_map.get(TransactionType.BIRTHDAY, 0.0),   # дни рождения
+        "campaigns": bd_map.get(TransactionType.CAMPAIGN, 0.0),  # рассылки/подарки
+        "referral": bd_map.get(TransactionType.REFERRAL, 0.0),   # рефералы
+    }
+    bonus_issued_all = round(sum(bonus_breakdown.values()), 2)
+
+    revenue_f = float(c.revenue)
+    # Стоимость программы:
+    #  issued  — НАЧИСЛЕНО (максимальная потенциальная стоимость / обязательство)
+    #  real    — РЕАЛЬНО ПОТРАЧЕНО клиентами за период (фактический расход кэшем)
+    bonus_cost_pct = round(bonus_issued_all / revenue_f * 100, 1) if revenue_f > 0 else 0.0
+    bonus_real_cost_pct = round(float(c.bonus_spent) / revenue_f * 100, 1) if revenue_f > 0 else 0.0
+
+    prev_bd = await db.execute(
+        select(func.coalesce(func.sum(Transaction.amount), 0)).where(
+            _prev(Transaction.type.in_([
+                TransactionType.EARN, TransactionType.PROMO, TransactionType.BIRTHDAY,
+                TransactionType.CAMPAIGN, TransactionType.REFERRAL,
+            ]), Transaction.amount > 0)
+        )
+    )
+    prev_bonus_issued_all = float(prev_bd.scalar() or 0)
+    prev_revenue_f = float(p.revenue)
+    prev_bonus_cost_pct = round(prev_bonus_issued_all / prev_revenue_f * 100, 1) if prev_revenue_f > 0 else 0.0
 
     prev_burn_issued = await db.execute(
         select(func.coalesce(func.sum(case(
             (Transaction.type == TransactionType.EARN, Transaction.amount), else_=Decimal(0)
-        )), 0)).where(and_(Transaction.created_at >= prev_start, Transaction.created_at < current_start))
+        )), 0)).where(_prev())
     )
     prev_burn_spent = await db.execute(
         select(func.coalesce(func.sum(case(
             (Transaction.type == TransactionType.SPEND, Transaction.amount), else_=Decimal(0)
-        )), 0)).where(and_(Transaction.created_at >= prev_start, Transaction.created_at < current_start))
+        )), 0)).where(_prev())
     )
     pi = float(prev_burn_issued.scalar() or 0)
     ps = float(prev_burn_spent.scalar() or 0)
@@ -136,7 +188,7 @@ async def business_overview(
 
     # Keys match frontend exactly
     return {
-        "revenue": float(c.revenue),
+        "revenue": revenue_f,
         "prev_revenue": float(p.revenue),
         "tx_count": c.tx_count,
         "prev_tx_count": p.tx_count,
@@ -151,7 +203,10 @@ async def business_overview(
         "bonus_issued": float(c.bonus_issued),
         "bonus_spent": float(c.bonus_spent),
         "bonus_issued_all": bonus_issued_all,
+        "bonus_breakdown": bonus_breakdown,
         "bonus_cost_pct": bonus_cost_pct,
+        "prev_bonus_cost_pct": prev_bonus_cost_pct,
+        "bonus_real_cost_pct": bonus_real_cost_pct,
     }
 
 
