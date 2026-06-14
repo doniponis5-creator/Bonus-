@@ -61,11 +61,17 @@ export default function SmartCampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState(false);
   const [launchResult, setLaunchResult] = useState<string | null>(null);
+  const [recipients, setRecipients] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [recLoading, setRecLoading] = useState(false);
+  const [recSearch, setRecSearch] = useState('');
   const router = useRouter();
 
   const handleLaunch = async () => {
     if (!selectedSeg || !suggestion) return;
-    if (!confirm(`Создать кампанию для сегмента «${suggestion.segment?.name}» (${suggestion.recipients} клиентов, ${bonusAmount} сом каждому)?`)) return;
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) { setLaunchResult('Выберите хотя бы одного получателя'); return; }
+    if (!confirm(`Создать кампанию для «${suggestion.segment?.name}» — ${ids.length} получателей по ${bonusAmount} сом?`)) return;
     setLaunching(true);
     setLaunchResult(null);
     try {
@@ -73,6 +79,7 @@ export default function SmartCampaignsPage() {
         segment_id: selectedSeg,
         bonus_amount: bonusAmount,
         message_template: suggestion.message_template ? suggestion.message_template + '\n{link}' : undefined,
+        customer_ids: ids,
       });
       setLaunchResult(r.data.message || 'Кампания создана');
       setTimeout(() => router.push('/campaigns'), 1500);
@@ -96,11 +103,25 @@ export default function SmartCampaignsPage() {
 
   const handleSelectSegment = async (segId: string) => {
     setSelectedSeg(segId);
+    setRecLoading(true);
+    setRecSearch('');
     try {
-      const r = await smartCampaignAPI.suggest({ segment_id: segId, bonus_amount: bonusAmount });
-      setSuggestion(r.data);
-    } catch {}
+      const [s, c] = await Promise.all([
+        smartCampaignAPI.suggest({ segment_id: segId, bonus_amount: bonusAmount }),
+        smartCampaignAPI.segmentCustomers(segId),
+      ]);
+      setSuggestion(s.data);
+      const list = c.data.customers || [];
+      setRecipients(list);
+      setSelectedIds(new Set(list.map((x: any) => x.customer_id)));
+    } catch {} finally { setRecLoading(false); }
   };
+
+  const toggleId = (id: string) => setSelectedIds(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+  const selectAllRec = () => setSelectedIds(new Set(recipients.map((x: any) => x.customer_id)));
+  const clearRec = () => setSelectedIds(new Set());
 
   const handleUpdateBonus = async (amount: number) => {
     setBonusAmount(amount);
@@ -118,6 +139,12 @@ export default function SmartCampaignsPage() {
   const pieData = segments.filter((s: any) => s.count > 0).map((s: any) => ({
     name: s.name, value: s.count, fill: SEG_COLORS[s.id] || SEG_FALLBACK,
   }));
+
+  const recQuery = recSearch.trim().toLowerCase();
+  const filteredRecipients = recQuery
+    ? recipients.filter((r: any) => (r.name || '').toLowerCase().includes(recQuery) || (r.phone || '').includes(recQuery))
+    : recipients;
+  const pickBtn: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--text2)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' };
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -221,14 +248,53 @@ export default function SmartCampaignsPage() {
             </div>
           </div>
 
+          {/* Получатели — выбор вручную */}
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                <Users size={15} color="var(--accent)" /> Получатели
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>выбрано {selectedIds.size} из {recipients.length}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={selectAllRec} style={pickBtn}>Все</button>
+                <button onClick={clearRec} style={pickBtn}>Снять</button>
+              </div>
+            </div>
+            <input value={recSearch} onChange={e => setRecSearch(e.target.value)} placeholder="Поиск по имени или телефону..."
+              style={{ width: '100%', padding: '8px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, outline: 'none', marginBottom: 10, fontFamily: 'inherit' }} />
+            {recLoading ? (
+              <div style={{ padding: 16, textAlign: 'center', color: 'var(--text2)', fontSize: 13 }}>Загрузка...</div>
+            ) : recipients.length === 0 ? (
+              <div style={{ padding: 16, textAlign: 'center', color: 'var(--text2)', fontSize: 13 }}>Нет клиентов с телефоном в этом сегменте</div>
+            ) : (
+              <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {filteredRecipients.map((r: any) => {
+                  const on = selectedIds.has(r.customer_id);
+                  return (
+                    <label key={r.customer_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: on ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${on ? 'var(--accent-border, var(--accent))' : 'var(--border)'}` }}>
+                      <input type="checkbox" checked={on} onChange={() => toggleId(r.customer_id)} style={{ accentColor: 'var(--accent)', width: 16, height: 16, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name || 'Без имени'}</div>
+                        <div className="numeric" style={{ fontSize: 11, color: 'var(--text2)' }}>{r.phone} · {Math.round(r.total_spent).toLocaleString()} сом · {r.purchases} покупок</div>
+                      </div>
+                    </label>
+                  );
+                })}
+                {filteredRecipients.length === 0 && (
+                  <div style={{ padding: 12, textAlign: 'center', color: 'var(--text3)', fontSize: 12 }}>Ничего не найдено</div>
+                )}
+              </div>
+            )}
+          </div>
+
           <button
             className="btn btn-primary"
             onClick={handleLaunch}
-            disabled={launching || suggestion.recipients === 0}
+            disabled={launching || selectedIds.size === 0}
             style={{ marginTop: 16, width: '100%', padding: '14px 20px', fontSize: 15 }}
           >
             <Send size={18} />
-            {launching ? 'Создание кампании...' : `Запустить кампанию (${suggestion.recipients} клиентов)`}
+            {launching ? 'Создание кампании...' : `Запустить кампанию (${selectedIds.size} клиентов)`}
           </button>
           {launchResult && (
             <div style={{ marginTop: 10, fontSize: 13, color: 'var(--success)', textAlign: 'center' }}>{launchResult}</div>
