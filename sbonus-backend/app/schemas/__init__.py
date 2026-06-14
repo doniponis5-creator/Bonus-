@@ -611,3 +611,35 @@ class FrequentlyBoughtTogether(BaseModel):
     product_b_name: str
     times_bought_together: int
     confidence: float  # 0-1
+
+
+class SalesSyncItem(BaseModel):
+    sku: str = Field(..., max_length=50)
+    name: Optional[str] = Field(None, max_length=500)
+    quantity: float = 1
+    price: float = 0
+    total: float = 0
+    cost_price: float = 0
+
+class SalesSyncEntry(BaseModel):
+    receipt_number: str = Field(..., max_length=100)
+    date: Optional[str] = Field(None, max_length=30)
+    amount: float = 0
+    doc_type: Optional[str] = Field(None, max_length=50)
+    customer_phone: Optional[str] = Field(None, max_length=20)
+    items: Optional[list[SalesSyncItem]] = None
+
+class SalesSyncRequest(BaseModel):
+    branch_id: Optional[str] = Field(None, max_length=50)
+    sales: list[SalesSyncEntry]
+
+
+class ExpensesSyncEntry(BaseModel):
+    category: str = Field(..., max_length=100)
+    amount: float = 0
+    description: Optional[str] = Field(None, max_length=500)
+
+class ExpensesSyncRequest(BaseModel):
+    branch_id: Optional[str] = Field(None, max_length=50)
+    month: str = Field(..., max_length=7)
+    expenses: list[ExpensesSyncEntry]

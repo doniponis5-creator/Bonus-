@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:3001,http://localhost:8080"
 
     # ─── Приложение ───
+    contracts_public_base_url: str = "https://api.smartcentr.store"
+    contracts_pdf_dir: str = "/app/contracts_pdf"
+    greenapi_host: str = "https://api.green-api.com"
     app_env: str = "development"
     debug: bool = False
     log_level: str = "INFO"

@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
-from sqlalchemy import select, func
+from sqlalchemy import select, func, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1112,3 +1112,70 @@ async def webhook_1c_expenses(
 
     await db.commit()
     return {"success": True, "created": created, "skipped": skipped}
+
+
+from app.schemas import SalesSyncRequest as _SalesReq
+
+@router.post("/1c/sales-sync")
+async def webhook_1c_sales_sync(body: _SalesReq, request: Request, db: AsyncSession = Depends(get_db), x_signature: str = Header(None, alias="X-Signature")) -> dict:
+    await _security_check(request, x_signature, db)
+    from app.models import PurchaseItem, Product
+    from sqlalchemy import select, update
+    from datetime import datetime
+    created = updated = noprod = 0
+    for sale in body.sales:
+        ex = await db.execute(select(PurchaseItem.id).where(PurchaseItem.receipt_number == sale.receipt_number).limit(1))
+        receipt_exists = ex.scalar_one_or_none() is not None
+        sdate = None
+        if sale.date:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+                try:
+                    sdate = datetime.strptime(sale.date, fmt); break
+                except Exception:
+                    pass
+        for it in (sale.items or []):
+            pr = await db.execute(select(Product).where(Product.sku == it.sku).limit(1))
+            product = pr.scalar_one_or_none()
+            if not product:
+                noprod += 1
+                continue
+            cost = getattr(it, "cost_price", 0) or 0
+            if receipt_exists:
+                if cost and cost > 0:
+                    await db.execute(update(PurchaseItem).where(PurchaseItem.receipt_number == sale.receipt_number, PurchaseItem.product_id == product.id).values(cost_price=cost))
+            else:
+                tot = it.total if (it.total and it.total > 0) else (it.price * it.quantity)
+                pi = PurchaseItem(transaction_id=None, product_id=product.id, receipt_number=sale.receipt_number, quantity=it.quantity, price=it.price, total=tot)
+                if cost and cost > 0:
+                    pi.cost_price = cost
+                if sdate:
+                    pi.created_at = sdate
+                db.add(pi)
+        if receipt_exists:
+            updated += 1
+        else:
+            created += 1
+    await db.commit()
+    return {"status": "ok", "created": created, "updated": updated, "no_product": noprod}
+
+
+from app.schemas import ExpensesSyncRequest as _ExpReq
+
+@router.post("/1c/expenses-sync")
+async def webhook_1c_expenses_sync(body: _ExpReq, request: Request, db: AsyncSession = Depends(get_db), x_signature: str = Header(None, alias="X-Signature")) -> dict:
+    await _security_check(request, x_signature, db)
+    from app.models import Expense, Branch
+    from sqlalchemy import select, delete
+    branch_id = None
+    if body.branch_id:
+        res = await db.execute(select(Branch).where(Branch.id == body.branch_id))
+        b = res.scalar_one_or_none()
+        if b:
+            branch_id = b.id
+    await db.execute(delete(Expense).where(Expense.month == body.month, Expense.source == "1c"))
+    created = 0
+    for e in body.expenses:
+        db.add(Expense(category=(e.category or "Prochie")[:30], amount=e.amount, month=body.month, description=(e.description or "")[:500], source="1c", branch_id=branch_id))
+        created += 1
+    await db.commit()
+    return {"status": "ok", "created": created, "month": body.month}

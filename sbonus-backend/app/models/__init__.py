@@ -547,6 +547,7 @@ class PurchaseItem(Base):
     quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    cost_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

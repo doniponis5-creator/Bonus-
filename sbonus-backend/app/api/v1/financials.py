@@ -92,7 +92,7 @@ async def _get_revenue_data(db: AsyncSession, start: datetime, end: datetime) ->
     result = await db.execute(
         select(
             func.coalesce(func.sum(PurchaseItem.total), 0).label("revenue"),
-            func.coalesce(func.sum(PurchaseItem.quantity * Product.cost_price), 0).label("cost"),
+            func.coalesce(func.sum(PurchaseItem.quantity * PurchaseItem.cost_price), 0).label("cost"),
             func.coalesce(func.sum(PurchaseItem.quantity), 0).label("items_sold"),
             func.count(func.distinct(PurchaseItem.receipt_number)).label("receipts"),
         )
@@ -100,8 +100,6 @@ async def _get_revenue_data(db: AsyncSession, start: datetime, end: datetime) ->
         .where(
             PurchaseItem.created_at >= start,
             PurchaseItem.created_at < end,
-            Product.cost_price != None,
-            Product.cost_price > 0,
         )
     )
     row = result.one()

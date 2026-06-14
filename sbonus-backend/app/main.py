@@ -244,7 +244,28 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
-    scheduler.start()
+    # SB FIX: при --workers 2 каждый воркер запускал свой планировщик →
+    # ВСЕ cron-задачи дублировались (сообщения уходили 2 раза). Теперь
+    # планировщик стартует ТОЛЬКО на одном воркере-лидере (Redis NX + failover).
+    import os as _sb_os, asyncio as _sb_aio
+    from app.core.redis import redis_client as _sb_rc
+    _SB_LEADER_KEY = "sb:scheduler:leader"
+    async def _sb_leader_loop():
+        started = False
+        while True:
+            try:
+                if not started:
+                    got = await _sb_rc.set(_SB_LEADER_KEY, str(_sb_os.getpid()), nx=True, ex=90)
+                    if got:
+                        scheduler.start()
+                        started = True
+                        logger.info("Scheduler ЗАПУЩЕН (лидер pid=%s)", _sb_os.getpid())
+                else:
+                    await _sb_rc.set(_SB_LEADER_KEY, str(_sb_os.getpid()), ex=90)
+            except Exception as _sb_e:
+                logger.warning("Scheduler leader-loop: %s", _sb_e)
+            await _sb_aio.sleep(30)
+    _sb_aio.create_task(_sb_leader_loop())
 
     # Telegram bot polling (обработка команд)
     start_tg_polling()
@@ -319,6 +340,9 @@ app.add_middleware(RequestIDMiddleware)
 
 # API Routes (v1 + v2)
 app.include_router(api_router)
+from app.contracts import router_public as contracts_public_router
+app.include_router(contracts_public_router)
+
 app.include_router(api_v2_router)
 
 

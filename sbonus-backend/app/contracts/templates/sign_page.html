@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Смарт Центр">
+<meta name="format-detection" content="telephone=no">
+<title>Договор рассрочки — Смарт Центр</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --primary:#20C997;--primary-d:#16A077;--dark:#1c1c1e;--text:#1d1d1f;
+  --muted:#6e6e73;--soft:#f5f5f7;--border:#e5e5ea;--border-strong:#d1d1d6;
+  --bg:#ffffff;--bg-page:#fafafa;--success:#34c759;--danger:#ff3b30;
+}
+html,body{margin:0;padding:0;background:var(--bg-page);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
+  font-size:15px;line-height:1.5;overscroll-behavior:none;
+  -webkit-font-smoothing:antialiased;color:var(--text);
+  min-height:100vh;min-height:100dvh}
+.app{max-width:560px;margin:0 auto;padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+
+.hdr{background:var(--bg);padding:22px 22px 18px;border-bottom:1px solid var(--border)}
+.hdr-top{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;
+  letter-spacing:.4px;text-transform:uppercase;font-weight:600;margin-bottom:18px}
+.hdr-dot{width:6px;height:6px;border-radius:50%;background:var(--primary)}
+.hdr h1{margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-.4px;color:var(--text)}
+.hdr-meta{color:var(--muted);font-size:13px}
+
+.progress{padding:20px 22px 4px;background:var(--bg);border-bottom:1px solid var(--border)}
+.progress-steps{display:flex;align-items:center;position:relative}
+.step{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;z-index:1}
+.step:not(:last-child)::after{content:'';position:absolute;top:12px;left:50%;width:100%;
+  height:1px;background:var(--border);z-index:-1;transition:background .4s}
+.step.done:not(:last-child)::after{background:var(--primary)}
+.step-circle{width:26px;height:26px;border-radius:50%;background:var(--bg);
+  color:var(--muted);font-size:12px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+  border:1.5px solid var(--border-strong);transition:all .25s}
+.step.active .step-circle{background:var(--primary);color:#fff;border-color:var(--primary)}
+.step.done .step-circle{background:var(--primary);color:#fff;border-color:var(--primary)}
+.step-label{font-size:10px;color:var(--muted);margin-top:6px;font-weight:600;letter-spacing:.3px}
+.step.active .step-label,.step.done .step-label{color:var(--text)}
+
+.sec{background:var(--bg);margin:10px 0 0;padding:18px 22px;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.sec + .sec{margin-top:0;border-top:none}
+.sec-title{font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--muted);margin:0 0 14px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sec-action{font-size:12px;color:var(--primary-d);text-decoration:none;
+  font-weight:600;text-transform:none;letter-spacing:0;
+  padding:4px 10px;border:1px solid var(--border-strong);border-radius:6px;
+  transition:background .15s;background:var(--bg)}
+.sec-action:active{background:var(--soft)}
+
+.contract-doc{font-size:13px;line-height:1.55;color:var(--text)}
+.contract-doc h3{font-size:13px;font-weight:700;color:var(--primary-d);
+  margin:14px 0 6px;text-transform:uppercase;letter-spacing:.3px}
+.contract-doc h3:first-child{margin-top:0}
+.contract-doc p{margin:0 0 6px;text-align:justify}
+.contract-doc .preamble{margin-bottom:10px;color:var(--text)}
+details.contract-box{margin:0}
+details.contract-box > summary{cursor:pointer;list-style:none;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--muted);margin:0;user-select:none}
+details.contract-box[open] > summary{margin-bottom:14px}
+details.contract-box > summary::-webkit-details-marker{display:none}
+details.contract-box > summary .chev{font-size:12px;color:var(--primary-d);
+  text-transform:none;letter-spacing:0;font-weight:600}
+details.contract-box[open] > summary .chev::after{content:' ▲'}
+details.contract-box:not([open]) > summary .chev::after{content:' ▼'}
+
+.row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;gap:14px}
+.row:last-child{border-bottom:none;padding-bottom:0}
+.row:first-child{padding-top:0}
+.row .k{color:var(--muted);flex-shrink:0;font-weight:400}
+.row .v{text-align:right;font-weight:500;color:var(--text);word-break:break-word}
+.row .v.big{font-size:22px;color:var(--text);font-weight:700;letter-spacing:-.5px;
+  font-variant-numeric:tabular-nums}
+.row .v.mono{font-variant-numeric:tabular-nums}
+
+.item{display:flex;justify-content:space-between;align-items:flex-start;
+  padding:11px 0;border-bottom:1px solid var(--border);gap:14px}
+.item:last-child{border-bottom:none;padding-bottom:0}
+.item:first-child{padding-top:0}
+.item-info{flex:1;min-width:0}
+.item-name{font-size:14px;font-weight:500;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.item-meta{color:var(--muted);font-size:12px;margin-top:3px}
+.item-sum{font-weight:600;font-size:14px;white-space:nowrap;
+  font-variant-numeric:tabular-nums;color:var(--text)}
+
+.sch-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.sch-tbl th{color:var(--muted);font-weight:600;font-size:11px;
+  text-transform:uppercase;letter-spacing:.4px;
+  padding:0 6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.sch-tbl th:last-child,.sch-tbl td:last-child{text-align:right}
+.sch-tbl th:nth-child(3),.sch-tbl td:nth-child(3){text-align:right}
+.sch-tbl td{padding:10px 6px;border-bottom:1px solid var(--border);
+  font-variant-numeric:tabular-nums;color:var(--text)}
+.sch-tbl tr:last-child td{border-bottom:none}
+.td-n{color:var(--muted);font-weight:500;width:30px}
+.td-sum{font-weight:600}
+.td-bal{color:var(--muted)}
+
+.consent{background:var(--bg);border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  padding:18px 22px;margin-top:10px;cursor:pointer;
+  display:flex;gap:14px;align-items:flex-start;transition:background .15s;user-select:none}
+.consent:active{background:var(--soft)}
+.cb{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--border-strong);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);transition:all .2s;margin-top:1px}
+.consent.checked .cb{background:var(--primary);border-color:var(--primary)}
+.consent.checked .cb::after{content:'';width:6px;height:11px;border:solid #fff;
+  border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.consent-txt{font-size:14px;line-height:1.5;color:var(--text)}
+
+.otp{background:var(--bg);border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);padding:18px 22px;margin-top:10px}
+.otp-lbl{font-size:11px;color:var(--muted);font-weight:700;
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.otp-desc{font-size:13px;color:var(--muted);margin-bottom:14px}
+.otp-row{display:flex;gap:10px}
+.otp-input{flex:1;padding:14px 16px;border-radius:10px;
+  border:1.5px solid var(--border-strong);font-size:18px;letter-spacing:6px;
+  text-align:center;font-family:-apple-system,"SF Mono",ui-monospace,monospace;
+  font-weight:600;outline:none;transition:all .2s;
+  font-variant-numeric:tabular-nums;color:var(--text);background:var(--bg)}
+.otp-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(32,201,151,.12)}
+.otp-input.ok{border-color:var(--success)}
+.otp-input.err{border-color:var(--danger);animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}
+  75%{transform:translateX(4px)}}
+.otp-btn{padding:0 18px;border-radius:10px;border:1.5px solid var(--primary);
+  background:var(--bg);color:var(--primary-d);
+  font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
+  transition:all .15s;min-width:120px}
+.otp-btn:active:not(:disabled){background:var(--soft)}
+.otp-btn:disabled{opacity:.45;cursor:not-allowed;border-color:var(--border-strong);color:var(--muted)}
+.otp-msg{font-size:12px;margin-top:10px;min-height:18px}
+.otp-msg.ok{color:var(--success)}
+.otp-msg.err{color:var(--danger)}
+.otp-msg.info{color:var(--muted)}
+
+.ftr{position:fixed;bottom:0;left:0;right:0;
+  background:rgba(255,255,255,.96);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  padding:14px 22px calc(20px + env(safe-area-inset-bottom,0px));
+  border-top:1px solid var(--border);z-index:100}
+.ftr-inner{max-width:560px;margin:0 auto}
+.submit{width:100%;padding:15px;border-radius:10px;border:none;
+  background:var(--primary);color:#fff;font-size:15px;font-weight:600;
+  cursor:pointer;transition:background .15s;letter-spacing:-.1px}
+.submit:active:not(:disabled){background:var(--primary-d)}
+.submit:disabled{background:var(--border-strong);color:#fff;cursor:not-allowed}
+.submit-hint{text-align:center;font-size:11px;color:var(--muted);
+  margin-top:8px;letter-spacing:.2px}
+
+.toast{position:fixed;top:20px;left:50%;
+  transform:translateX(-50%) translateY(-120px);
+  background:var(--text);color:#fff;padding:12px 20px;border-radius:10px;
+  font-size:13px;font-weight:500;transition:transform .3s cubic-bezier(.34,1.3,.64,1);
+  z-index:300;max-width:90vw;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--danger)}
+.toast.ok{background:var(--success)}
+
+.success-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.success{text-align:center;padding:40px 24px;max-width:380px;width:100%}
+.success-check{width:54px;height:54px;border-radius:50%;
+  background:var(--primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 22px;font-size:24px;font-weight:600;line-height:1}
+.success h1{font-size:22px;margin:0 0 8px;letter-spacing:-.3px;font-weight:600}
+.success p{color:var(--muted);margin:0 0 6px;font-size:14px;line-height:1.55}
+.success-meta{color:var(--muted);font-size:12px;margin:16px 0 24px;
+  padding-top:16px;border-top:1px solid var(--border)}
+.success a{display:inline-block;padding:12px 22px;background:var(--text);color:#fff;
+  border-radius:10px;text-decoration:none;font-weight:500;
+  font-size:14px;transition:opacity .15s}
+.success a:active{opacity:.8}
+
+.loader{width:100%;padding:120px 0;text-align:center;color:var(--muted);font-size:13px}
+.spinner{width:28px;height:28px;border:2px solid var(--border);
+  border-top-color:var(--primary);border-radius:50%;
+  animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.err-page{padding:80px 24px;text-align:center}
+.err-page h2{font-size:18px;margin:0 0 8px;font-weight:600}
+.err-page p{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<div id="root">
+  <div class="loader">
+    <div class="spinner"></div>
+    <div>Загрузка договора…</div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+  const root = document.getElementById('root');
+  const toastEl = document.getElementById('toast');
+  const shortCode = window.location.pathname.split('/').filter(Boolean).pop();
+
+  const state = {
+    contract: null, consented: false,
+    otpSent: false, otpVerified: false, otpCooldown: 0, submitting: false
+  };
+
+  function toast(msg, type, ms){
+    type = type || ''; ms = ms || 2800;
+    toastEl.textContent = msg;
+    toastEl.className = 'toast ' + type + ' show';
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(function(){toastEl.classList.remove('show');}, ms);
+  }
+  function fmtMoney(n){
+    if(n==null) return '';
+    return Number(n).toLocaleString('ru-RU',{maximumFractionDigits:2});
+  }
+  function fmtDate(iso){
+    if(!iso) return '';
+    return new Date(iso).toLocaleDateString('ru-RU');
+  }
+  function esc(s){
+    if(s==null) return '';
+    return String(s).replace(/[&<>"']/g, function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+  function plural(n, forms){
+    n = Math.abs(n);
+    const m100 = n % 100, m10 = n % 10;
+    if (m100 >= 11 && m100 <= 14) return forms[2];
+    if (m10 === 1) return forms[0];
+    if (m10 >= 2 && m10 <= 4) return forms[1];
+    return forms[2];
+  }
+  function fmtTerm(count, firstISO, lastISO){
+    if (!count) return '—';
+    const pPay = plural(count, ['платёж','платежа','платежей']);
+    if (count <= 1 || !firstISO || !lastISO) return count + ' ' + pPay;
+    const f = new Date(firstISO), l = new Date(lastISO);
+    const days = Math.max(0, Math.round((l - f) / 86400000));
+    const months = Math.max(1, Math.round(days / 30));
+    const pMo = plural(months, ['месяц','месяца','месяцев']);
+    const pDn = plural(days, ['день','дня','дней']);
+    return count + ' ' + pPay + ' · ' + months + ' ' + pMo + ' (' + days + ' ' + pDn + ')';
+  }
+
+  function contractHtml(c){
+    const total = fmtMoney(c.total_amount);
+    const words = c.total_amount_words ? '('+esc(c.total_amount_words)+') ' : '';
+    const seller = esc(c.seller_fio||'Усманов Комолиддин Акмарижинович');
+    const seller_inn = esc(c.seller_inn||'21209200000252');
+    const seller_addr = esc(c.seller_address||'Ош обл. Араван Р-ну ул. Ош-3000 86');
+    const client = esc(c.client_fio||'—');
+    const city = esc(c.city||'с.Араван');
+    const dt = fmtDate(c.rtu_date);
+    const financed = c.total_amount - (c.initial_payment||0);
+    let pp = '';
+    if (c.client_passport_serial){
+      pp = ', паспорт ' + esc(c.client_passport_serial);
+      if (c.client_passport_date) pp += ' от ' + fmtDate(c.client_passport_date);
+      if (c.client_passport_issuer) pp += ', выдан ' + esc(c.client_passport_issuer);
+    }
+    if (c.client_inn) pp += ', ИНН ' + esc(c.client_inn);
+    const initial = c.initial_payment > 0
+      ? '<p>3.2. Первоначальный взнос составляет <b>'+fmtMoney(c.initial_payment)+' сом</b> и вносится Покупателем в день подписания настоящего Договора.</p>'
+      : '';
+    let guarantorSection = '';
+    let nextSec = 7;
+    if (c.guarantor_fio) {
+      let gInfo = esc(c.guarantor_fio);
+      if (c.guarantor_passport) gInfo += ', паспорт ' + esc(c.guarantor_passport);
+      if (c.guarantor_inn) gInfo += ', ИНН ' + esc(c.guarantor_inn);
+      if (c.guarantor_address) gInfo += ', адрес: ' + esc(c.guarantor_address);
+      if (c.guarantor_phone) gInfo += ', тел.: ' + esc(c.guarantor_phone);
+      guarantorSection = '<h3>7. Поручительство</h3>' +
+        '<p>7.1. За исполнение обязательств Покупателя поручается: <b>' + gInfo + '</b> (далее — «Поручитель»).</p>' +
+        '<p>7.2. Поручитель несёт солидарную ответственность с Покупателем за исполнение обязательств по настоящему Договору, включая уплату основного долга, неустойки и возмещение убытков.</p>' +
+        '<p>7.3. Поручительство действует до полного исполнения Покупателем обязательств по настоящему Договору.</p>';
+      nextSec = 8;
+    }
+    const numCopies = c.guarantor_fio ? 'трёх' : 'двух';
+    const copiesFor = c.guarantor_fio ? ', по одному для каждой из Сторон и Поручителя' : ', по одному для каждой из Сторон';
+    return [
+      '<p class="preamble"><b>',city,'</b>&nbsp;&nbsp;&nbsp;&nbsp;<b>',dt,'</b></p>',
+      '<p class="preamble"><b>',seller,'</b>, именуемый(-ая) в дальнейшем «Продавец», действующий(-ая) на основании свидетельства о государственной регистрации',seller_inn?' (ИНН '+seller_inn+')':'',', с одной стороны, и <b>',client,'</b>',pp,', именуемый(-ая) в дальнейшем «Покупатель», с другой стороны, совместно именуемые «Стороны», заключили настоящий Договор о нижеследующем:</p>',
+      '<h3>1. Предмет договора</h3>',
+      '<p>1.1. Продавец обязуется передать Покупателю товар(ы), указанный(-ые) в Приложении №1, в количестве и ассортименте согласно Приложению №1 к настоящему Договору (далее — «Товар»), а Покупатель обязуется принять и оплатить Товар на условиях рассрочки платежа.</p>',
+      '<p>1.2. Товар передаётся Покупателю в момент подписания настоящего Договора на условиях рассрочки в порядке, предусмотренном статьёй 3.</p>',
+      '<h3>2. Права и обязанности сторон</h3>',
+      '<p>2.1. Продавец обязуется:</p>',
+      '<p>2.1.1. В день подписания настоящего Договора передать Покупателю Товар по акту приёма-передачи. Место передачи: торговая точка Продавца по адресу: ',seller_addr,'.</p>',
+      '<p>2.1.2. Передать Товар надлежащего качества, в количестве и ассортименте, соответствующем Приложению №1.</p>',
+      '<p>2.1.3. Одновременно с передачей Товара передать Покупателю гарантийные обязательства и необходимую документацию на Товар.</p>',
+      '<p>2.2. Покупатель обязуется:</p>',
+      '<p>2.2.1. Принять Товар по акту приёма-передачи и оплатить его в порядке и сроки, установленные статьёй 3 настоящего Договора.</p>',
+      '<p>2.2.2. Бережно относиться к Товару до момента полной оплаты. Не передавать, не продавать и не сдавать в залог Товар до полного расчёта с Продавцом без его письменного согласия.</p>',
+      '<h3>3. Цена и порядок оплаты</h3>',
+      '<p>3.1. Общая стоимость Товара составляет <b>',total,' ',words,'сом</b>.</p>',
+      initial,
+      '<p>3.3. Оставшаяся сумма в размере <b>',fmtMoney(financed),' сом</b> выплачивается Покупателем в рассрочку согласно Графику погашения (Приложение №2).</p>',
+      '<p>3.4. Оплата производится путём внесения наличных денежных средств в кассу Продавца или путём перечисления на расчётный счёт (Элсом) Продавца.</p>',
+      '<p>3.5. Покупатель вправе досрочно погасить всю оставшуюся сумму без дополнительных комиссий и штрафов.</p>',
+      '<h3>4. Право собственности и залог</h3>',
+      '<p>4.1. Товар передаётся Покупателю в пользование с момента подписания акта приёма-передачи.</p>',
+      '<p>4.2. Право собственности на Товар переходит к Покупателю после полной оплаты его стоимости. До полной оплаты Товар остаётся в залоге у Продавца (статья 429 Гражданского кодекса Кыргызской Республики).</p>',
+      '<p>4.3. В случае полной оплаты Стороны подтверждают переход права собственности без оформления дополнительных документов.</p>',
+      '<h3>5. Ответственность сторон</h3>',
+      '<p>5.1. В случае просрочки очередного платежа Покупатель уплачивает Продавцу неустойку (пеню) в размере 0,1% от суммы просроченного платежа за каждый день просрочки, но не более 10% от суммы просроченного платежа.</p>',
+      '<p>5.2. В случае просрочки платежа свыше 30 (тридцати) календарных дней Продавец вправе потребовать досрочного возврата всей оставшейся суммы задолженности.</p>',
+      '<p>5.3. В случае просрочки свыше 60 (шестидесяти) календарных дней Продавец вправе в одностороннем порядке расторгнуть настоящий Договор с возвратом Товара. При этом ранее внесённые платежи возвращаются Покупателю за вычетом неустойки и стоимости износа Товара.</p>',
+      '<p>5.4. Продавец несёт ответственность за качество Товара в соответствии с Законом Кыргызской Республики «О защите прав потребителей».</p>',
+      '<h3>6. Обстоятельства непреодолимой силы</h3>',
+      '<p>6.1. Стороны освобождаются от ответственности за неисполнение обязательств, если оно вызвано обстоятельствами непреодолимой силы (форс-мажор): стихийные бедствия, военные действия, эпидемии, акты государственных органов, непосредственно препятствующие исполнению Договора.</p>',
+      '<p>6.2. Сторона, для которой наступили указанные обстоятельства, обязана уведомить другую Сторону в течение 5 (пяти) рабочих дней с момента их наступления.</p>',
+      '<p>6.3. Если обстоятельства непреодолимой силы продолжаются более 3 (трёх) месяцев, каждая из Сторон вправе расторгнуть настоящий Договор, уведомив другую Сторону в письменной форме.</p>',
+      guarantorSection,
+      '<h3>',nextSec,'. Дополнительные условия</h3>',
+      '<p>',nextSec,'.1. В случае замены Товара Продавцом по гарантии (полностью или частично) до полной оплаты, Стороны обязаны внести соответствующие изменения в Приложение №1 в течение 3 (трёх) рабочих дней с момента замены.</p>',
+      '<h3>',nextSec+1,'. Заключительные положения</h3>',
+      '<p>',nextSec+1,'.1. Настоящий Договор вступает в силу с момента его подписания обеими Сторонами и действует до полного исполнения Сторонами своих обязательств.</p>',
+      '<p>',nextSec+1,'.2. Все споры, возникающие из настоящего Договора, разрешаются путём переговоров. При недостижении согласия спор передаётся на рассмотрение суда по месту нахождения Продавца в соответствии с законодательством Кыргызской Республики.</p>',
+      '<p>',nextSec+1,'.3. Любые изменения и дополнения к настоящему Договору действительны при условии, что они совершены в письменной форме и подписаны Сторонами.</p>',
+      '<p>',nextSec+1,'.4. Все приложения к настоящему Договору являются его неотъемлемой частью.</p>',
+      '<p>',nextSec+1,'.5. Во всём, что не предусмотрено настоящим Договором, Стороны руководствуются действующим законодательством Кыргызской Республики.</p>',
+      '<p>',nextSec+1,'.6. Настоящий Договор составлен в ',numCopies,' экземплярах, имеющих одинаковую юридическую силу',copiesFor,'.</p>'
+    ].join('');
+  }
+
+  async function api(method, url, body){
+    const opts = {method:method, headers:{}};
+    if(body){
+      opts.headers['Content-Type']='application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const r = await fetch(url, opts);
+    let data = null;
+    try{ data = await r.json(); }catch(_){}
+    if(!r.ok){
+      const msg = (data && (data.detail||data.message)) || ('HTTP '+r.status);
+      throw new Error(typeof msg==='string'?msg:JSON.stringify(msg));
+    }
+    return data;
+  }
+
+  function setStep(n){
+    document.querySelectorAll('.step').forEach(function(el,i){
+      el.classList.remove('active','done');
+      if(i+1<n) el.classList.add('done');
+      else if(i+1===n) el.classList.add('active');
+    });
+  }
+  function currentStep(){
+    if(state.otpVerified) return 3;
+    if(state.consented) return 2;
+    return 1;
+  }
+  function refreshStep(){ setStep(currentStep()); }
+
+  async function load(){
+    try{
+      const c = await api('GET', '/c/'+shortCode+'/data');
+      state.contract = c;
+      if(c.status==='signed') return renderSuccess(c);
+      render();
+    }catch(e){
+      root.innerHTML = '<div class="err-page"><h2>Не удалось загрузить договор</h2><p>'+esc(e.message)+'</p></div>';
+    }
+  }
+
+  function renderSuccess(c){
+    root.innerHTML =
+      '<div class="success-wrap"><div class="success">'+
+      '<div class="success-check">&#10003;</div>'+
+      '<h1>Договор подписан</h1>'+
+      '<p>Спасибо. Копия отправлена в WhatsApp.</p>'+
+      '<div class="success-meta">№ '+esc(c.rtu_number)+' · '+fmtDate(c.signed_at||new Date().toISOString())+'</div>'+
+      '<a href="/c/'+shortCode+'/pdf" target="_blank" rel="noopener">Скачать PDF</a>'+
+      '</div></div>';
+  }
+
+  function render(){
+    const c = state.contract;
+    const items = c.items || [];
+    const sched = c.schedule || [];
+
+    const itemsHtml = items.map(function(it){
+      return '<div class="item">'+
+        '<div class="item-info">'+
+          '<div class="item-name">'+esc(it.name)+'</div>'+
+          '<div class="item-meta">'+it.qty+' × '+fmtMoney(it.price)+' сом</div>'+
+        '</div>'+
+        '<div class="item-sum">'+fmtMoney(it.sum)+' сом</div>'+
+      '</div>';
+    }).join('');
+
+    const schedHtml = sched.map(function(r){
+      return '<tr>'+
+        '<td class="td-n">'+r.n+'</td>'+
+        '<td>'+fmtDate(r.date)+'</td>'+
+        '<td class="td-sum">'+fmtMoney(r.amount)+'</td>'+
+        '<td class="td-bal">'+(r.balance>0?fmtMoney(r.balance):'—')+'</td>'+
+      '</tr>';
+    }).join('');
+
+    const termStr = fmtTerm(sched.length, sched[0]&&sched[0].date, sched.length&&sched[sched.length-1].date);
+    const initialRow = c.initial_payment>0
+      ? '<div class="row"><span class="k">Первоначальный взнос</span><span class="v mono">'+fmtMoney(c.initial_payment)+' сом</span></div>'
+      : '';
+    const wordsRow = c.total_amount_words
+      ? '<div class="row"><span class="k">Прописью</span><span class="v" style="font-size:12px;color:var(--muted);font-weight:400">'+esc(c.total_amount_words)+'</span></div>'
+      : '';
+    const itemsSec = items.length
+      ? '<div class="sec"><div class="sec-title">Товар · '+items.length+'</div>'+itemsHtml+'</div>'
+      : '';
+    const schedSec = sched.length
+      ? '<div class="sec"><div class="sec-title"><span>График погашения</span>'+
+        '<a class="sec-action" href="/c/'+shortCode+'/schedule.pdf" target="_blank" rel="noopener">Скачать</a></div>'+
+        '<table class="sch-tbl"><thead><tr><th>№</th><th>Дата</th><th>Сумма</th><th>Остаток</th></tr></thead>'+
+        '<tbody>'+schedHtml+'</tbody></table></div>'
+      : '';
+    const passportRow = c.client_passport_serial
+      ? '<div class="row"><span class="k">Паспорт</span><span class="v">'+esc(c.client_passport_serial)+'</span></div>' : '';
+    const addressRow = c.client_address
+      ? '<div class="row"><span class="k">Адрес</span><span class="v">'+esc(c.client_address)+'</span></div>' : '';
+    const sellerInnRow = c.seller_inn
+      ? '<div class="row"><span class="k">ИНН</span><span class="v mono">'+esc(c.seller_inn)+'</span></div>' : '';
+    const sellerAddrRow = c.seller_address
+      ? '<div class="row"><span class="k">Адрес</span><span class="v">'+esc(c.seller_address)+'</span></div>' : '';
+
+    root.innerHTML =
+      '<div class="app">'+
+        '<div class="hdr">'+
+          '<div class="hdr-top"><span class="hdr-dot"></span><span>Смарт Центр</span></div>'+
+          '<h1>Договор рассрочки</h1>'+
+          '<div class="hdr-meta">№ '+esc(c.rtu_number)+' · '+fmtDate(c.rtu_date)+'</div>'+
+        '</div>'+
+
+        '<div class="progress"><div class="progress-steps">'+
+          '<div class="step active"><div class="step-circle">1</div><div class="step-label">Читаю</div></div>'+
+          '<div class="step"><div class="step-circle">2</div><div class="step-label">Согласие</div></div>'+
+          '<div class="step"><div class="step-circle">3</div><div class="step-label">Код</div></div>'+
+        '</div></div>'+
+
+        '<div class="sec">'+
+          '<div class="sec-title">Сумма к оплате</div>'+
+          '<div class="row"><span class="k">Итого</span><span class="v big">'+fmtMoney(c.total_amount)+' '+esc(c.currency||'сом')+'</span></div>'+
+          initialRow+
+          '<div class="row"><span class="k">Рассрочка</span><span class="v">'+termStr+'</span></div>'+
+          wordsRow+
+        '</div>'+
+
+        itemsSec + schedSec +
+
+        '<div class="sec">'+
+          '<div class="sec-title">Покупатель</div>'+
+          '<div class="row"><span class="k">ФИО</span><span class="v">'+esc(c.client_fio)+'</span></div>'+
+          passportRow + addressRow +
+          '<div class="row"><span class="k">Телефон</span><span class="v mono">'+esc(c.client_phone_masked)+'</span></div>'+
+        '</div>'+
+
+        '<div class="sec">'+
+          '<div class="sec-title">Продавец</div>'+
+          '<div class="row"><span class="k">Организация</span><span class="v">'+esc(c.seller_fio)+'</span></div>'+
+          sellerInnRow + sellerAddrRow +
+        '</div>'+
+
+        '<div class="sec">'+
+          '<details class="contract-box">'+
+            '<summary><span>Текст договора</span><span class="chev">Показать</span></summary>'+
+            '<div class="contract-doc">'+contractHtml(c)+'</div>'+
+          '</details>'+
+        '</div>'+
+
+        '<div id="consent" class="consent">'+
+          '<div class="cb"></div>'+
+          '<div class="consent-txt">Я ознакомлен(а) с условиями договора и графиком погашения, согласен(на) подписать его электронной подписью с подтверждением через WhatsApp.</div>'+
+        '</div>'+
+
+        '<div class="otp">'+
+          '<div class="otp-lbl">Код подтверждения</div>'+
+          '<div class="otp-desc">Придёт в WhatsApp на '+esc(c.client_phone_masked)+'</div>'+
+          '<div class="otp-row">'+
+            '<input id="otpCode" class="otp-input" type="tel" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">'+
+            '<button id="otpSend" class="otp-btn" type="button">Получить код</button>'+
+          '</div>'+
+          '<div id="otpMsg" class="otp-msg"></div>'+
+        '</div>'+
+      '</div>'+
+
+      '<div class="ftr"><div class="ftr-inner">'+
+        '<button id="submit" class="submit" disabled>Подписать договор</button>'+
+        '<div class="submit-hint">Подписывая, вы соглашаетесь с условиями договора</div>'+
+      '</div></div>';
+
+    setupConsent();
+    setupOtp();
+    setupSubmit();
+    refreshStep();
+  }
+
+  function setupConsent(){
+    const el = document.getElementById('consent');
+    el.addEventListener('click', function(){
+      state.consented = !state.consented;
+      el.classList.toggle('checked', state.consented);
+      updateSubmit(); refreshStep();
+    });
+  }
+
+  function setupOtp(){
+    const sendBtn = document.getElementById('otpSend');
+    const input = document.getElementById('otpCode');
+    const msg = document.getElementById('otpMsg');
+
+    sendBtn.addEventListener('click', async function(){
+      sendBtn.disabled = true;
+      msg.className='otp-msg info'; msg.textContent='Отправка…';
+      try{
+        await api('POST', '/c/'+shortCode+'/send-otp');
+        msg.className='otp-msg ok';
+        msg.textContent='Код отправлен в WhatsApp';
+        state.otpSent=true;
+        startCooldown(60);
+        input.focus();
+      }catch(e){
+        const text = e.message==='wait_60s' ? 'Подождите 60 секунд' : ('Ошибка: '+e.message);
+        msg.className='otp-msg err'; msg.textContent=text;
+        sendBtn.disabled=false;
+      }
+    });
+
+    input.addEventListener('input', async function(){
+      const v = input.value.replace(/\D/g,'').slice(0,6);
+      input.value = v;
+      input.classList.remove('ok','err');
+      if(v.length===6){
+        try{
+          await api('POST', '/c/'+shortCode+'/verify-otp', {code:v});
+          state.otpVerified=true;
+          msg.className='otp-msg ok';
+          msg.textContent='Код подтверждён';
+          input.classList.add('ok');
+          input.blur();
+          updateSubmit(); refreshStep();
+        }catch(e){
+          state.otpVerified=false;
+          msg.className='otp-msg err';
+          msg.textContent = e.message==='wrong_code'?'Неверный код':'Ошибка: '+e.message;
+          input.classList.add('err');
+          updateSubmit();
+        }
+      } else {
+        state.otpVerified=false;
+        updateSubmit();
+      }
+    });
+  }
+
+  function startCooldown(sec){
+    const btn = document.getElementById('otpSend');
+    state.otpCooldown = sec;
+    function tick(){
+      if(state.otpCooldown<=0){
+        btn.textContent='Получить код';
+        btn.disabled=false; return;
+      }
+      btn.textContent = state.otpCooldown+' с';
+      state.otpCooldown--;
+      setTimeout(tick,1000);
+    }
+    btn.disabled=true; tick();
+  }
+
+  function updateSubmit(){
+    const btn = document.getElementById('submit');
+    if(!btn) return;
+    const ok = state.consented && state.otpVerified && !state.submitting;
+    btn.disabled = !ok;
+  }
+
+  function setupSubmit(){
+    document.getElementById('submit').addEventListener('click', async function(){
+      if(state.submitting) return;
+      state.submitting=true;
+      const btn = document.getElementById('submit');
+      btn.disabled=true; btn.textContent='Подписание…';
+      try{
+        await api('POST', '/c/'+shortCode+'/sign', {});
+        toast('Договор подписан', 'ok');
+        setTimeout(function(){
+          renderSuccess(Object.assign({}, state.contract, {status:'signed', signed_at:new Date().toISOString()}));
+        }, 600);
+      }catch(e){
+        state.submitting=false;
+        btn.disabled=false; btn.textContent='Подписать договор';
+        toast('Ошибка: '+e.message, 'err', 4000);
+      }
+    });
+  }
+
+  load();
+})();
+</script>
+
+</body>
+</html>

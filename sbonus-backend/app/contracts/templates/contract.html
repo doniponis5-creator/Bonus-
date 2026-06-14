@@ -1,0 +1,288 @@
+{# Договор купли-продажи с рассрочкой платежа — Jinja2 шаблон для PDF #}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Договор №{{ c.rtu_number }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 18mm;
+    @bottom-center {
+      content: "Стр. " counter(page) " из " counter(pages);
+      font-family: "DejaVu Sans", sans-serif;
+      font-size: 9pt;
+      color: #888;
+    }
+  }
+  body {
+    font-family: "DejaVu Sans", "Times New Roman", serif;
+    font-size: 10.5pt;
+    line-height: 1.35;
+    color: #000;
+  }
+  h1 { font-size: 13pt; text-align: center; margin: 0 0 14px; }
+  h2 { font-size: 11pt; margin: 14px 0 6px; }
+  .header-row {
+    display: flex; justify-content: space-between;
+    font-weight: bold; margin-bottom: 10px;
+  }
+  p { margin: 4px 0; text-align: justify; }
+  .signatures {
+    margin-top: 28px;
+    display: table; width: 100%;
+  }
+  .sig-col {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+    padding-right: 18px;
+  }
+  .sig-line {
+    border-top: 1px solid #000;
+    margin-top: 38px;
+    padding-top: 4px;
+    font-size: 9pt;
+    color: #555;
+  }
+  .signed-img {
+    max-height: 60px;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .seal {
+    margin-top: 12px;
+    font-size: 8.5pt;
+    color: #666;
+    border: 1px dashed #888;
+    padding: 6px 8px;
+    background: #fafafa;
+  }
+  table.items {
+    width: 100%; border-collapse: collapse; margin-top: 8px;
+  }
+  table.items th, table.items td {
+    border: 1px solid #000; padding: 4px 6px; font-size: 10pt;
+  }
+  table.items th { background: #f0f0f0; }
+  table.items td.num { text-align: right; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+{# ═══════════════════ СТРАНИЦА 1: ДОГОВОР ═══════════════════ #}
+<h1>Договор купли-продажи товара №{{ c.rtu_number }} с рассрочкой платежа</h1>
+
+<div class="header-row">
+  <span>{{ c.city }}</span>
+  <span>{{ rtu_date_human }}</span>
+</div>
+
+<p>
+  Индивидуальный предприниматель, именуемый в дальнейшем «Продавец», в лице
+  <b>{{ c.seller_fio }}</b>, действующего на основании устава, с одной стороны, и
+  <b>{{ c.client_fio }}</b>{% if c.client_passport_serial %} паспорт {{ c.client_passport_serial }}{% if c.client_passport_date %} от {{ c.client_passport_date|date_ru }}{% endif %}{% if c.client_passport_issuer %} Выдан {{ c.client_passport_issuer }}{% endif %}{% endif %}{% if c.client_inn %}, ИНН {{ c.client_inn }}{% endif %}, именуемый в дальнейшем «Покупатель», с другой стороны, именуемые в дальнейшем «Стороны», заключили настоящий Договор о нижеследующем:
+</p>
+
+<h2>1. Предмет Договора</h2>
+<p>1.1. Продавец обязуется передать Покупателю товары, указанные в Приложении №1, в количестве и ассортименте, согласно Приложению №1 к настоящему Договору (далее — Товар), а Покупатель обязуется принять и оплатить Товар.</p>
+<p>1.2. Товар передаётся Покупателю на условиях рассрочки платежа за Товар в порядке, предусмотренном настоящим Договором.</p>
+
+<h2>2. Права и обязанности Сторон</h2>
+<p>2.1. Продавец обязуется:</p>
+<p>2.1.1. В течение 3 (трёх) рабочих дней с даты подписания настоящего Договора передать Покупателю Товар. Передача Товара производится согласно товарной накладной, подписываемой представителями обеих Сторон. Место передачи Товара: торговая точка (склад) продавца, расположенный по адресу: {{ c.seller_address }}.</p>
+<p>2.1.2. Передать Товар в количестве и ассортименте, соответствующем Приложению №1 к настоящему Договору.</p>
+<p>2.1.3. Одновременно с передачей Товара передать Покупателю всю необходимую документацию на Товар.</p>
+<p>2.2. Покупатель обязуется:</p>
+<p>2.2.1. Принять Товар и оплатить его на согласованных в статье 3 настоящего Договора условиях.</p>
+
+<h2>3. Цена и порядок оплаты</h2>
+<p>3.1. Цена Товара составляет <b>{{ c.total_amount|money }} ({{ c.total_amount_words }})</b>. Оплата производится путём перечисления денежных средств на счёт Продавца, указанный в договоре, или путём внесения наличных денежных средств в кассу продавца. График погашения указан в Приложении №2 к настоящему Договору.</p>
+<p>3.2. Покупатель имеет право досрочно оплатить Продавцу всю сумму договора.</p>
+{% if c.initial_payment and c.initial_payment > 0 %}
+<p>3.3. Первоначальный взнос составляет <b>{{ c.initial_payment|money }} сом</b> и вносится Покупателем в момент подписания настоящего Договора.</p>
+{% endif %}
+<p>3.4. Срок рассрочки: <b>{{ c.term_months }}</b> месяц(ев).</p>
+
+<h2>4. Переход права собственности</h2>
+<p>4.1. Право собственности на Товар переходит от Продавца к Покупателю с момента подписания Сторонами акта приёма-передачи Товара.</p>
+<p>4.2. Стороны обязаны подписать акт приёма-передачи товара в течение 3 (трёх) рабочих дней с момента оплаты Покупателем всей суммы договора, указанной в п. 3.1.</p>
+
+<h2>5. Ответственность Сторон</h2>
+<p>5.1. Сумма задолженности, подлежащая уплате Продавцу, выплачивается Покупателем с учётом индекса роста потребительских цен, рассчитанного государственными органами статистики.</p>
+
+<h2>6. Обстоятельства непреодолимой силы</h2>
+<p>6.1. Стороны освобождаются от ответственности за неисполнение или ненадлежащее исполнение своих обязательств по настоящему Договору в случае действия обстоятельств непреодолимой силы.</p>
+<p>6.2. К таким обстоятельствам относятся: война и военные действия, восстание, эпидемии, землетрясения, наводнения, акты органов власти, прямо затрагивающие предмет настоящего Договора.</p>
+<p>6.3. Сторона, подвергшаяся действию таких обстоятельств, обязана немедленно в письменном виде уведомить другую Сторону.</p>
+
+<h2>7. Заключительные положения</h2>
+<p>7.1. Настоящий Договор вступает в силу с момента его подписания и действует до полного исполнения Сторонами своих обязательств.</p>
+<p>7.2. Споры и разногласия решаются Сторонами путём переговоров. В случае не достижения согласия спор передаётся на рассмотрение арбитражного суда.</p>
+<p>7.3. Любые изменения и дополнения к настоящему Договору действительны, только если они составлены в письменной форме и подписаны Сторонами.</p>
+<p>7.4. Во всём, что не оговорено в настоящем Договоре, Стороны руководствуются действующим законодательством Кыргызской Республики.</p>
+<p>7.5. Настоящий Договор составлен в трёх экземплярах, имеющих одинаковую юридическую силу, по одному экземпляру для каждой из Сторон.</p>
+
+<div class="signatures">
+  <div class="sig-col">
+    <b>Продавец:</b><br>
+    {{ c.seller_fio }}<br>
+    {{ c.seller_address }}<br>
+    {% if c.seller_inn %}ИНН {{ c.seller_inn }}<br>{% endif %}
+    {% if c.seller_account %}Р/с Элсом {{ c.seller_account }}{% endif %}
+    <div class="sig-line">подпись Продавца</div>
+  </div>
+  <div class="sig-col">
+    <b>Покупатель:</b><br>
+    {{ c.client_fio }}<br>
+    Адрес: {{ c.client_address or '—' }}<br>
+    Тел: {{ c.client_phone }}<br>
+    Паспорт {{ c.client_passport_serial or '—' }}{% if c.client_passport_date %} от {{ c.client_passport_date|date_ru }}{% endif %}{% if c.client_passport_issuer %} Выдан {{ c.client_passport_issuer }}{% endif %}<br>
+    {% if c.client_inn %}ИНН {{ c.client_inn }}{% endif %}
+    {% if signature_b64 %}
+      <img class="signed-img" src="{{ signature_b64 }}" alt="Подпись">
+    {% endif %}
+    <div class="sig-line">подпись и ФИО покупателя</div>
+    {% if c.signed_at %}
+      <div class="seal">
+        ✅ ЭЛЕКТРОННАЯ ПОДПИСЬ<br>
+        Подписано: {{ signed_at_human }}<br>
+        IP: {{ c.signature_ip }}<br>
+        OTP подтверждён через WhatsApp
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if c.guarantor_fio %}
+<div style="margin-top: 28px;">
+  <b>Поручитель:</b><br>
+  {{ c.guarantor_fio }}<br>
+  Адрес: {{ c.guarantor_address or '—' }}, Тел: {{ c.guarantor_phone or '—' }}<br>
+  Паспорт {{ c.guarantor_passport or '—' }}{% if c.guarantor_inn %} ИНН {{ c.guarantor_inn }}{% endif %}
+  <div class="sig-line">подпись и ФИО поручителя</div>
+</div>
+{% endif %}
+
+{# ═══════════════════ СТРАНИЦА 2: АКТ ПРИЁМКИ ═══════════════════ #}
+<div class="page-break"></div>
+<h1>Акт приёмки-передачи товара от Продавца Клиенту</h1>
+
+<div class="header-row">
+  <span>{{ c.city }}</span>
+  <span>{{ rtu_date_human }}</span>
+</div>
+<p style="text-align: right; font-style: italic;">Приложение №1</p>
+
+<table style="width: 100%; margin-bottom: 12px;">
+  <tr><td style="width: 35%;"><b>Продавец</b></td><td>{{ c.seller_fio }}</td></tr>
+  <tr><td><b>ФИО Клиента</b></td><td>{{ c.client_fio }}</td></tr>
+  <tr><td><b>Адрес торг.точки (склада)</b></td><td>{{ c.seller_address }}</td></tr>
+  <tr><td><b>Телефон клиента</b></td><td>{{ c.client_phone }}</td></tr>
+</table>
+
+<table class="items">
+  <thead>
+    <tr><th>№</th><th>Наименование товара</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+  </thead>
+  <tbody>
+    {% for it in c['items'] %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ it.name }}</td>
+      <td class="num">{{ it.qty }}</td>
+      <td class="num">{{ it.price|money }}</td>
+      <td class="num">{{ it.sum|money }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+      <td colspan="2" style="text-align: right;"><b>Всего:</b></td>
+      <td class="num"><b>{{ c['items']|sum_qty }}</b></td>
+      <td></td>
+      <td class="num"><b>{{ c.total_amount|money }}</b></td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="margin-top: 14px;">
+  Я, <b>{{ c.client_fio }}</b>, не имею никаких претензий по качеству и
+  количеству или по другим параметрам к передаваемому мне товару.
+</p>
+<p><b>Общая сумма:</b> {{ c.total_amount|money }} ({{ c.total_amount_words }})</p>
+
+<div class="signatures">
+  <div class="sig-col">
+    <b>Продавец:</b><br>
+    {{ c.seller_fio }}<br>
+    {{ c.seller_address }}<br>
+    {% if c.seller_inn %}ИНН {{ c.seller_inn }}<br>{% endif %}
+    {% if c.seller_account %}Р/с Элсом {{ c.seller_account }}{% endif %}
+    <div class="sig-line">подпись Продавца</div>
+  </div>
+  <div class="sig-col">
+    <b>Покупатель:</b><br>
+    {{ c.client_fio }}<br>
+    Адрес: {{ c.client_address or '—' }}<br>
+    Тел: {{ c.client_phone }}<br>
+    Паспорт {{ c.client_passport_serial or '—' }}{% if c.client_passport_date %} от {{ c.client_passport_date|date_ru }}{% endif %}{% if c.client_passport_issuer %} Выдан {{ c.client_passport_issuer }}{% endif %}<br>
+    {% if c.client_inn %}ИНН {{ c.client_inn }}{% endif %}
+    {% if signature_b64 %}
+      <img class="signed-img" src="{{ signature_b64 }}" alt="Подпись">
+    {% endif %}
+    <div class="sig-line">подпись и ФИО покупателя</div>
+  </div>
+</div>
+
+{# ═══════════════════ СТРАНИЦА 3: ГРАФИК ═══════════════════ #}
+<div class="page-break"></div>
+<h1>График погашения рассрочки</h1>
+<p style="text-align: center;">
+  Договор купли-продажи товара №{{ c.rtu_number }} с рассрочкой платежа<br>
+  от {{ rtu_date_human }}<br>
+  <b>Дата полного погашения: {{ last_payment_date_human }}</b>
+</p>
+<p style="text-align: right; font-style: italic;">Приложение №2</p>
+
+<p><b>На сумму:</b> {{ financed_amount|money }} сом &nbsp;&nbsp; <b>Срок:</b> {{ c.term_months }} месяц(ев)<br>
+<b>ФИО Клиента:</b> {{ c.client_fio }}</p>
+
+<table class="items">
+  <thead>
+    <tr>
+      <th style="width: 6%;">№</th>
+      <th style="width: 28%;">Дата платежа</th>
+      <th style="width: 30%;">Сумма к оплате</th>
+      <th style="width: 36%;">Ост. осн. долга после погашения</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in c.schedule %}
+    <tr>
+      <td class="num">{{ row.n }}</td>
+      <td>{{ row.date|date_ru }}</td>
+      <td class="num">{{ row.amount|money }}</td>
+      <td class="num">{{ row.balance|money if row.balance > 0 else '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="signatures">
+  <div class="sig-col">
+    <b>Продавец:</b><br>
+    {{ c.seller_fio }}
+    <div class="sig-line">подпись Продавца</div>
+  </div>
+  <div class="sig-col">
+    <b>Покупатель:</b><br>
+    {{ c.client_fio }}
+    {% if signature_b64 %}
+      <img class="signed-img" src="{{ signature_b64 }}" alt="Подпись">
+    {% endif %}
+    <div class="sig-line">подпись и ФИО покупателя</div>
+  </div>
+</div>
+
+</body>
+</html>

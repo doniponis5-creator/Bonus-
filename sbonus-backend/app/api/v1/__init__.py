@@ -16,6 +16,7 @@ from app.api.v1.telegram import router as telegram_router
 from app.api.v1.telegram import customer_bot_router
 from app.api.v1.wa_broadcast import router as wa_broadcast_router
 from app.api.v1.webhook import router as webhook_router
+from app.contracts import router_1c as contracts_1c_router
 from app.api.v1.wheel import router as wheel_router
 from app.api.v1.push import router as push_router
 from app.api.v1.analytics import router as analytics_router
@@ -44,6 +45,7 @@ api_router.include_router(auth_router)
 api_router.include_router(customers_router)
 api_router.include_router(bonus_router)
 api_router.include_router(webhook_router)
+api_router.include_router(contracts_1c_router)
 api_router.include_router(admin_router)
 api_router.include_router(cashier_bonus_router)
 api_router.include_router(campaigns_router)
