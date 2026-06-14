@@ -38,6 +38,7 @@ from app.api.v1.branch_analytics import router as branch_analytics_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.smart_campaigns import router as smart_campaigns_router
 from app.api.v1.reports import router as reports_router
+from app.api.v1.shifts import router as shifts_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -75,3 +76,4 @@ api_router.include_router(branch_analytics_router)
 api_router.include_router(feedback_router)
 api_router.include_router(smart_campaigns_router)
 api_router.include_router(reports_router)
+api_router.include_router(shifts_router)

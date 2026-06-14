@@ -155,3 +155,16 @@ export const upsellAPI = {
   suggestions: (customerId: string) =>
     api.get(`/api/v1/cashier/products/upsell/${customerId}`, { params: { limit: 3 } }),
 };
+
+// ═══════════════════════════════════════
+// SHIFTS API (смены / инкассация)
+// ═══════════════════════════════════════
+
+export const shiftsAPI = {
+  rate: () => api.get('/api/v1/shifts/rate'),
+  current: () => api.get('/api/v1/shifts/current'),
+  open: (opening_balance: number) =>
+    api.post('/api/v1/shifts/open', { opening_balance }),
+  close: (denominations: Record<string, number>, note?: string) =>
+    api.post('/api/v1/shifts/close', { denominations, note: note || null }),
+};

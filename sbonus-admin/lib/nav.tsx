@@ -29,6 +29,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/transactions', icon: CreditCard, label: 'Транзакции', desc: 'Все операции' },
       { href: '/branches', icon: Store, label: 'Филиалы', desc: 'Магазины' },
       { href: '/cashiers', icon: Briefcase, label: 'Кассиры', desc: 'Сотрудники' },
+      { href: '/shifts', icon: Wallet, label: 'Смены / Касса', desc: 'Закрытие, инкассация' },
       { href: '/tiers', icon: Trophy, label: 'Уровни', desc: 'Bronze→Platinum' },
     ],
   },

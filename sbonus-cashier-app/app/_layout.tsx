@@ -25,6 +25,8 @@ import HistoryScreen from './(main)/history';
 import MotivationScreen from './(main)/motivation';
 import ProductsScreen from './(main)/products';
 import DebtCheckScreen from './(main)/debt-check';
+import ShiftOpenScreen from './(main)/shift-open';
+import ShiftCloseScreen from './(main)/shift-close';
 
 const Stack = createNativeStackNavigator();
 const queryClient = new QueryClient();
@@ -68,6 +70,8 @@ export default function RootLayout() {
           <Stack.Screen name="Products" component={ProductsScreen} options={{ headerShown: false, title: 'Товары' }} />
           <Stack.Screen name="Motivation" component={MotivationScreen} options={{ headerShown: true, title: 'Моя мотивация' }} />
           <Stack.Screen name="DebtCheck" component={DebtCheckScreen} options={{ headerShown: false, title: 'Проверка клиента' }} />
+          <Stack.Screen name="ShiftOpen" component={ShiftOpenScreen} options={{ headerShown: true, title: 'Открытие смены' }} />
+          <Stack.Screen name="ShiftClose" component={ShiftCloseScreen} options={{ headerShown: true, title: 'Закрытие смены' }} />
         </Stack.Navigator>
       </NavigationContainer>
       <Toast />

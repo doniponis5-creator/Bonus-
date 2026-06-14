@@ -941,3 +941,63 @@ class CustomerAchievement(Base):
     # Relationships
     achievement: Mapped["Achievement"] = relationship(back_populates="unlocks")
     customer: Mapped["Customer"] = relationship()
+
+
+# ═══════════════════════════════════════════
+# СМЕНЫ / ИНКАССАЦИЯ (закрытие кассы)
+# ═══════════════════════════════════════════
+
+class ShiftStatus(str, enum.Enum):
+    """Статус кассовой смены."""
+    OPEN = "open"
+    CLOSED = "closed"
+
+
+class Shift(Base):
+    """
+    Кассовая смена — открытие/закрытие кассы с пересчётом наличных.
+    Денежные суммы — Decimal(12,2). Купюры считаются по номиналам KGS
+    (5000/2000/1000/500/200/100/50/20). USD — справочный эквивалент по курсу.
+    """
+    __tablename__ = "shifts"
+    __table_args__ = (
+        Index("ix_shifts_branch_id", "branch_id"),
+        Index("ix_shifts_cashier_id", "cashier_id"),
+        Index("ix_shifts_status", "status"),
+        Index("ix_shifts_opened_at", "opened_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    branch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=True)
+    cashier_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=ShiftStatus.OPEN.value, server_default=ShiftStatus.OPEN.value)
+
+    # Открытие
+    opening_balance: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Закрытие — пересчёт наличных
+    denominations: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # {"5000": 3, "2000": 1, ...}
+    total_counted: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)   # факт (пересчитано)
+    cash_sales: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))  # продажи за смену (нал.)
+    total_expected: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)  # ожидалось = opening + cash_sales
+    difference: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)       # факт - ожидалось
+
+    # Доллар (справочно)
+    usd_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    usd_equivalent: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)  # причина расхождения (обязательна при diff != 0)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Правка админом (после закрытия кассир править не может)
+    edited_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships (одно-направленные, без back_populates чтобы не трогать Branch/User)
+    branch: Mapped["Branch | None"] = relationship("Branch", foreign_keys=[branch_id])
+    cashier: Mapped["User"] = relationship("User", foreign_keys=[cashier_id])
+    editor: Mapped["User | None"] = relationship("User", foreign_keys=[edited_by])

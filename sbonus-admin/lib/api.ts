@@ -427,3 +427,19 @@ export const reportsAPI = {
   daily: (date?: string) => api.get('/api/v1/reports/daily' + (date ? `?date=${date}` : ''), { responseType: 'blob' }),
   monthly: (month?: string) => api.get('/api/v1/reports/monthly' + (month ? `?month=${month}` : ''), { responseType: 'blob' }),
 };
+
+// ─── Смены / Инкассация ───
+export const shiftsAPI = {
+  list: (params: Record<string, any> = {}) =>
+    api.get('/api/v1/shifts', { params }),
+  detail: (id: string) => api.get(`/api/v1/shifts/${id}`),
+  stats: (params: Record<string, any> = {}) =>
+    api.get('/api/v1/shifts/stats', { params }),
+  config: () => api.get('/api/v1/shifts/config'),
+  saveConfig: (usd_rate: number, alert_threshold: number) =>
+    api.put('/api/v1/shifts/config', { usd_rate, alert_threshold }),
+  edit: (id: string, body: { denominations?: Record<string, number>; opening_balance?: number; note?: string }) =>
+    api.patch(`/api/v1/shifts/${id}`, body),
+  export: (fmt: 'csv' | 'xlsx', params: Record<string, any> = {}) =>
+    api.get('/api/v1/shifts/export', { params: { fmt, ...params }, responseType: 'blob' }),
+};
