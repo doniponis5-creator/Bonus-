@@ -31,6 +31,13 @@ const PRESETS = [
   { label: '30×20', w: 30, h: 20 },
 ];
 
+// Уровни жирности шрифта (вес + лёгкая обводка глифов для термопечати).
+const BOLD = [
+  { label: 'Обычный', nameW: 700, newW: 800, oldW: 600, stroke: 0 },
+  { label: 'Жирный',  nameW: 800, newW: 900, oldW: 700, stroke: 0 },
+  { label: 'Жирнее',  nameW: 900, newW: 900, oldW: 700, stroke: 0.12 },
+];
+
 export default function PriceTagPrint({
   name, oldPrice, newPrice, discount,
 }: { name: string; oldPrice: number; newPrice: number; discount: number }) {
@@ -40,10 +47,14 @@ export default function PriceTagPrint({
   const [qty, setQty] = useState(1);
   const [showOld, setShowOld] = useState(true);
   const [showBadge, setShowBadge] = useState(true);
+  const [boldIdx, setBoldIdx] = useState(1); // по умолчанию «Жирный»
+  const [fontScale, setFontScale] = useState(1); // масштаб шрифта 0.7–1.5
 
   const hasDiscount = discount > 0 && newPrice < oldPrice;
   const withOld = hasDiscount && showOld;
   const withBadge = hasDiscount && showBadge;
+  const b = BOLD[boldIdx];
+  const strokeCss = (mm: number) => (mm > 0 ? `-webkit-text-stroke:${mm}mm #1a1a1a;` : '');
 
   const PX = 3.78; // мм → px (96 dpi)
   const newFontMm = withOld ? 8.5 * (w / 58) : 10 * (w / 58);
@@ -68,12 +79,12 @@ export default function PriceTagPrint({
       `.tag{position:relative;width:${w}mm;height:${h}mm;border:1.5px solid #1a1a1a;` +
       `border-radius:${(cell * 0.6).toFixed(2)}mm;display:flex;flex-direction:column;overflow:hidden;page-break-after:always;}` +
       '.tag:last-child{page-break-after:auto;}' +
-      `.name{flex:1;display:flex;align-items:center;padding:0 2.5mm;font-weight:700;` +
-      `font-size:${nameFontMm(name, w).toFixed(2)}mm;line-height:1.05;color:#1a1a1a;}` +
+      `.name{flex:1;display:flex;align-items:center;padding:0 2.5mm;font-weight:${b.nameW};${strokeCss(b.stroke)}` +
+      `font-size:${(nameFontMm(name, w) * fontScale).toFixed(2)}mm;line-height:1.05;color:#1a1a1a;}` +
       '.price{flex:1;border-top:1.5px solid #1a1a1a;display:flex;flex-direction:column;' +
       'align-items:center;justify-content:center;gap:0.4mm;}' +
-      '.old{font-size:3.4mm;font-weight:600;color:#555;text-decoration:line-through;}' +
-      `.new{font-weight:800;font-size:${newFontMm.toFixed(2)}mm;color:#1a1a1a;letter-spacing:-0.3mm;}` +
+      `.old{font-size:${(3.4 * fontScale).toFixed(2)}mm;font-weight:${b.oldW};color:#555;text-decoration:line-through;}` +
+      `.new{font-weight:${b.newW};font-size:${(newFontMm * fontScale).toFixed(2)}mm;color:#1a1a1a;letter-spacing:-0.3mm;${strokeCss(b.stroke)}}` +
       '.badge{position:absolute;top:0;right:0;background:#e11d48;color:#fff;font-weight:800;' +
       'font-size:3mm;padding:0.6mm 1.6mm;border-bottom-left-radius:1.5mm;}' +
       `</style></head><body>${tags}</body></html>`
@@ -125,19 +136,20 @@ export default function PriceTagPrint({
               }}>−{Math.round(discount)}%</div>
             )}
             <div style={{
-              flex: 1, display: 'flex', alignItems: 'center', padding: '0 9px', fontWeight: 700,
-              fontSize: nameFontMm(name, w) * PX, lineHeight: 1.05, color: '#1a1a1a', overflow: 'hidden',
+              flex: 1, display: 'flex', alignItems: 'center', padding: '0 9px',
+              fontSize: nameFontMm(name, w) * PX * fontScale, lineHeight: 1.05, color: '#1a1a1a', overflow: 'hidden',
+              fontWeight: b.nameW, WebkitTextStroke: b.stroke ? `${(b.stroke * PX).toFixed(2)}px #1a1a1a` : undefined,
             }}>{name}</div>
             <div style={{
               flex: 1, borderTop: '1.5px solid #1a1a1a', display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center', gap: 2,
             }}>
               {withOld && (
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#555', textDecoration: 'line-through' }}>
+                <div style={{ fontSize: 13 * fontScale, fontWeight: b.oldW, color: '#555', textDecoration: 'line-through' }}>
                   {fmtPrice(oldPrice)}с
                 </div>
               )}
-              <div style={{ fontWeight: 800, fontSize: newFontMm * PX, color: '#1a1a1a', letterSpacing: -1 }}>
+              <div style={{ fontWeight: b.newW, fontSize: newFontMm * PX * fontScale, color: '#1a1a1a', letterSpacing: -1, WebkitTextStroke: b.stroke ? `${(b.stroke * PX).toFixed(2)}px #1a1a1a` : undefined }}>
                 {fmtPrice(newPrice)}с
               </div>
             </div>
@@ -153,6 +165,34 @@ export default function PriceTagPrint({
               <button key={p.label} onClick={() => { setW(p.w); setH(p.h); }}
                 className={`chip ${w === p.w && h === p.h ? 'active' : ''}`}>{p.label}</button>
             ))}
+          </div>
+
+          {/* Жирность шрифта */}
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, letterSpacing: 0.2, textTransform: 'uppercase', marginBottom: 6 }}>Жирность</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {BOLD.map((x, i) => (
+                <button key={x.label} onClick={() => setBoldIdx(i)}
+                  className={`chip ${boldIdx === i ? 'active' : ''}`}>{x.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Размер шрифта */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, letterSpacing: 0.2, textTransform: 'uppercase' }}>Размер шрифта</span>
+              <span className="numeric" style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{Math.round(fontScale * 100)}%</span>
+            </div>
+            <input type="range" min={0.7} max={1.5} step={0.05} value={fontScale}
+              onChange={e => setFontScale(Number(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--accent)' }} />
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              {[0.85, 1, 1.15, 1.3].map(v => (
+                <button key={v} onClick={() => setFontScale(v)}
+                  className={`chip ${Math.abs(fontScale - v) < 0.001 ? 'active' : ''}`}>{Math.round(v * 100)}%</button>
+              ))}
+            </div>
           </div>
 
           {/* Поля */}
