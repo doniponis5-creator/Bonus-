@@ -39,6 +39,13 @@ const BOLD = [
   { label: 'Жирнее',  nameW: 900, newW: 900, oldW: 700, stroke: 0.12 },
 ];
 
+// Сохранение настроек ценника между сессиями (только размеры/вид, не данные товара).
+const CFG_KEY = 'sbonus_pricetag_cfg_v1';
+const loadCfg = (): Record<string, any> => {
+  if (typeof window === 'undefined') return {};
+  try { return JSON.parse(window.localStorage.getItem(CFG_KEY) || '{}') || {}; } catch { return {}; }
+};
+
 export default function PriceTagPrint({
   name, oldPrice, newPrice, discount,
 }: { name: string; oldPrice: number; newPrice: number; discount: number }) {
@@ -81,6 +88,37 @@ export default function PriceTagPrint({
   const [oldMm, setOldMm] = useState(0);           // шрифт старой цены (0=авто)
   const [badgeMm, setBadgeMm] = useState(3);       // шрифт бейджа
   const [padMm, setPadMm] = useState(2.5);         // боковой отступ названия
+
+  // ── Сохранённые настройки: загрузка один раз, затем автосохранение ──
+  const cfgLoaded = useRef(false);
+  useEffect(() => {
+    const c = loadCfg();
+    if (c.w != null) setW(c.w);
+    if (c.h != null) setH(c.h);
+    if (c.cell != null) setCell(c.cell);
+    if (c.qty != null) setQty(c.qty);
+    if (c.showOld != null) setShowOld(c.showOld);
+    if (c.showBadge != null) setShowBadge(c.showBadge);
+    if (c.boldIdx != null) setBoldIdx(c.boldIdx);
+    if (c.fontScale != null) setFontScale(c.fontScale);
+    if (c.showAdv != null) setShowAdv(c.showAdv);
+    if (c.borderMm != null) setBorderMm(c.borderMm);
+    if (c.splitPct != null) setSplitPct(c.splitPct);
+    if (c.nameMm != null) setNameMm(c.nameMm);
+    if (c.newMm != null) setNewMm(c.newMm);
+    if (c.oldMm != null) setOldMm(c.oldMm);
+    if (c.badgeMm != null) setBadgeMm(c.badgeMm);
+    if (c.padMm != null) setPadMm(c.padMm);
+    cfgLoaded.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!cfgLoaded.current) return;
+    const cfg = { w, h, cell, qty, showOld, showBadge, boldIdx, fontScale, showAdv,
+      borderMm, splitPct, nameMm, newMm, oldMm, badgeMm, padMm };
+    try { window.localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch { /* ignore */ }
+  }, [w, h, cell, qty, showOld, showBadge, boldIdx, fontScale, showAdv,
+      borderMm, splitPct, nameMm, newMm, oldMm, badgeMm, padMm]);
 
   // Скидка считается из самих цен.
   const calcDiscount = eOld > 0 && eNew < eOld ? Math.round((1 - eNew / eOld) * 100) : 0;
