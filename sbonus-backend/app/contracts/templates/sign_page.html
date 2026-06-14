@@ -128,7 +128,7 @@ details.contract-box:not([open]) > summary .chev::after{content:' ▼'}
 .otp-lbl{font-size:11px;color:var(--muted);font-weight:700;
   text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
 .otp-desc{font-size:13px;color:var(--muted);margin-bottom:14px}
-.otp-row{display:flex;gap:10px}
+.otp-row{display:flex;flex-direction:column;gap:10px}
 .otp-input{flex:1;padding:14px 16px;border-radius:10px;
   border:1.5px solid var(--border-strong);font-size:18px;letter-spacing:6px;
   text-align:center;font-family:-apple-system,"SF Mono",ui-monospace,monospace;
@@ -502,8 +502,8 @@ details.contract-box:not([open]) > summary .chev::after{content:' ▼'}
           '<div class="otp-lbl">Подтверждение по WhatsApp</div>'+
           '<div class="otp-desc">Код отправлен в WhatsApp на '+esc(c.client_phone_masked)+'. Введите 6 цифр из сообщения:</div>'+
           '<div class="otp-row">'+
-            '<input id="otpCode" class="otp-input" type="tel" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">'+
-            '<button id="otpSend" class="otp-btn" type="button">Получить код</button>'+
+            '<input id="otpCode" class="otp-input otp-input-big" type="tel" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">'+
+            '<button id="otpSend" class="otp-btn otp-resend" type="button">Получить код</button>'+
           '</div>'+
           '<div id="otpMsg" class="otp-msg"></div>'+
         '</div>'+
@@ -524,6 +524,7 @@ details.contract-box:not([open]) > summary .chev::after{content:' ▼'}
     const el = document.getElementById('consent');
     el.addEventListener('click', function(){
       state.consented = !state.consented;
+      if(state.consented && !state.otpSent){var _sb=document.getElementById('otpSend'); if(_sb) _sb.click();}
       el.classList.toggle('checked', state.consented);
       updateSubmit(); refreshStep();
     });
