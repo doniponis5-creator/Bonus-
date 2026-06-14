@@ -137,6 +137,9 @@ details.contract-box:not([open]) > summary .chev::after{content:' ▼'}
 .otp-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(32,201,151,.12)}
 .otp-input.ok{border-color:var(--success)}
 .otp-input.err{border-color:var(--danger);animation:shake .35s}
+.otp-input-big{width:100%;text-align:center;font-size:32px;letter-spacing:12px;font-weight:800;padding:18px 10px}
+.otp-resend{display:block;width:100%;margin-top:14px;background:transparent;border:none;color:var(--primary);font-weight:700;font-size:13px;text-decoration:underline;cursor:pointer}
+.otp-resend:disabled{color:var(--muted);text-decoration:none;cursor:not-allowed}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}
   75%{transform:translateX(4px)}}
 .otp-btn{padding:0 18px;border-radius:10px;border:1.5px solid var(--primary);
@@ -496,8 +499,8 @@ details.contract-box:not([open]) > summary .chev::after{content:' ▼'}
         '</div>'+
 
         '<div class="otp">'+
-          '<div class="otp-lbl">Код подтверждения</div>'+
-          '<div class="otp-desc">Придёт в WhatsApp на '+esc(c.client_phone_masked)+'</div>'+
+          '<div class="otp-lbl">Подтверждение по WhatsApp</div>'+
+          '<div class="otp-desc">Код отправлен в WhatsApp на '+esc(c.client_phone_masked)+'. Введите 6 цифр из сообщения:</div>'+
           '<div class="otp-row">'+
             '<input id="otpCode" class="otp-input" type="tel" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">'+
             '<button id="otpSend" class="otp-btn" type="button">Получить код</button>'+
@@ -580,7 +583,7 @@ details.contract-box:not([open]) > summary .chev::after{content:' ▼'}
     state.otpCooldown = sec;
     function tick(){
       if(state.otpCooldown<=0){
-        btn.textContent='Получить код';
+        btn.textContent='Отправить код ещё раз';
         btn.disabled=false; return;
       }
       btn.textContent = state.otpCooldown+' с';
