@@ -12,6 +12,7 @@ import {
   ChevronRight, Loader2, Gift, MessageCircle, Plug, Flame, Disc3,
 } from 'lucide-react';
 import api, { analyticsProAPI, productAPI } from '@/lib/api';
+import PriceTagPrint from './PriceTagPrint';
 
 const fmt = (n: any) => Number(n || 0).toLocaleString('ru-RU');
 const round10 = (n: number) => Math.round(n / 10) * 10;
@@ -123,7 +124,14 @@ export default function ProfitLabPage() {
         if (items.length) setProduct(items[0]);
       }
       if (fb.status === 'fulfilled') {
-        const cs = fb.value.data?.combos || fb.value.data?.items || [];
+        // Backend (/frequently-bought) отдаёт pairs[] с плоскими полями — нормализуем
+        // в форму, которую ждут карточки и comboCalc (product_a/_b как объекты).
+        const raw = fb.value.data?.pairs || fb.value.data?.combos || fb.value.data?.items || [];
+        const cs = raw.map((p: any) => ({
+          product_a: { name: p.product_a_name ?? p.product_a?.name, sku: p.product_a_sku ?? p.product_a?.sku, price: p.product_a?.price, category: p.product_a?.category },
+          product_b: { name: p.product_b_name ?? p.product_b?.name, sku: p.product_b_sku ?? p.product_b?.sku, price: p.product_b?.price, category: p.product_b?.category },
+          times_together: p.times_bought_together ?? p.times_together ?? 0,
+        }));
         setCombos(cs);
         if (cs.length) setCombo(cs[0]);
       }
@@ -356,6 +364,13 @@ export default function ProfitLabPage() {
                   Цена продажи = закупка из 1С + наценка {disc.pct}% (категория/класс товара). Наценки настраиваются выше.
                 </p>
               )}
+
+              <PriceTagPrint
+                name={product.name}
+                oldPrice={disc.retail}
+                newPrice={disc.newPrice}
+                discount={discount}
+              />
             </>
           )}
         </div>
