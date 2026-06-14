@@ -168,7 +168,7 @@ export default function ShiftPanel({ onChanged }: { onChanged?: () => void }) {
                 <span style={{ color: 'var(--text3)', fontSize: 11 }}>сом</span>
                 <div style={{ flex: 1 }} />
                 <button className="btn btn-secondary" style={{ padding: 0, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setQty(d, -1)}><Minus size={14} /></button>
-                <input className="input" style={{ width: 56, textAlign: 'center', padding: '6px 4px' }} type="number" min={0} value={qty} onChange={(e) => setExact(d, e.target.value)} />
+                <input className="input" style={{ width: 56, textAlign: 'center', padding: '6px 4px' }} type="number" min={0} value={qty || ''} placeholder="0" onFocus={(e) => e.target.select()} onChange={(e) => setExact(d, e.target.value)} />
                 <button className="btn btn-secondary" style={{ padding: 0, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setQty(d, 1)}><Plus size={14} /></button>
                 <span style={{ width: 76, textAlign: 'right', color: 'var(--text2)', fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt(d * qty)}</span>
               </div>

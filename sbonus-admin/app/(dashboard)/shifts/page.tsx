@@ -256,7 +256,7 @@ export default function ShiftsPage() {
               {DENOMS.map((d) => (
                 <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ width: 56, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{d.toLocaleString('ru-RU')}</span>
-                  <input className="input" style={{ flex: 1 }} type="number" min={0} value={editDenoms[String(d)] || 0}
+                  <input className="input" style={{ flex: 1 }} type="number" min={0} value={editDenoms[String(d)] || ''} placeholder="0" onFocus={(e) => e.target.select()}
                     onChange={(e) => setEditDenoms((p) => ({ ...p, [String(d)]: Math.max(0, parseInt(e.target.value) || 0) }))} />
                 </div>
               ))}

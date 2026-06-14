@@ -137,7 +137,7 @@ export default function ShiftCloseScreen() {
               </TouchableOpacity>
               <TextInput
                 style={styles.qtyInput}
-                value={String(qty)}
+                value={qty ? String(qty) : ''}
                 onChangeText={(v) => setExact(d, v)}
                 keyboardType="number-pad"
                 selectTextOnFocus
