@@ -430,6 +430,11 @@ export const reportsAPI = {
 
 // ─── Смены / Инкассация ───
 export const shiftsAPI = {
+  rate: () => api.get('/api/v1/shifts/rate'),
+  current: () => api.get('/api/v1/shifts/current'),
+  open: (opening_balance: number) => api.post('/api/v1/shifts/open', { opening_balance }),
+  close: (denominations: Record<string, number>, note?: string) =>
+    api.post('/api/v1/shifts/close', { denominations, note: note || null }),
   list: (params: Record<string, any> = {}) =>
     api.get('/api/v1/shifts', { params }),
   detail: (id: string) => api.get(`/api/v1/shifts/${id}`),

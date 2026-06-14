@@ -3,6 +3,7 @@ import { Wallet, Loader2, FileText, BarChart2, Pencil, X, Save, Settings2 } from
 import { useEffect, useState } from 'react';
 import { shiftsAPI } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import ShiftPanel from '@/components/ShiftPanel';
 
 const DENOMS = [5000, 2000, 1000, 500, 200, 100, 50, 20];
 const money = (v: any) => (v === null || v === undefined || v === '') ? '—' : Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
@@ -135,6 +136,8 @@ export default function ShiftsPage() {
           <button className="btn btn-secondary" onClick={() => exportFile('xlsx')} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BarChart2 size={16} /> Excel</button>
         </div>
       </div>
+
+      <ShiftPanel onChanged={() => { load(page); loadStats(); }} />
 
       {/* Stats */}
       {stats && (
