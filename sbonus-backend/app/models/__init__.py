@@ -1001,3 +1001,99 @@ class Shift(Base):
     branch: Mapped["Branch | None"] = relationship("Branch", foreign_keys=[branch_id])
     cashier: Mapped["User"] = relationship("User", foreign_keys=[cashier_id])
     editor: Mapped["User | None"] = relationship("User", foreign_keys=[edited_by])
+
+
+# ═══════════════════════════════════════════════════════════════
+# NASIYA DAFTAR — shaxsiy qarz daftari (1C'ga BOG'LIQ EMAS)
+# Bu blokni app/models/__init__.py FAYLINING OXIRIGA qo'shing.
+# customer_debts / contracts / Transaction — HECH NARSAGA TEGMAYDI.
+# ═══════════════════════════════════════════════════════════════
+#
+# Kerakli importlar (Python'da takror import xato EMAS — xavfsiz qoldirildi).
+# 'Base' shu faylda allaqachon aniqlangan (boshqa modellar ishlatadi).
+import uuid
+from datetime import datetime, date
+from decimal import Decimal
+from sqlalchemy import (
+    Column, String, Text, Numeric, Date, DateTime, ForeignKey, func, Index,
+)
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import relationship
+
+
+class NasiyaDebt(Base):
+    """Shaxsiy nasiya (naq pul qarzi). Faqat admin yuritadi."""
+    __tablename__ = "nasiya_debts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Foydalanuvchi to'ldiradi (1C kerak emas):
+    debtor_name = Column(String(255), nullable=False)          # FIO
+    debtor_phone = Column(String(20), nullable=False)          # +996XXXXXXXXX
+    principal_amount = Column(Numeric(12, 2), nullable=False)  # berilgan summa (som)
+    paid_amount = Column(Numeric(12, 2), nullable=False, default=0, server_default="0")
+
+    lent_date = Column(Date, nullable=False, default=date.today, server_default=func.current_date())
+    due_date = Column(Date, nullable=False)                    # srok oplaty
+
+    status = Column(String(20), nullable=False, default="active", server_default="active")
+    # "active" | "paid"  (overdue — due_date < bugun bo'lsa, hisoblab chiqariladi)
+
+    note = Column(Text, nullable=True)                         # izoh (masalan "telefon uchun")
+
+    # Eslatma dublikatini oldini olish uchun jurnal: ["2026-06-18:0", "2026-06-15:3", ...]
+    # (server_default SQL faylda '[]'::jsonb; ORM tomonda default=list)
+    reminder_log = Column(JSONB, nullable=False, default=list)
+    last_reminder_at = Column(DateTime(timezone=True), nullable=True)
+
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    payments = relationship(
+        "NasiyaPayment",
+        back_populates="debt",
+        cascade="all, delete-orphan",
+        order_by="NasiyaPayment.paid_at",
+    )
+
+    __table_args__ = (
+        Index("ix_nasiya_debts_status", "status"),
+        Index("ix_nasiya_debts_due_date", "due_date"),
+        Index("ix_nasiya_debts_phone", "debtor_phone"),
+    )
+
+    @property
+    def remaining(self):
+        """Qoldiq = berilgan - to'langan (hech qachon manfiy emas)."""
+        from decimal import Decimal
+        rem = (self.principal_amount or Decimal("0")) - (self.paid_amount or Decimal("0"))
+        return rem if rem > 0 else Decimal("0.00")
+
+
+class NasiyaPayment(Base):
+    """Nasiya bo'yicha qisman to'lov."""
+    __tablename__ = "nasiya_payments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    debt_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("nasiya_debts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    amount = Column(Numeric(12, 2), nullable=False)
+    paid_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    note = Column(Text, nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    debt = relationship("NasiyaDebt", back_populates="payments")
+
+    __table_args__ = (
+        Index("ix_nasiya_payments_debt_id", "debt_id"),
+    )
