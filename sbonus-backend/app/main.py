@@ -244,15 +244,6 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
-
-    from app.tasks.nasiya_reminders import run_nasiya_reminders
-    scheduler.add_job(
-        run_nasiya_reminders,
-        CronTrigger(hour=9, minute=0),
-        id="nasiya_reminders",
-        replace_existing=True,
-    )
-
     # SB FIX: при --workers 2 каждый воркер запускал свой планировщик →
     # ВСЕ cron-задачи дублировались (сообщения уходили 2 раза). Теперь
     # планировщик стартует ТОЛЬКО на одном воркере-лидере (Redis NX + failover).
