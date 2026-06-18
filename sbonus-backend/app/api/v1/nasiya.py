@@ -25,7 +25,8 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db                     # ⚠️ moslang agar kerak bo'lsa
 from app.core.security import get_current_user, require_role  # ⚠️ moslang
-from app.models import UserRole, NasiyaDebt, NasiyaPayment
+from app.core.security import UserRole
+from app.models import NasiyaDebt, NasiyaPayment
 
 # Nasiya eslatma matnlari/yordamchilari — bitta manbadan (cron fayli):
 from app.tasks.nasiya_reminders import send_debtor_reminder
