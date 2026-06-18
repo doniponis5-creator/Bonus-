@@ -4,7 +4,6 @@
  * Fayl: sbonus-admin/app/(dashboard)/nasiya/page.tsx
  */
 import { useEffect, useState, useCallback, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import api from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import StatsCard from "@/components/StatsCard";
@@ -86,7 +85,8 @@ export default function NasiyaPage() {
   const refreshAll = () => { loadList(); loadSummary(); };
 
   return (
-    <div className="fade-up">
+    <>
+      <div className="fade-up">
       {/* Header */}
       <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
@@ -149,6 +149,7 @@ export default function NasiyaPage() {
           </tbody>
         </table>
       </div>
+      </div>
 
       {showCreate && (
         <CreateModal onClose={() => setShowCreate(false)} onSaved={() => { setShowCreate(false); refreshAll(); }} />
@@ -161,13 +162,12 @@ export default function NasiyaPage() {
           onClosed={() => { setDetail(null); refreshAll(); }}
         />
       )}
-    </div>
+    </>
   );
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  if (typeof document === "undefined") return null;
-  return createPortal(
+  return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
       <div className="card scale-in" onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", padding: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 22px", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, background: "var(--card)", zIndex: 2 }}>
@@ -176,8 +176,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
         </div>
         <div style={{ padding: 22 }}>{children}</div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
 
