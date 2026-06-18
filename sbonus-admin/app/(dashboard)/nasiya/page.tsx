@@ -4,6 +4,7 @@
  * Fayl: sbonus-admin/app/(dashboard)/nasiya/page.tsx
  */
 import { useEffect, useState, useCallback, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import api from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import StatsCard from "@/components/StatsCard";
@@ -165,7 +166,8 @@ export default function NasiyaPage() {
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
       <div className="card scale-in" onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", padding: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 22px", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, background: "var(--card)", zIndex: 2 }}>
@@ -174,7 +176,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
         </div>
         <div style={{ padding: 22 }}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
