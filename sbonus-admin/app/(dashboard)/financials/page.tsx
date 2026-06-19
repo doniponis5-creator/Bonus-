@@ -465,6 +465,7 @@ export default function FinancialsPage() {
           <h1 style={{ color: 'var(--text)', fontSize: 24, fontWeight: 700, margin: 0 }}>P&L Финансы</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <SyncBadge />
           <input type="month" value={month} onChange={e => handleMonthChange(e.target.value)} style={{
             padding: '8px 14px', background: 'var(--bg2)', border: '1px solid var(--border)',
             borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer',
@@ -526,6 +527,7 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
     revenue: Math.round(m.revenue),
     expenses: Math.round(m.total_expenses),
     profit: Math.round(m.net_profit),
+    opnet: Math.round(m.operating_net_profit),
   }));
 
   return (
@@ -561,7 +563,8 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
               <Bar dataKey="revenue" fill="#22c55e" radius={[4, 4, 0, 0]} name="Выручка" />
               <Bar dataKey="expenses" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Расходы" />
-              <Bar dataKey="profit" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Прибыль" />
+              <Bar dataKey="profit" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Чистая" />
+              <Bar dataKey="opnet" fill="#a855f7" radius={[4, 4, 0, 0]} name="Без разовых" />
               <Legend wrapperStyle={{ fontSize: 12 }} />
             </BarChart>
           </ResponsiveContainer>
@@ -1169,5 +1172,40 @@ function DailySection({ month }: { month: string }) {
         <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Нет данных за выбранный период</div>
       )}
     </>
+  );
+}
+
+
+// ═══════════════════════════════════════════
+// SYNC BADGE — последняя синхронизация из 1С
+// ═══════════════════════════════════════════
+
+function SyncBadge() {
+  const [s, setS] = useState<any>(null);
+  useEffect(() => {
+    let stop = false;
+    const load = () => financialsAPI.syncStatus().then((r: any) => { if (!stop) setS(r.data); }).catch(() => {});
+    load();
+    const id = setInterval(load, 60000);
+    return () => { stop = true; clearInterval(id); };
+  }, []);
+  if (!s) return null;
+  const m: number | null = s.minutes_ago;
+  const label = m == null ? 'нет данных'
+    : m < 1 ? 'только что'
+    : m < 60 ? `${m} мин назад`
+    : m < 1440 ? `${Math.floor(m / 60)} ч назад`
+    : `${Math.floor(m / 1440)} дн назад`;
+  const color = m == null ? '#8899aa' : m <= 30 ? '#22c55e' : m <= 1440 ? '#f59e0b' : '#ef4444';
+  const at = s.last_sync ? new Date(s.last_sync).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+  return (
+    <div title={`Последние данные из 1С: ${at}`} style={{
+      display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px',
+      background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10,
+      fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap',
+    }}>
+      <span style={{ width: 8, height: 8, borderRadius: 999, background: color, boxShadow: `0 0 8px ${color}`, flexShrink: 0 }} />
+      <span>1С: {label}</span>
+    </div>
   );
 }

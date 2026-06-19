@@ -1141,3 +1141,49 @@ async def pin_status(
     setting = result.scalar_one_or_none()
     has_pin = bool(setting and setting.value)
     return {"has_pin": has_pin}
+
+
+# ═══════════════════════════════════════════
+# 9. SYNC STATUS — когда последний раз приходили данные из 1С
+# ═══════════════════════════════════════════
+
+@router.get("/sync-status")
+async def sync_status(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+) -> dict:
+    """Последняя синхронизация из 1С: общий момент + по источникам + «сколько минут назад»."""
+    now = datetime.now(timezone.utc)
+
+    def _norm(dt):
+        if dt is None:
+            return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    def _mins(dt):
+        dt = _norm(dt)
+        return int((now - dt).total_seconds() // 60) if dt else None
+
+    def _iso(dt):
+        dt = _norm(dt)
+        return dt.astimezone(BISHKEK_TZ).isoformat() if dt else None
+
+    last_sale = await db.scalar(select(func.max(PurchaseItem.created_at)))
+    last_tx = await db.scalar(select(func.max(Transaction.created_at)))
+    last_prod = await db.scalar(select(func.max(Product.last_synced_at)))
+    last_exp = await db.scalar(select(func.max(Expense.created_at)).where(Expense.source == "1c"))
+
+    cands = [_norm(d) for d in (last_sale, last_tx, last_prod, last_exp) if d]
+    last_any = max(cands) if cands else None
+
+    return {
+        "now": _iso(now),
+        "last_sync": _iso(last_any),
+        "minutes_ago": _mins(last_any),
+        "sources": {
+            "last_sale": {"at": _iso(last_sale), "minutes_ago": _mins(last_sale)},
+            "last_transaction": {"at": _iso(last_tx), "minutes_ago": _mins(last_tx)},
+            "last_product_sync": {"at": _iso(last_prod), "minutes_ago": _mins(last_prod)},
+            "last_expense_sync": {"at": _iso(last_exp), "minutes_ago": _mins(last_exp)},
+        },
+    }

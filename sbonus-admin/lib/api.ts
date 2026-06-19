@@ -316,6 +316,7 @@ export const financialsAPI = {
     if (params.date_to) q.set('date_to', params.date_to);
     return api.get('/api/v1/financials/daily' + (q.toString() ? `?${q.toString()}` : ''));
   },
+  syncStatus: () => api.get('/api/v1/financials/sync-status'),
   planFact: (month?: string) => api.get('/api/v1/financials/plan-fact' + (month ? `?month=${month}` : '')),
   verifyPin: (pin: string) => api.post("/api/v1/financials/verify-pin", { pin }),
   setPin: (pin: string, current_pin?: string) => api.put("/api/v1/financials/pin", { pin, current_pin }),
