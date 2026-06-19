@@ -1197,3 +1197,78 @@ async def webhook_1c_expenses_sync(body: _ExpReq, request: Request, db: AsyncSes
         created += 1
     await db.commit()
     return {"status": "ok", "created": created, "month": body.month}
+
+
+from app.schemas import CashSyncRequest as _CashReq
+
+@router.post("/1c/cash-sync")
+async def webhook_1c_cash_sync(body: _CashReq, request: Request, db: AsyncSession = Depends(get_db), x_signature: str = Header(None, alias="X-Signature")) -> dict:
+    """1С шлёт движения наличных (ПКО/РКО) и/или текущий остаток кассы."""
+    await _security_check(request, x_signature, db)
+    from app.models import CashOperation, Setting, Branch
+    from sqlalchemy import select, delete
+    import uuid as _uuid
+
+    branch_id = None
+    if body.branch_id:
+        try:
+            res = await db.execute(select(Branch).where(Branch.id == _uuid.UUID(body.branch_id)))
+            b = res.scalar_one_or_none()
+            if b:
+                branch_id = b.id
+        except Exception:
+            branch_id = None
+
+    if body.balance is not None:
+        for k, v in (("KASSA_BALANCE", str(body.balance)),
+                     ("KASSA_BALANCE_AT", body.balance_at or datetime.now(timezone.utc).isoformat())):
+            r = await db.execute(select(Setting).where(Setting.key == k))
+            s = r.scalar_one_or_none()
+            if s:
+                s.value = v
+            else:
+                db.add(Setting(key=k, value=v))
+
+    if body.replace_month:
+        y, m = int(body.replace_month[:4]), int(body.replace_month[5:7])
+        start = datetime(y, m, 1, tzinfo=timezone.utc)
+        end = datetime(y + 1, 1, 1, tzinfo=timezone.utc) if m == 12 else datetime(y, m + 1, 1, tzinfo=timezone.utc)
+        await db.execute(delete(CashOperation).where(CashOperation.source == "1c", CashOperation.operation_date >= start, CashOperation.operation_date < end))
+
+    def _pdt(s):
+        if not s:
+            return datetime.now(timezone.utc)
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+            except Exception:
+                pass
+        return datetime.now(timezone.utc)
+
+    created = skipped = 0
+    for op in body.operations:
+        d = (op.direction or "").lower()
+        if d not in ("in", "out"):
+            skipped += 1
+            continue
+        ref = op.reference
+        if ref and not body.replace_month:
+            ex = await db.execute(select(CashOperation.id).where(CashOperation.reference == str(ref), CashOperation.source == "1c").limit(1))
+            if ex.scalar_one_or_none():
+                skipped += 1
+                continue
+        db.add(CashOperation(
+            direction=d,
+            amount=Decimal(str(op.amount)),
+            doc_type=(op.doc_type or None),
+            category=((op.category or None) and str(op.category)[:80]),
+            description=((op.description or None) and str(op.description)[:500]),
+            operation_date=_pdt(op.date),
+            reference=(str(ref)[:100] if ref else None),
+            source="1c",
+            branch_id=branch_id,
+        ))
+        created += 1
+
+    await db.commit()
+    return {"status": "ok", "created": created, "skipped": skipped}

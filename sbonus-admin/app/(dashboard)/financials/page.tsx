@@ -4,7 +4,7 @@ import { financialsAPI } from '@/lib/api';
 import {
   Wallet, Loader2, TrendingUp, TrendingDown, DollarSign,
   Plus, Trash2, Edit3, RefreshCw, BarChart3, PieChart as PieIcon,
-  Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X, Lock, Shield, Delete, Gift,
+  Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X, Lock, Shield, Delete, Gift, Banknote,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -63,7 +63,7 @@ const CATEGORIES = [
   { value: 'maintenance', label: 'Ремонт' }, { value: 'other', label: 'Прочие' },
 ];
 
-type Tab = 'overview' | 'daily' | 'pnl' | 'expenses' | 'cashiers' | 'trends';
+type Tab = 'overview' | 'daily' | 'pnl' | 'cash' | 'expenses' | 'cashiers' | 'trends';
 
 
 // ─── PIN Gate ───
@@ -437,6 +437,7 @@ export default function FinancialsPage() {
     { key: 'overview' as const, label: 'Обзор', icon: BarChart3 },
     { key: 'daily' as const, label: 'По дням', icon: Calendar },
     { key: 'pnl' as const, label: 'P&L отчёт', icon: DollarSign },
+    { key: 'cash' as const, label: 'Касса', icon: Banknote },
     { key: 'expenses' as const, label: 'Расходы', icon: Wallet },
     { key: 'cashiers' as const, label: 'Кассиры', icon: Users },
     { key: 'trends' as const, label: 'Тренды', icon: TrendingUp },
@@ -521,6 +522,7 @@ export default function FinancialsPage() {
       {tab === 'overview' && <OverviewSection summary={summary} monthly={monthly} />}
       {tab === 'daily' && <DailySection month={month} />}
       {tab === 'pnl' && <PnlSection data={pnl} />}
+      {tab === 'cash' && <CashSection month={month} />}
       {tab === 'expenses' && <ExpensesSection data={expenses} byCategory={byCategory} month={month}
         onReload={async () => {
           const [e, c] = await Promise.all([financialsAPI.expenses(month), financialsAPI.byCategory(month)]);
@@ -1304,5 +1306,119 @@ function ChangePinModal({ onClose }: { onClose: () => void }) {
         </p>
       </div>
     </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════
+// CASH — касса: остаток + движения наличных (1С)
+// ═══════════════════════════════════════════
+
+function CashSection({ month }: { month: string }) {
+  const lastDay = (m: string) => {
+    const [y, mm] = m.split('-').map(Number);
+    return `${m}-${String(new Date(y, mm, 0).getDate()).padStart(2, '0')}`;
+  };
+  const [from, setFrom] = useState(`${month}-01`);
+  const [to, setTo] = useState(lastDay(month));
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { setFrom(`${month}-01`); setTo(lastDay(month)); }, [month]);
+  useEffect(() => {
+    let cancel = false;
+    setLoading(true);
+    financialsAPI.cash({ date_from: from, date_to: to })
+      .then((r: any) => { if (!cancel) setData(r.data); })
+      .catch(() => { if (!cancel) setData(null); })
+      .finally(() => { if (!cancel) setLoading(false); });
+    return () => { cancel = true; };
+  }, [from, to]);
+
+  if (loading) return <div style={{ color: 'var(--text2)', padding: 40, textAlign: 'center' }}><Loader2 size={24} className="animate-spin" /></div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Ошибка загрузки</div>;
+  if (!data.initialized) return (
+    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 32, textAlign: 'center' }}>
+      <Banknote size={32} color="#8899aa" style={{ marginBottom: 12 }} />
+      <div style={{ color: 'var(--text)', fontWeight: 600, marginBottom: 6 }}>Касса ещё не настроена</div>
+      <div style={{ color: 'var(--text2)', fontSize: 13 }}>Создайте таблицу cash_operations и включите выгрузку кассы из 1С.</div>
+    </div>
+  );
+
+  const balance = data.balance?.amount ?? data.computed_balance;
+  const balLabel = data.balance?.amount != null ? 'остаток из 1С' : 'расчётный остаток';
+  const chartData = (data.daily || []).map((d: any) => ({ name: d.label, 'Приход': Math.round(d.cash_in), 'Расход': Math.round(d.cash_out) }));
+
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+        <span style={{ color: 'var(--text2)', fontSize: 13 }}>Период:</span>
+        <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} style={_dateInput} />
+        <span style={{ color: 'var(--text3)' }}>—</span>
+        <input type="date" value={to} min={from} onChange={e => setTo(e.target.value)} style={_dateInput} />
+      </div>
+
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 22px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(34,197,94,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Banknote size={26} color="#22c55e" />
+        </div>
+        <div>
+          <div style={{ color: 'var(--text2)', fontSize: 13 }}>Остаток наличных в кассе</div>
+          <div style={{ color: 'var(--text)', fontSize: 28, fontWeight: 700 }}>{fmtMoney(balance || 0)}</div>
+          <div style={{ color: 'var(--text3)', fontSize: 11 }}>{balLabel}{data.balance?.at ? ` · ${new Date(data.balance.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px,1fr))', gap: 12, marginBottom: 18 }}>
+        <KpiCard icon={ArrowDownRight} label="Приход за период" value={fmtMoney(data.cash_in)} color="#22c55e" />
+        <KpiCard icon={ArrowUpRight} label="Расход за период" value={fmtMoney(data.cash_out)} color="#f59e0b" />
+        <KpiCard icon={TrendingUp} label="Чистый поток" value={fmtMoney(data.net_flow)} sub={`${data.operations_count} операций`} color={data.net_flow >= 0 ? '#22c55e' : '#ef4444'} />
+      </div>
+
+      {chartData.length > 0 && (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 18 }}>
+          <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Движение наличных по дням</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="name" stroke="#8899aa" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+              <YAxis stroke="#8899aa" tickFormatter={fmtShort} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="Приход" fill="#22c55e" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Расход" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ color: 'var(--text2)', textAlign: 'right', background: 'var(--bg3)' }}>
+                <th style={{ ..._thS, textAlign: 'left' }}>Дата</th>
+                <th style={{ ..._thS, textAlign: 'left' }}>Тип</th>
+                <th style={{ ..._thS, textAlign: 'left' }}>Категория</th>
+                <th style={_thS}>Сумма</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.operations || []).map((o: any, i: number) => (
+                <tr key={i} style={{ borderTop: '1px solid var(--border)', color: 'var(--text)' }}>
+                  <td style={{ ..._tdS, textAlign: 'left', color: 'var(--text2)' }}>{o.date}</td>
+                  <td style={{ ..._tdS, textAlign: 'left', color: o.direction === 'in' ? 'var(--success)' : 'var(--danger)' }}>{o.direction === 'in' ? 'Приход' : 'Расход'}</td>
+                  <td style={{ ..._tdS, textAlign: 'left' }}>{o.category || o.description || '—'}</td>
+                  <td style={{ ..._tdS, color: o.direction === 'in' ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>{o.direction === 'in' ? '+' : '−'}{fmtMoney(o.amount)}</td>
+                </tr>
+              ))}
+              {(!data.operations || data.operations.length === 0) && (
+                <tr><td colSpan={4} style={{ padding: 24, textAlign: 'center', color: 'var(--text3)' }}>Нет операций за период</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 }

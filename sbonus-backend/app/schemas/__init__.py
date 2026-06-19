@@ -645,3 +645,20 @@ class ExpensesSyncRequest(BaseModel):
     branch_id: Optional[str] = Field(None, max_length=50)
     month: str = Field(..., max_length=7)
     expenses: list[ExpensesSyncEntry]
+
+
+class CashOperationEntry(BaseModel):
+    direction: str = Field(..., pattern="^(in|out)$", description="in=приход, out=расход")
+    amount: float = Field(..., gt=0)
+    doc_type: Optional[str] = Field(None, max_length=20)
+    category: Optional[str] = Field(None, max_length=80)
+    description: Optional[str] = Field(None, max_length=500)
+    date: Optional[str] = Field(None, max_length=30, description="YYYY-MM-DD или YYYY-MM-DD HH:MM:SS")
+    reference: Optional[str] = Field(None, max_length=100)
+
+class CashSyncRequest(BaseModel):
+    branch_id: Optional[str] = Field(None, max_length=50)
+    balance: Optional[float] = Field(None, description="Текущий остаток наличных в кассе (snapshot)")
+    balance_at: Optional[str] = Field(None, max_length=30)
+    replace_month: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}$", description="Если задан — операции этого месяца перезаписываются")
+    operations: list[CashOperationEntry] = Field(default_factory=list)

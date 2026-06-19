@@ -1187,3 +1187,103 @@ async def sync_status(
             "last_expense_sync": {"at": _iso(last_exp), "minutes_ago": _mins(last_exp)},
         },
     }
+
+
+# ═══════════════════════════════════════════
+# 10. CASH — касса (остаток + движения наличных из 1С)
+# ═══════════════════════════════════════════
+
+@router.get("/cash")
+async def cash_overview(
+    month: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}$"),
+    date_from: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    date_to: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+) -> dict:
+    """Касса: текущий остаток (из 1С) + приход/расход/поток наличных за период + журнал."""
+    from app.models import CashOperation
+
+    start, end, label, mode, month_key = _resolve_period(month, date_from, date_to)
+
+    bal = await db.scalar(select(Setting.value).where(Setting.key == "KASSA_BALANCE"))
+    bal_at = await db.scalar(select(Setting.value).where(Setting.key == "KASSA_BALANCE_AT"))
+
+    cash_in = cash_out = computed_balance = 0.0
+    cnt = 0
+    daily = []
+    operations = []
+    by_cat = []
+    initialized = True
+    try:
+        row = await db.execute(
+            select(
+                func.coalesce(func.sum(case((CashOperation.direction == "in", CashOperation.amount), else_=0)), 0).label("cin"),
+                func.coalesce(func.sum(case((CashOperation.direction == "out", CashOperation.amount), else_=0)), 0).label("cout"),
+                func.count(CashOperation.id).label("cnt"),
+            ).where(CashOperation.operation_date >= start, CashOperation.operation_date < end)
+        )
+        r = row.one()
+        cash_in = float(r.cin or 0)
+        cash_out = float(r.cout or 0)
+        cnt = int(r.cnt or 0)
+
+        allrow = await db.execute(
+            select(
+                func.coalesce(func.sum(case((CashOperation.direction == "in", CashOperation.amount), else_=0)), 0),
+                func.coalesce(func.sum(case((CashOperation.direction == "out", CashOperation.amount), else_=0)), 0),
+            )
+        )
+        ai, ao = allrow.one()
+        computed_balance = float(ai or 0) - float(ao or 0)
+
+        day = _bishkek_day(CashOperation.operation_date)
+        drows = await db.execute(
+            select(
+                day.label("d"),
+                func.coalesce(func.sum(case((CashOperation.direction == "in", CashOperation.amount), else_=0)), 0).label("cin"),
+                func.coalesce(func.sum(case((CashOperation.direction == "out", CashOperation.amount), else_=0)), 0).label("cout"),
+            ).where(CashOperation.operation_date >= start, CashOperation.operation_date < end).group_by(day).order_by(day)
+        )
+        for x in drows.all():
+            key = x.d.strftime("%Y-%m-%d") if hasattr(x.d, "strftime") else str(x.d)[:10]
+            di = float(x.cin or 0)
+            do = float(x.cout or 0)
+            daily.append({"date": key, "label": key[8:10] + "." + key[5:7], "cash_in": round(di, 2), "cash_out": round(do, 2), "net": round(di - do, 2)})
+
+        ops_res = await db.execute(
+            select(CashOperation).where(CashOperation.operation_date >= start, CashOperation.operation_date < end).order_by(CashOperation.operation_date.desc()).limit(200)
+        )
+        for o in ops_res.scalars().all():
+            operations.append({
+                "date": o.operation_date.astimezone(BISHKEK_TZ).strftime("%Y-%m-%d %H:%M"),
+                "direction": o.direction,
+                "amount": float(o.amount),
+                "doc_type": o.doc_type,
+                "category": o.category,
+                "description": o.description,
+            })
+
+        cat_res = await db.execute(
+            select(CashOperation.category, func.coalesce(func.sum(CashOperation.amount), 0).label("t"))
+            .where(CashOperation.direction == "out", CashOperation.operation_date >= start, CashOperation.operation_date < end)
+            .group_by(CashOperation.category).order_by(desc("t")).limit(20)
+        )
+        by_cat = [{"category": c.category or "—", "amount": float(c.t)} for c in cat_res.all()]
+    except Exception:
+        await db.rollback()
+        initialized = False
+
+    return {
+        "period": {"mode": mode, "label": label, "month": month_key},
+        "initialized": initialized,
+        "balance": {"amount": (float(bal) if bal not in (None, "") else None), "at": bal_at},
+        "cash_in": cash_in,
+        "cash_out": cash_out,
+        "net_flow": round(cash_in - cash_out, 2),
+        "computed_balance": round(computed_balance, 2),
+        "operations_count": cnt,
+        "daily": daily,
+        "operations": operations,
+        "by_category_out": by_cat,
+    }

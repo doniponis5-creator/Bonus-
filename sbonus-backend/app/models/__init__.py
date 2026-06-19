@@ -1097,3 +1097,24 @@ class NasiyaPayment(Base):
     __table_args__ = (
         Index("ix_nasiya_payments_debt_id", "debt_id"),
     )
+
+
+class CashOperation(Base):
+    """Движение наличных по кассе (ПКО/РКО), синхронизируется из 1С."""
+    __tablename__ = "cash_operations"
+    __table_args__ = (
+        Index("ix_cash_ops_date", "operation_date"),
+        Index("ix_cash_ops_ref", "reference"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    direction: Mapped[str] = mapped_column(String(3), nullable=False)  # "in" (приход) | "out" (расход)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    doc_type: Mapped[str | None] = mapped_column(String(20), nullable=True)  # pko | rko | sale | other
+    category: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    operation_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reference: Mapped[str | None] = mapped_column(String(100), nullable=True)  # № документа 1С (идемпотентность)
+    source: Mapped[str] = mapped_column(String(10), nullable=False, default="1c")
+    branch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
