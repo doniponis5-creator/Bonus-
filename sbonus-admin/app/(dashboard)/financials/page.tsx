@@ -4,7 +4,7 @@ import { financialsAPI } from '@/lib/api';
 import {
   Wallet, Loader2, TrendingUp, TrendingDown, DollarSign,
   Plus, Trash2, Edit3, RefreshCw, BarChart3, PieChart as PieIcon,
-  Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X, Lock, Shield, Delete,
+  Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X, Lock, Shield, Delete, Gift,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -63,7 +63,7 @@ const CATEGORIES = [
   { value: 'maintenance', label: 'Ремонт' }, { value: 'other', label: 'Прочие' },
 ];
 
-type Tab = 'overview' | 'pnl' | 'expenses' | 'cashiers' | 'trends';
+type Tab = 'overview' | 'daily' | 'pnl' | 'expenses' | 'cashiers' | 'trends';
 
 
 // ─── PIN Gate ───
@@ -423,6 +423,7 @@ export default function FinancialsPage() {
 
   const tabs = [
     { key: 'overview' as const, label: 'Обзор', icon: BarChart3 },
+    { key: 'daily' as const, label: 'По дням', icon: Calendar },
     { key: 'pnl' as const, label: 'P&L отчёт', icon: DollarSign },
     { key: 'expenses' as const, label: 'Расходы', icon: Wallet },
     { key: 'cashiers' as const, label: 'Кассиры', icon: Users },
@@ -498,6 +499,7 @@ export default function FinancialsPage() {
       </div>
 
       {tab === 'overview' && <OverviewSection summary={summary} monthly={monthly} />}
+      {tab === 'daily' && <DailySection month={month} />}
       {tab === 'pnl' && <PnlSection data={pnl} />}
       {tab === 'expenses' && <ExpensesSection data={expenses} byCategory={byCategory} month={month}
         onReload={async () => {
@@ -536,10 +538,13 @@ function OverviewSection({ summary, monthly }: { summary: any; monthly: any }) {
           sub={`Маржа ${summary.gross_margin_pct}%${summary.revenue_source === 'items' && summary.cost_coverage_pct < 100 ? ` · себест. известна ${summary.cost_coverage_pct}%` : ''}`}
           color="#3b82f6" />
         <KpiCard icon={Wallet} label="Расходы" value={fmtMoney(summary.total_expenses)}
-          sub={`Постоянные: ${fmtMoney(summary.recurring_expenses)}${summary.one_off_expenses > 0 ? ` · Разовые: ${fmtMoney(summary.one_off_expenses)}` : ''} · Бонусы: ${fmtMoney(summary.bonus_expenses)}`}
+          sub={`Постоянные: ${fmtMoney(summary.recurring_expenses)} · Разовые: ${fmtMoney(summary.one_off_expenses)}`}
           color="#f59e0b" />
+        <KpiCard icon={Gift} label="Бонусы клиентам" value={fmtMoney(summary.bonus_redeemed)}
+          sub={`Списано: ${fmtMoney(summary.bonus_redeemed)} · Начислено: ${fmtMoney(summary.bonus_issued)}`}
+          color="#ec4899" />
         <KpiCard icon={BarChart3} label="Чистая прибыль" value={fmtMoney(summary.net_profit)}
-          sub={`Маржа ${summary.net_margin_pct}%${summary.one_off_expenses > 0 ? ` · без разовых: ${fmtMoney(summary.operating_net_profit)}` : ''}`}
+          sub={`Маржа ${summary.net_margin_pct}% · до бонусов: ${fmtMoney(summary.net_before_bonus)}${summary.one_off_expenses > 0 ? ` · без разовых: ${fmtMoney(summary.operating_net_profit)}` : ''}`}
           color={summary.net_profit >= 0 ? '#22c55e' : '#ef4444'}
           trend={{ value: vs.profit_change_pct, label: 'vs прошлый мес' }} />
       </div>
@@ -665,6 +670,16 @@ function PnlSection({ data }: { data: any }) {
             <div style={{ borderTop: '2px solid var(--border)', margin: '8px 0' }} />
             <PnlRow label={r.operating_net_profit.label} amount={r.operating_net_profit.amount} bold margin={r.operating_net_profit.margin_pct} />
           </>
+        )}
+
+        {r.net_before_bonus && (
+          <>
+            <div style={{ borderTop: '2px solid var(--border)', margin: '8px 0' }} />
+            <PnlRow label={r.net_before_bonus.label} amount={r.net_before_bonus.amount} bold margin={r.net_before_bonus.margin_pct} />
+          </>
+        )}
+        {r.bonus && r.bonus.amount !== 0 && (
+          <PnlRow label={`  ${r.bonus.label}`} amount={r.bonus.amount} indent />
         )}
 
         <div style={{ borderTop: '3px solid var(--accent)', margin: '8px 0' }} />
@@ -1034,6 +1049,125 @@ function TrendsSection({ data }: { data: any }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+    </>
+  );
+}
+
+
+// ═══════════════════════════════════════════
+// DAILY — подневная динамика + диапазон дат
+// ═══════════════════════════════════════════
+
+const _dateInput: any = { padding: '8px 12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer' };
+const _thS: any = { padding: '10px 14px', fontWeight: 600, whiteSpace: 'nowrap' };
+const _tdS: any = { padding: '9px 14px', textAlign: 'right', whiteSpace: 'nowrap' };
+
+function DailySection({ month }: { month: string }) {
+  const lastDay = (m: string) => {
+    const [y, mm] = m.split('-').map(Number);
+    return `${m}-${String(new Date(y, mm, 0).getDate()).padStart(2, '0')}`;
+  };
+  const [from, setFrom] = useState(`${month}-01`);
+  const [to, setTo] = useState(lastDay(month));
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { setFrom(`${month}-01`); setTo(lastDay(month)); }, [month]);
+
+  useEffect(() => {
+    let cancel = false;
+    setLoading(true);
+    financialsAPI.daily({ date_from: from, date_to: to })
+      .then((r: any) => { if (!cancel) setData(r.data); })
+      .catch(() => { if (!cancel) setData(null); })
+      .finally(() => { if (!cancel) setLoading(false); });
+    return () => { cancel = true; };
+  }, [from, to]);
+
+  const t = data?.totals;
+  const activeDays = (data?.days || []).filter((d: any) => d.revenue > 0 || d.receipts > 0);
+  const chartData = activeDays.map((d: any) => ({
+    name: d.label,
+    'Выручка': Math.round(d.revenue),
+    'Чистая': Math.round(d.net_profit),
+  }));
+
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+        <span style={{ color: 'var(--text2)', fontSize: 13 }}>Период:</span>
+        <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} style={_dateInput} />
+        <span style={{ color: 'var(--text3)' }}>—</span>
+        <input type="date" value={to} min={from} onChange={e => setTo(e.target.value)} style={_dateInput} />
+        {t && <span style={{ color: 'var(--text3)', fontSize: 12 }}>{t.days_count} дн. · активных {t.active_days}</span>}
+      </div>
+
+      {loading && (
+        <div style={{ color: 'var(--text2)', padding: 40, textAlign: 'center' }}>
+          <Loader2 size={24} className="animate-spin" />
+        </div>
+      )}
+
+      {!loading && t && t.revenue > 0 && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px,1fr))', gap: 12, marginBottom: 18 }}>
+            <KpiCard icon={TrendingUp} label="Выручка за период" value={fmtMoney(t.revenue)} sub={`${t.receipts} чеков · ср/день ${fmtMoney(t.avg_daily_revenue)}`} color="#22c55e" />
+            <KpiCard icon={DollarSign} label="Валовая прибыль" value={fmtMoney(t.gross_profit)} color="#3b82f6" />
+            <KpiCard icon={Gift} label="Бонусы (списано)" value={fmtMoney(t.bonus_redeemed)} sub={`Начислено: ${fmtMoney(t.bonus_issued)}`} color="#ec4899" />
+            <KpiCard icon={BarChart3} label="Чистая прибыль" value={fmtMoney(t.net_profit)} sub={t.best_day ? `Лучший день: ${t.best_day}` : undefined} color={t.net_profit >= 0 ? '#22c55e' : '#ef4444'} />
+          </div>
+
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 18 }}>
+            <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Выручка и прибыль по дням</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="name" stroke="#8899aa" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis stroke="#8899aa" tickFormatter={fmtShort} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtMoney(v)} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="Выручка" fill="#22c55e" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Чистая" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: 'var(--text2)', textAlign: 'right', background: 'var(--bg3)' }}>
+                    <th style={{ ..._thS, textAlign: 'left' }}>Дата</th>
+                    <th style={_thS}>Выручка</th>
+                    <th style={_thS}>Себест.</th>
+                    <th style={_thS}>Валовая</th>
+                    <th style={_thS}>Бонусы</th>
+                    <th style={_thS}>Чистая</th>
+                    <th style={_thS}>Чеков</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeDays.map((d: any, i: number) => (
+                    <tr key={i} style={{ borderTop: '1px solid var(--border)', color: 'var(--text)' }}>
+                      <td style={{ ..._tdS, textAlign: 'left', color: d.weekday >= 5 ? '#f59e0b' : 'var(--text)' }}>{d.date}</td>
+                      <td style={_tdS}>{fmtMoney(d.revenue)}</td>
+                      <td style={{ ..._tdS, color: 'var(--text3)' }}>{fmtMoney(d.cost_of_goods)}</td>
+                      <td style={_tdS}>{fmtMoney(d.gross_profit)}</td>
+                      <td style={{ ..._tdS, color: '#ec4899' }}>{fmtMoney(d.bonus_redeemed)}</td>
+                      <td style={{ ..._tdS, color: d.net_profit >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>{fmtMoney(d.net_profit)}</td>
+                      <td style={{ ..._tdS, color: 'var(--text3)' }}>{d.receipts}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {!loading && (!t || t.revenue === 0) && (
+        <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Нет данных за выбранный период</div>
+      )}
     </>
   );
 }

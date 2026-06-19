@@ -187,6 +187,16 @@ async def _resolve_cashier_id(
 # 1. PURCHASE — начисление бонуса
 # ═══════════════════════════════════════════
 
+# Постоянные категории расходов (авто-классификация, если 1С не прислала is_recurring)
+RECURRING_CATS = {
+    "rent","arenda","аренда","salary","salaries","zarplata","zp","oklad","зарплата","оклад",
+    "utilities","kommunal","kommunalka","коммунальные","коммуналка","communal",
+    "communication","svyaz","связь","internet","интернет","insurance","strahovanie","страхование",
+    "taxes","nalogi","налоги","ipoteka","ипотека","credit","kredit","кредит","leasing","lizing","лизинг",
+    "amortizatsiya","амортизация","depreciation","subscription","podpiska","подписка","security","ohrana","охрана",
+}
+
+
 @router.post("/1c/purchase", status_code=201)
 async def webhook_1c_purchase(
     body: Webhook1CPurchaseRequest,
@@ -241,6 +251,7 @@ async def webhook_1c_purchase(
                     quantity=item.quantity,
                     price=item.price,
                     total=(item.quantity * item.price).quantize(Decimal("0.01")),
+                    cost_price=(item.cost_price if getattr(item, "cost_price", None) is not None else product.cost_price),
                 )
                 db.add(pi)
                 # Обновить остаток и дату последней продажи
@@ -1099,13 +1110,17 @@ async def webhook_1c_expenses(
             skipped += 1
             continue
 
+        _cat = str(item.get("category", "other")).strip()[:30]
+        _flag = item.get("is_recurring")
+        _is_rec = bool(_flag) if _flag is not None else (_cat.lower() in RECURRING_CATS)
         expense = Expense(
-            category=str(item.get("category", "other"))[:50],
+            category=_cat,
             amount=amount,
             month=str(item.get("month") or datetime.now(timezone.utc).strftime("%Y-%m"))[:7],
             description=(str(item.get("description"))[:500] if item.get("description") else None),
             reference=(str(ref)[:100] if ref else None),
             source="1c",
+            is_recurring=_is_rec,
         )
         db.add(expense)
         created += 1
@@ -1175,7 +1190,10 @@ async def webhook_1c_expenses_sync(body: _ExpReq, request: Request, db: AsyncSes
     await db.execute(delete(Expense).where(Expense.month == body.month, Expense.source == "1c"))
     created = 0
     for e in body.expenses:
-        db.add(Expense(category=(e.category or "Prochie")[:30], amount=e.amount, month=body.month, description=(e.description or "")[:500], source="1c", branch_id=branch_id))
+        _cat = (e.category or "Prochie").strip()[:30]
+        _flag = getattr(e, "is_recurring", None)
+        _is_rec = bool(_flag) if _flag is not None else (_cat.lower() in RECURRING_CATS)
+        db.add(Expense(category=_cat, amount=e.amount, month=body.month, description=(e.description or "")[:500], source="1c", branch_id=branch_id, is_recurring=_is_rec))
         created += 1
     await db.commit()
     return {"status": "ok", "created": created, "month": body.month}

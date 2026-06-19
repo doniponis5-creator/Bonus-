@@ -531,6 +531,7 @@ class PurchaseItemInput(BaseModel):
     sku: str = Field(..., max_length=50, description="Артикул товара")
     quantity: Decimal = Field(..., gt=0, description="Количество")
     price: Decimal = Field(..., ge=0, description="Цена за единицу в KGS")
+    cost_price: Optional[Decimal] = Field(None, ge=0, description="Себестоимость за единицу в KGS (для P&L)")
 
 
 class ProductResponse(BaseModel):
@@ -638,6 +639,7 @@ class ExpensesSyncEntry(BaseModel):
     category: str = Field(..., max_length=100)
     amount: float = 0
     description: Optional[str] = Field(None, max_length=500)
+    is_recurring: Optional[bool] = Field(None, description="Постоянный (аренда/зарплата). None -> авто по категории")
 
 class ExpensesSyncRequest(BaseModel):
     branch_id: Optional[str] = Field(None, max_length=50)

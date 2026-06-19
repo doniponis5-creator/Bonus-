@@ -309,6 +309,13 @@ export const financialsAPI = {
   deleteExpense: (id: string) => api.delete(`/api/v1/financials/expenses/${id}`),
   byCashier: (month?: string) => api.get('/api/v1/financials/by-cashier' + (month ? `?month=${month}` : '')),
   byCategory: (month?: string) => api.get('/api/v1/financials/by-category' + (month ? `?month=${month}` : '')),
+  daily: (params: { month?: string; date_from?: string; date_to?: string } = {}) => {
+    const q = new URLSearchParams();
+    if (params.month) q.set('month', params.month);
+    if (params.date_from) q.set('date_from', params.date_from);
+    if (params.date_to) q.set('date_to', params.date_to);
+    return api.get('/api/v1/financials/daily' + (q.toString() ? `?${q.toString()}` : ''));
+  },
   planFact: (month?: string) => api.get('/api/v1/financials/plan-fact' + (month ? `?month=${month}` : '')),
   verifyPin: (pin: string) => api.post("/api/v1/financials/verify-pin", { pin }),
   setPin: (pin: string, current_pin?: string) => api.put("/api/v1/financials/pin", { pin, current_pin }),
