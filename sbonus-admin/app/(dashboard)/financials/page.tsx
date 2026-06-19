@@ -163,6 +163,17 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
     }
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (loading) return;
+      if (e.key >= '0' && e.key <= '9') { e.preventDefault(); handleDigit(e.key); }
+      else if (e.key === 'Backspace') { e.preventDefault(); handleDelete(); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (showSetup) submitSetup(); else if (pin.length >= 4) submitPin(pin); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showSetup, setupStep, pin, newPin, confirmPin, loading]);
+
   if (checking) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg)' }}>
@@ -377,6 +388,7 @@ export default function FinancialsPage() {
   const [expenses, setExpenses] = useState<any>(null);
   const [cashiers, setCashiers] = useState<any>(null);
   const [byCategory, setByCategory] = useState<any>(null);
+  const [showPinModal, setShowPinModal] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!pinUnlocked) return;
@@ -470,6 +482,13 @@ export default function FinancialsPage() {
             padding: '8px 14px', background: 'var(--bg2)', border: '1px solid var(--border)',
             borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer',
           }} />
+          <button onClick={() => setShowPinModal(true)} title="Сменить PIN" style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 10, color: 'var(--text2)', cursor: 'pointer', fontSize: 13,
+          }}>
+            <Lock size={14} /> PIN
+          </button>
           <button onClick={loadData} style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', background: 'var(--border)', border: '1px solid var(--bg3)',
@@ -510,6 +529,8 @@ export default function FinancialsPage() {
         }} />}
       {tab === 'cashiers' && <CashiersSection data={cashiers} />}
       {tab === 'trends' && <TrendsSection data={monthly} />}
+
+      {showPinModal && <ChangePinModal onClose={() => setShowPinModal(false)} />}
     </div>
   );
 }
@@ -1206,6 +1227,82 @@ function SyncBadge() {
     }}>
       <span style={{ width: 8, height: 8, borderRadius: 999, background: color, boxShadow: `0 0 8px ${color}`, flexShrink: 0 }} />
       <span>1С: {label}</span>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════
+// CHANGE PIN — смена PIN-кода (только супер-админ)
+// ═══════════════════════════════════════════
+
+function ChangePinModal({ onClose }: { onClose: () => void }) {
+  const [cur, setCur] = useState('');
+  const [np, setNp] = useState('');
+  const [cf, setCf] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const onlyDigits = (v: string) => v.replace(/\D/g, '').slice(0, 6);
+
+  const save = async () => {
+    setMsg(null);
+    if (np.length < 4) { setMsg({ ok: false, text: 'Новый PIN — минимум 4 цифры' }); return; }
+    if (np !== cf) { setMsg({ ok: false, text: 'PIN-коды не совпадают' }); return; }
+    setSaving(true);
+    try {
+      await financialsAPI.setPin(np, cur || undefined);
+      setMsg({ ok: true, text: 'PIN изменён' });
+      setTimeout(onClose, 900);
+    } catch (e: any) {
+      setMsg({ ok: false, text: e?.response?.data?.detail || 'Ошибка смены PIN' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inp: any = {
+    width: '100%', padding: '12px 14px', background: 'var(--bg)', border: '1px solid var(--border)',
+    borderRadius: 10, color: 'var(--text)', fontSize: 16, letterSpacing: 4, textAlign: 'center',
+    marginBottom: 12, boxSizing: 'border-box',
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16,
+        padding: 24, width: '100%', maxWidth: 360,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h3 style={{ color: 'var(--text)', fontSize: 17, fontWeight: 700, margin: 0 }}>Сменить PIN</h3>
+          <button onClick={onClose} aria-label="Закрыть" style={{ background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer' }}>
+            <X size={20} />
+          </button>
+        </div>
+        <input type="password" inputMode="numeric" autoFocus placeholder="Текущий PIN"
+          value={cur} onChange={e => setCur(onlyDigits(e.target.value))} style={inp} />
+        <input type="password" inputMode="numeric" placeholder="Новый PIN (4–6 цифр)"
+          value={np} onChange={e => setNp(onlyDigits(e.target.value))} style={inp} />
+        <input type="password" inputMode="numeric" placeholder="Повторите новый PIN"
+          value={cf} onChange={e => setCf(onlyDigits(e.target.value))}
+          onKeyDown={e => { if (e.key === 'Enter') save(); }} style={inp} />
+        {msg && (
+          <div style={{ fontSize: 13, textAlign: 'center', margin: '4px 0 12px', color: msg.ok ? 'var(--success)' : 'var(--danger)' }}>
+            {msg.text}
+          </div>
+        )}
+        <button onClick={save} disabled={saving} style={{
+          width: '100%', padding: 13, background: 'var(--accent)', border: 'none', borderRadius: 10,
+          color: 'var(--on-accent)', fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1,
+        }}>
+          {saving ? 'Сохранение…' : 'Сохранить'}
+        </button>
+        <p style={{ color: 'var(--text3)', fontSize: 11.5, textAlign: 'center', marginTop: 12, marginBottom: 0 }}>
+          Менять PIN может только супер-админ. Если PIN ещё не задан — оставьте «Текущий PIN» пустым.
+        </p>
+      </div>
     </div>
   );
 }
