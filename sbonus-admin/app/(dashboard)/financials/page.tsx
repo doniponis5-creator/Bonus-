@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { financialsAPI, productAnalyticsAPI } from '@/lib/api';
+import { financialsAPI, productAPI } from '@/lib/api';
 import {
   Wallet, Loader2, TrendingUp, TrendingDown, DollarSign, Truck, Package, AlertTriangle, ChevronDown, ChevronRight,
   Plus, Trash2, Edit3, RefreshCw, BarChart3, PieChart as PieIcon,
@@ -1447,7 +1447,7 @@ function SuppliersSection() {
     setLoading(true);
     setError('');
     try {
-      const r = await productAnalyticsAPI.suppliers(days);
+      const r = await productAPI.suppliers(days);
       setData(r.data);
     } catch (e: any) {
       setError(e?.response?.data?.detail || 'Ошибка загрузки');
