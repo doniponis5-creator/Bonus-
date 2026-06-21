@@ -1361,3 +1361,174 @@ async def smart_recommendations(
             "recovery_potential": sum(a.get("recovery_potential", 0) for a in slow_mover_actions),
         },
     }
+
+
+# ═══════════════════════════════════════════
+# 11. SUPPLIERS — аналитика по поставщикам
+# ═══════════════════════════════════════════
+
+@router.get("/suppliers")
+async def supplier_analytics(
+    days: int = Query(90, ge=1, le=365, description="Период продаж в днях"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+) -> dict:
+    """Аналитика по поставщикам: остатки, продажи, маржа."""
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    # ── 1. Все активные товары с остатками ──
+    products_q = await db.execute(
+        select(Product).where(Product.is_active == True)
+    )
+    all_products = products_q.scalars().all()
+
+    # ── 2. Продажи по товарам за период ──
+    sales_q = await db.execute(
+        select(
+            PurchaseItem.product_id,
+            func.sum(PurchaseItem.quantity).label("sold_qty"),
+            func.sum(PurchaseItem.total).label("sold_amount"),
+        )
+        .where(PurchaseItem.created_at >= since)
+        .group_by(PurchaseItem.product_id)
+    )
+    sales_map: dict = {}
+    for r in sales_q.all():
+        sales_map[r.product_id] = {
+            "sold_qty": float(r.sold_qty or 0),
+            "sold_amount": float(r.sold_amount or 0),
+        }
+
+    # ── 3. Агрегация по поставщику ──
+    suppliers: dict = {}
+    for p in all_products:
+        sup_name = p.supplier or "Не указан"
+        if sup_name not in suppliers:
+            suppliers[sup_name] = {
+                "name": sup_name,
+                "product_count": 0,
+                "stock_qty": 0.0,
+                "stock_value": 0.0,       # по цене продажи
+                "cost_value": 0.0,        # по себестоимости
+                "sold_qty": 0.0,
+                "sold_amount": 0.0,
+                "revenue_with_cost": 0.0, # выручка только там где есть себест.
+                "cost_of_sold": 0.0,      # себест. проданных
+                "low_stock_count": 0,
+                "out_of_stock_count": 0,
+                "abc": {"A": 0, "B": 0, "C": 0, "None": 0},
+                "categories": {},
+                "top_products": [],
+            }
+
+        s = suppliers[sup_name]
+        s["product_count"] += 1
+        s["stock_qty"] += float(p.current_stock or 0)
+        s["stock_value"] += float(p.current_stock or 0) * float(p.price or 0)
+        if p.cost_price:
+            s["cost_value"] += float(p.current_stock or 0) * float(p.cost_price)
+
+        # Продажи
+        sale = sales_map.get(p.id, {"sold_qty": 0.0, "sold_amount": 0.0})
+        s["sold_qty"] += sale["sold_qty"]
+        s["sold_amount"] += sale["sold_amount"]
+
+        # Маржа (только если есть себестоимость)
+        if p.cost_price and p.cost_price > 0 and sale["sold_qty"] > 0:
+            cost_of_sold = sale["sold_qty"] * float(p.cost_price)
+            s["cost_of_sold"] += cost_of_sold
+            s["revenue_with_cost"] += sale["sold_amount"]
+
+        # Остатки
+        stock = float(p.current_stock or 0)
+        min_stock = float(p.min_stock_level or 0)
+        if stock == 0:
+            s["out_of_stock_count"] += 1
+        elif min_stock > 0 and stock <= min_stock:
+            s["low_stock_count"] += 1
+
+        # ABC
+        abc_key = p.abc_class or "None"
+        s["abc"][abc_key] = s["abc"].get(abc_key, 0) + 1
+
+        # Категории
+        cat = p.category or "Прочие"
+        s["categories"][cat] = s["categories"].get(cat, 0) + 1
+
+        # Top products (для таблицы)
+        s["top_products"].append({
+            "sku": p.sku,
+            "name": p.name,
+            "price": float(p.price or 0),
+            "cost_price": float(p.cost_price) if p.cost_price else None,
+            "current_stock": stock,
+            "sold_qty": sale["sold_qty"],
+            "sold_amount": sale["sold_amount"],
+            "abc_class": p.abc_class,
+        })
+
+    # ── 4. Финализация: маржа, сортировка top_products, сортировка поставщиков ──
+    result_list = []
+    for s in suppliers.values():
+        # Маржа
+        if s["revenue_with_cost"] > 0:
+            gross_profit = s["revenue_with_cost"] - s["cost_of_sold"]
+            margin_pct = round((gross_profit / s["revenue_with_cost"]) * 100, 1)
+        else:
+            gross_profit = 0.0
+            margin_pct = None
+
+        # Top 5 products by sold_amount
+        top5 = sorted(s["top_products"], key=lambda x: x["sold_amount"], reverse=True)[:5]
+
+        # Categories top 5
+        top_cats = sorted(s["categories"].items(), key=lambda x: x[1], reverse=True)[:5]
+
+        result_list.append({
+            "name": s["name"],
+            "product_count": s["product_count"],
+            "stock_qty": round(s["stock_qty"], 1),
+            "stock_value": round(s["stock_value"], 2),
+            "cost_value": round(s["cost_value"], 2),
+            "sold_qty": round(s["sold_qty"], 1),
+            "sold_amount": round(s["sold_amount"], 2),
+            "gross_profit": round(gross_profit, 2),
+            "margin_pct": margin_pct,
+            "low_stock_count": s["low_stock_count"],
+            "out_of_stock_count": s["out_of_stock_count"],
+            "abc": s["abc"],
+            "top_categories": [{"name": c[0], "count": c[1]} for c in top_cats],
+            "top_products": top5,
+        })
+
+    # Сортировка: сначала по sold_amount desc, затем по stock_value desc
+    result_list.sort(key=lambda x: (x["sold_amount"], x["stock_value"]), reverse=True)
+
+    # ── 5. Итоговая сводка ──
+    total_suppliers = len(result_list)
+    total_stock_value = sum(s["stock_value"] for s in result_list)
+    total_sold_amount = sum(s["sold_amount"] for s in result_list)
+    total_products = sum(s["product_count"] for s in result_list)
+    total_low_stock = sum(s["low_stock_count"] for s in result_list)
+    total_out_of_stock = sum(s["out_of_stock_count"] for s in result_list)
+
+    # Взвешенная средняя маржа
+    total_rev_with_cost = sum(s["sold_amount"] for s in suppliers.values() if suppliers[s["name"]]["revenue_with_cost"] > 0) if False else 0
+    all_rev = sum(s.get("revenue_with_cost", 0) for s in suppliers.values())
+    all_cogs = sum(s.get("cost_of_sold", 0) for s in suppliers.values())
+    avg_margin = round(((all_rev - all_cogs) / all_rev) * 100, 1) if all_rev > 0 else None
+
+    return {
+        "period_days": days,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "total_suppliers": total_suppliers,
+            "total_products": total_products,
+            "total_stock_value": round(total_stock_value, 2),
+            "total_sold_amount": round(total_sold_amount, 2),
+            "avg_margin_pct": avg_margin,
+            "total_low_stock": total_low_stock,
+            "total_out_of_stock": total_out_of_stock,
+        },
+        "suppliers": result_list,
+    }

@@ -291,6 +291,7 @@ export const productAPI = {
   updateSettings: (params: Record<string, any>) => api.put('/api/v1/product-analytics/settings', null, { params }),
   dailyDigest: () => api.get('/api/v1/product-analytics/daily-digest'),
   smartRecommendations: (days = 90) => api.get(`/api/v1/product-analytics/smart-recommendations?days=${days}`),
+  suppliers: (days = 90) => api.get(`/api/v1/product-analytics/suppliers?days=${days}`),
 };
 
 export const financialsAPI = {
@@ -328,6 +329,8 @@ export const financialsAPI = {
   verifyPin: (pin: string) => api.post("/api/v1/financials/verify-pin", { pin }),
   setPin: (pin: string, current_pin?: string) => api.put("/api/v1/financials/pin", { pin, current_pin }),
   pinStatus: () => api.get("/api/v1/financials/pin-status"),
+  getSupplierDebts: () => api.get("/api/v1/financials/supplier-debts"),
+  saveSupplierDebts: (suppliers: any[]) => api.put("/api/v1/financials/supplier-debts", { suppliers }),
   setPlan: (month: string, params: { revenue?: number; expenses?: number; profit?: number }) =>
     api.put(`/api/v1/financials/plan?month=${month}`, null, { params }),
 };

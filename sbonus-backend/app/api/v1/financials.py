@@ -1287,3 +1287,64 @@ async def cash_overview(
         "operations": operations,
         "by_category_out": by_cat,
     }
+
+
+# ═══════════════════════════════════════════════════════════════
+# SUPPLIER DEBTS — Долги поставщикам (хранится в settings JSON)
+# ═══════════════════════════════════════════════════════════════
+
+import json as _json
+
+_SUPPLIER_DEBTS_KEY = "SUPPLIER_DEBTS"
+
+
+class SupplierDebtItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = Field(..., min_length=1, max_length=200)
+    currency: str = Field("USD", pattern="^(USD|SOM)$")
+    amount: float = Field(..., ge=0)
+    notes: str = Field("", max_length=500)
+    excluded: bool = False
+    color: str = Field("", max_length=20)
+
+
+class SupplierDebtsPayload(BaseModel):
+    suppliers: list[SupplierDebtItem]
+
+
+@router.get("/supplier-debts")
+async def get_supplier_debts(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+) -> dict:
+    """Получить список долгов поставщикам."""
+    result = await db.execute(select(Setting).where(Setting.key == _SUPPLIER_DEBTS_KEY))
+    setting = result.scalar_one_or_none()
+    if not setting or not setting.value:
+        return {"suppliers": []}
+    try:
+        suppliers = _json.loads(setting.value)
+    except Exception:
+        suppliers = []
+    return {"suppliers": suppliers}
+
+
+@router.put("/supplier-debts")
+async def save_supplier_debts(
+    payload: SupplierDebtsPayload,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN)),
+) -> dict:
+    """Сохранить/обновить список долгов поставщикам."""
+    data = _json.dumps([s.model_dump() for s in payload.suppliers], ensure_ascii=False)
+
+    result = await db.execute(select(Setting).where(Setting.key == _SUPPLIER_DEBTS_KEY))
+    setting = result.scalar_one_or_none()
+    if setting:
+        setting.value = data
+        setting.updated_at = datetime.now(timezone.utc)
+    else:
+        db.add(Setting(key=_SUPPLIER_DEBTS_KEY, value=data))
+
+    await db.commit()
+    return {"ok": True, "count": len(payload.suppliers)}

@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { financialsAPI } from '@/lib/api';
+import { financialsAPI, productAnalyticsAPI } from '@/lib/api';
 import {
-  Wallet, Loader2, TrendingUp, TrendingDown, DollarSign,
+  Wallet, Loader2, TrendingUp, TrendingDown, DollarSign, Truck, Package, AlertTriangle, ChevronDown, ChevronRight,
   Plus, Trash2, Edit3, RefreshCw, BarChart3, PieChart as PieIcon,
   Users, Calendar, ArrowUpRight, ArrowDownRight, Save, X, Lock, Shield, Delete, Gift, Banknote,
 } from 'lucide-react';
@@ -63,7 +63,7 @@ const CATEGORIES = [
   { value: 'maintenance', label: 'Ремонт' }, { value: 'other', label: 'Прочие' },
 ];
 
-type Tab = 'overview' | 'daily' | 'pnl' | 'cash' | 'expenses' | 'cashiers' | 'trends';
+type Tab = 'overview' | 'daily' | 'pnl' | 'cash' | 'suppliers' | 'expenses' | 'cashiers' | 'trends';
 
 
 // ─── PIN Gate ───
@@ -438,6 +438,7 @@ export default function FinancialsPage() {
     { key: 'daily' as const, label: 'По дням', icon: Calendar },
     { key: 'pnl' as const, label: 'P&L отчёт', icon: DollarSign },
     { key: 'cash' as const, label: 'Касса', icon: Banknote },
+    { key: 'suppliers' as const, label: 'Поставщики', icon: Truck },
     { key: 'expenses' as const, label: 'Расходы', icon: Wallet },
     { key: 'cashiers' as const, label: 'Кассиры', icon: Users },
     { key: 'trends' as const, label: 'Тренды', icon: TrendingUp },
@@ -530,6 +531,7 @@ export default function FinancialsPage() {
           loadData();
         }} />}
       {tab === 'cashiers' && <CashiersSection data={cashiers} />}
+      {tab === 'suppliers' && <SuppliersSection />}
       {tab === 'trends' && <TrendsSection data={monthly} />}
 
       {showPinModal && <ChangePinModal onClose={() => setShowPinModal(false)} />}
@@ -1420,5 +1422,314 @@ function CashSection({ month }: { month: string }) {
         </div>
       </div>
     </>
+  );
+}
+
+
+// ═══════════════════════════════════════════
+// SUPPLIERS SECTION — Аналитика поставщиков
+// ═══════════════════════════════════════════
+
+const SUPPLIER_COLORS = [
+  '#FFE600', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899',
+  '#06b6d4', '#8b5cf6', '#ef4444', '#84cc16', '#f97316',
+];
+
+function SuppliersSection() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [days, setDays] = useState(90);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const r = await productAnalyticsAPI.suppliers(days);
+      setData(r.data);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Ошибка загрузки');
+    } finally {
+      setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text2)' }}>
+      <Loader2 size={28} className="animate-spin" style={{ marginRight: 10 }} /> Загрузка поставщиков...
+    </div>
+  );
+  if (error) return (
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--danger)' }}>
+      {error}
+      <button onClick={load} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--border)', border: 'none', borderRadius: 10, color: 'var(--text)', cursor: 'pointer', display: 'block', margin: '12px auto 0' }}>
+        Повторить
+      </button>
+    </div>
+  );
+  if (!data) return null;
+
+  const { summary, suppliers: allSuppliers } = data;
+
+  const filtered = (allSuppliers || []).filter((s: any) =>
+    !search || s.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Chart data — top 8 by sold_amount
+  const chartData = [...(allSuppliers || [])]
+    .filter((s: any) => s.sold_amount > 0)
+    .slice(0, 8)
+    .map((s: any) => ({
+      name: s.name.length > 14 ? s.name.slice(0, 13) + '…' : s.name,
+      fullName: s.name,
+      sold: Math.round(s.sold_amount),
+      stock: Math.round(s.stock_value),
+      margin: s.margin_pct,
+    }));
+
+  return (
+    <div>
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+        <KpiCard icon={Truck} label="Поставщиков" value={summary.total_suppliers} color="#FFE600" />
+        <KpiCard icon={Package} label="Товаров" value={summary.total_products} color="#3b82f6" />
+        <KpiCard icon={TrendingUp} label={`Продажи (${days}д)`} value={fmtMoney(summary.total_sold_amount)} color="#22c55e" />
+        <KpiCard icon={Wallet} label="Остатки (сом)" value={fmtMoney(summary.total_stock_value)} color="#f59e0b" />
+        {summary.avg_margin_pct !== null && (
+          <KpiCard icon={DollarSign} label="Средняя маржа" value={`${summary.avg_margin_pct}%`}
+            color={summary.avg_margin_pct >= 20 ? '#22c55e' : summary.avg_margin_pct >= 10 ? '#f59e0b' : '#ef4444'} />
+        )}
+        {summary.total_low_stock > 0 && (
+          <KpiCard icon={AlertTriangle} label="Мало остатков" value={summary.total_low_stock} color="#ef4444" />
+        )}
+      </div>
+
+      {/* Bar Chart — top suppliers by sales */}
+      {chartData.length > 0 && (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, margin: 0 }}>
+              Топ поставщиков по продажам (топ 8)
+            </h3>
+            <span style={{ color: 'var(--text2)', fontSize: 12 }}>За {days} дней</span>
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="name" stroke="#8899aa" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" interval={0} />
+              <YAxis stroke="#8899aa" tickFormatter={fmtShort} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(v: number, name: string) => [fmtMoney(v), name]}
+                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+              />
+              <Bar dataKey="sold" fill="#22c55e" radius={[4, 4, 0, 0]} name="Продажи" />
+              <Bar dataKey="stock" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Остаток" />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Controls */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          placeholder="🔍 Поиск поставщика..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            flex: 1, minWidth: 200, padding: '9px 14px',
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 10, color: 'var(--text)', fontSize: 13,
+          }}
+        />
+        <select value={days} onChange={e => setDays(Number(e.target.value))} style={{
+          padding: '9px 14px', background: 'var(--bg2)', border: '1px solid var(--border)',
+          borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer',
+        }}>
+          <option value={30}>30 дней</option>
+          <option value={60}>60 дней</option>
+          <option value={90}>90 дней</option>
+          <option value={180}>180 дней</option>
+          <option value={365}>365 дней</option>
+        </select>
+        <button onClick={load} style={{
+          display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px',
+          background: 'var(--border)', border: '1px solid var(--bg3)',
+          borderRadius: 10, color: 'var(--text)', cursor: 'pointer', fontSize: 13,
+        }}>
+          <RefreshCw size={13} /> Обновить
+        </button>
+      </div>
+
+      {/* Table */}
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '2fr 70px 140px 140px 80px 90px 70px',
+          gap: 0, padding: '12px 16px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg3)',
+        }}>
+          {['Поставщик', 'Товаров', 'Остаток', `Продажи (${days}д)`, 'Маржа', 'Остатки', 'ABC'].map((h, i) => (
+            <div key={i} style={{ color: 'var(--text2)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: i > 0 ? 'right' : 'left' }}>
+              {h}
+            </div>
+          ))}
+        </div>
+
+        {filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 48, color: 'var(--text2)' }}>Нет поставщиков</div>
+        )}
+
+        {filtered.map((sup: any, idx: number) => {
+          const isExpanded = expanded === sup.name;
+          const accentColor = SUPPLIER_COLORS[idx % SUPPLIER_COLORS.length];
+          const stockAlert = sup.out_of_stock_count > 0 ? 'critical' : sup.low_stock_count > 0 ? 'warn' : 'ok';
+
+          return (
+            <div key={sup.name} style={{ borderBottom: '1px solid var(--border)' }}>
+              {/* Row */}
+              <div
+                onClick={() => setExpanded(isExpanded ? null : sup.name)}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 70px 140px 140px 80px 90px 70px',
+                  gap: 0, padding: '14px 16px',
+                  cursor: 'pointer', alignItems: 'center',
+                  transition: 'background 0.15s',
+                  background: isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                onMouseLeave={e => (e.currentTarget.style.background = isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent')}
+              >
+                {/* Name */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {isExpanded ? <ChevronDown size={14} color="var(--text2)" /> : <ChevronRight size={14} color="var(--text2)" />}
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0,
+                  }} />
+                  <span style={{ color: 'var(--text)', fontSize: 13, fontWeight: 500 }}>{sup.name}</span>
+                  {sup.top_categories?.[0] && (
+                    <span style={{ color: 'var(--text2)', fontSize: 11, background: 'var(--bg3)', padding: '2px 6px', borderRadius: 6 }}>
+                      {sup.top_categories[0].name}
+                    </span>
+                  )}
+                </div>
+                {/* Product count */}
+                <div style={{ textAlign: 'right', color: 'var(--text)', fontSize: 13 }}>{sup.product_count}</div>
+                {/* Stock value */}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ color: 'var(--text)', fontSize: 13, fontWeight: 500 }}>{fmtMoney(sup.stock_value)}</div>
+                  {sup.cost_value > 0 && (
+                    <div style={{ color: 'var(--text2)', fontSize: 11 }}>с/с: {fmtMoney(sup.cost_value)}</div>
+                  )}
+                </div>
+                {/* Sold amount */}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ color: sup.sold_amount > 0 ? '#22c55e' : 'var(--text2)', fontSize: 13, fontWeight: 500 }}>
+                    {sup.sold_amount > 0 ? fmtMoney(sup.sold_amount) : '—'}
+                  </div>
+                  {sup.sold_qty > 0 && (
+                    <div style={{ color: 'var(--text2)', fontSize: 11 }}>{fmt(Math.round(sup.sold_qty))} шт</div>
+                  )}
+                </div>
+                {/* Margin */}
+                <div style={{ textAlign: 'right' }}>
+                  {sup.margin_pct !== null ? (
+                    <span style={{
+                      color: sup.margin_pct >= 20 ? '#22c55e' : sup.margin_pct >= 10 ? '#f59e0b' : '#ef4444',
+                      fontSize: 13, fontWeight: 600,
+                    }}>
+                      {sup.margin_pct}%
+                    </span>
+                  ) : <span style={{ color: 'var(--text2)', fontSize: 12 }}>—</span>}
+                </div>
+                {/* Stock status */}
+                <div style={{ textAlign: 'right' }}>
+                  {stockAlert === 'critical' && (
+                    <span style={{ color: '#ef4444', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                      <AlertTriangle size={12} /> {sup.out_of_stock_count} нет
+                    </span>
+                  )}
+                  {stockAlert === 'warn' && (
+                    <span style={{ color: '#f59e0b', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                      <AlertTriangle size={12} /> {sup.low_stock_count} мало
+                    </span>
+                  )}
+                  {stockAlert === 'ok' && <span style={{ color: '#22c55e', fontSize: 12 }}>✓ ОК</span>}
+                </div>
+                {/* ABC */}
+                <div style={{ textAlign: 'right', display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                  {sup.abc.A > 0 && <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: 11, padding: '2px 5px', borderRadius: 5, fontWeight: 700 }}>A:{sup.abc.A}</span>}
+                  {sup.abc.B > 0 && <span style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', fontSize: 11, padding: '2px 5px', borderRadius: 5, fontWeight: 700 }}>B:{sup.abc.B}</span>}
+                  {sup.abc.C > 0 && <span style={{ background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', fontSize: 11, padding: '2px 5px', borderRadius: 5, fontWeight: 700 }}>C:{sup.abc.C}</span>}
+                </div>
+              </div>
+
+              {/* Expanded — top products */}
+              {isExpanded && sup.top_products?.length > 0 && (
+                <div style={{ padding: '0 16px 16px 40px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Топ товаров
+                  </div>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    {sup.top_products.map((p: any, pi: number) => (
+                      <div key={pi} style={{
+                        display: 'grid', gridTemplateColumns: '2fr 90px 100px 110px 70px',
+                        padding: '8px 12px', background: 'var(--bg2)', borderRadius: 10,
+                        border: '1px solid var(--border)', alignItems: 'center', gap: 8,
+                      }}>
+                        <div>
+                          <div style={{ color: 'var(--text)', fontSize: 13 }}>{p.name}</div>
+                          <div style={{ color: 'var(--text2)', fontSize: 11 }}>{p.sku}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ color: 'var(--text2)', fontSize: 11 }}>Цена</div>
+                          <div style={{ color: 'var(--text)', fontSize: 13 }}>{fmtMoney(p.price)}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ color: 'var(--text2)', fontSize: 11 }}>На складе</div>
+                          <div style={{
+                            color: p.current_stock === 0 ? '#ef4444' : 'var(--text)', fontSize: 13,
+                          }}>{fmt(p.current_stock)} шт</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ color: 'var(--text2)', fontSize: 11 }}>Продажи</div>
+                          <div style={{ color: p.sold_amount > 0 ? '#22c55e' : 'var(--text2)', fontSize: 13 }}>
+                            {p.sold_amount > 0 ? fmtMoney(p.sold_amount) : '—'}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          {p.abc_class && (
+                            <span style={{
+                              background: p.abc_class === 'A' ? 'rgba(34,197,94,0.15)' : p.abc_class === 'B' ? 'rgba(59,130,246,0.15)' : 'rgba(139,92,246,0.15)',
+                              color: p.abc_class === 'A' ? '#22c55e' : p.abc_class === 'B' ? '#3b82f6' : '#8b5cf6',
+                              padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700,
+                            }}>{p.abc_class}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Summary footer */}
+      {filtered.length > 0 && (
+        <div style={{ marginTop: 12, color: 'var(--text2)', fontSize: 12, textAlign: 'right' }}>
+          Показано {filtered.length} из {allSuppliers?.length || 0} поставщиков · Период: {days} дней
+        </div>
+      )}
+    </div>
   );
 }
