@@ -414,8 +414,8 @@ export default function SupplierDebtsPage() {
       </div>
 
       {/* Modals */}
-      {(modal === 'add' || (modal && modal !== 'add')) && (
-        <SupplierModal initial={modal === 'add' ? undefined : (modal as Supplier)} currency={currency} onSave={handleSave} onClose={() => setModal(null)} />
+      {modal !== null && (
+        <SupplierModal initial={modal === 'add' ? undefined : modal as Supplier} currency={currency} onSave={handleSave} onClose={() => setModal(null)} />
       )}
 
       {deleteId && (
