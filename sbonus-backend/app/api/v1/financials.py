@@ -1326,6 +1326,10 @@ async def get_supplier_debts(
         suppliers = _json.loads(setting.value)
     except Exception:
         suppliers = []
+    # Normalize legacy "KGS" → "SOM" for frontend compatibility
+    for s in suppliers:
+        if isinstance(s, dict) and s.get("currency") == "KGS":
+            s["currency"] = "SOM"
     return {"suppliers": suppliers}
 
 
