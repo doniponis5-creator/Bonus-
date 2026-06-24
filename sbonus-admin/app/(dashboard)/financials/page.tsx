@@ -1436,7 +1436,8 @@ const SUPPLIER_COLORS = [
 ];
 
 function SuppliersSection() {
-  // SUP_PRO_V2 — som+$ bitta qatorda birlashgan + galochka bilan summadan chiqarib yashirish (persist: localStorage)
+  // SUP_PRO_V4 — som+$ bitta qatorda, galochka bilan yashirish, per-valyuta %/bar, share-sort,
+  //              copy, skeleton, qidiruv tozalash+highlight, zebra, top-accent, KPI hover
   const LS_EXCL = 'sup_debts_excluded_v1';
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1445,6 +1446,7 @@ function SuppliersSection() {
   const [sortBy, setSortBy] = useState<'amount' | 'name'>('amount');
   const [onlyDebts, setOnlyDebts] = useState(false);
   const [hiddenOpen, setHiddenOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancel = false;
@@ -1466,6 +1468,15 @@ function SuppliersSection() {
   const fmtUsd = (v: number) => '$' + fmt(Math.round(v));
   const cut = (s: string, n: number) => { const t = String(s || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
   const norm = (s: string) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  // qidiruvda mos qismni belgilash
+  const hl = (name: string): any => {
+    const t = q.trim();
+    if (!t) return name;
+    const idx = name.toLowerCase().indexOf(t.toLowerCase());
+    if (idx < 0) return name;
+    return (<>{name.slice(0, idx)}<mark style={{ background: 'rgba(245,158,11,0.35)', color: 'inherit', borderRadius: 3, padding: '0 1px' }}>{name.slice(idx, idx + t.length)}</mark>{name.slice(idx + t.length)}</>);
+  };
 
   // Bir odamni (nom bo'yicha) guruhlash — ham som, ham dollar bitta qatorda
   const groups = useMemo(() => {
@@ -1500,44 +1511,100 @@ function SuppliersSection() {
   const hidSom = hidden.reduce((s: number, g: any) => s + g.som, 0);
   const hidUsd = hidden.reduce((s: number, g: any) => s + g.usd, 0);
   const maxSom = included.reduce((mx: number, g: any) => Math.max(mx, Math.abs(g.som)), 1);
+  const maxUsd = included.reduce((mx: number, g: any) => Math.max(mx, Math.abs(g.usd)), 1);
   const somCount = groups.filter((g: any) => g.som !== 0).length;
   const usdCount = groups.filter((g: any) => g.usd !== 0).length;
-  const topSom = included.filter((g: any) => g.som > 0).sort((a: any, b: any) => b.som - a.som)[0];
+
+  // valyutalararo adolatli reyting: o'z valyutasidagi ulush (FX kerak emas)
+  const rank = (g: any) => Math.max(
+    debtSom > 0 && g.som > 0 ? g.som / debtSom : 0,
+    debtUsd > 0 && g.usd > 0 ? g.usd / debtUsd : 0,
+  );
+  const topByRank = included.slice().sort((a: any, b: any) => rank(b) - rank(a))[0];
+  const topDomUsd = topByRank ? ((debtUsd > 0 ? topByRank.usd / debtUsd : 0) > (debtSom > 0 ? topByRank.som / debtSom : 0)) : false;
 
   const list = useMemo(() => {
     let arr = included.slice();
     if (onlyDebts) arr = arr.filter((g: any) => g.som > 0 || g.usd > 0);
     const t = q.trim().toLowerCase();
     if (t) arr = arr.filter((g: any) => String(g.name).toLowerCase().includes(t));
-    arr.sort((a: any, b: any) => sortBy === 'name' ? String(a.name).localeCompare(String(b.name)) : ((b.som - a.som) || (b.usd - a.usd)));
+    arr.sort((a: any, b: any) => sortBy === 'name'
+      ? String(a.name).localeCompare(String(b.name))
+      : (rank(b) - rank(a)) || (b.som - a.som) || (b.usd - a.usd));
     return arr;
-  }, [included, q, sortBy, onlyDebts]);
+  }, [included, q, sortBy, onlyDebts, debtSom, debtUsd]);
+
+  const copyTotals = () => {
+    const lines = included.slice().sort((a: any, b: any) => rank(b) - rank(a)).map((g: any) => {
+      const p: string[] = [];
+      if (g.som !== 0) p.push(fmtSom(g.som));
+      if (g.usd !== 0) p.push(fmtUsd(g.usd));
+      return g.name + ': ' + p.join(' · ');
+    });
+    lines.push('');
+    lines.push('ИТОГО (' + included.length + '): ' + fmtSom(debtSom) + (debtUsd > 0 ? ' · ' + fmtUsd(debtUsd) : ''));
+    try { navigator.clipboard.writeText(lines.join('\n')); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* noop */ }
+  };
+
+  const filtered = q.trim() !== '' || onlyDebts;
+
+  if (loading) return (
+    <div className="supsec">
+      <style>{`@keyframes supShimmer{0%{background-position:-440px 0}100%{background-position:440px 0}} .supsec .sk{background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 37%,var(--bg2) 63%);background-size:880px 100%;animation:supShimmer 1.3s linear infinite;border-radius:10px}`}</style>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 16 }}>
+        {[0, 1, 2, 3].map((i) => <div key={i} className="sk" style={{ height: 96, borderRadius: 16 }} />)}
+      </div>
+      <div className="sk" style={{ height: 42, marginBottom: 12 }} />
+      {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="sk" style={{ height: 54, marginBottom: 8 }} />)}
+    </div>
+  );
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Ошибка загрузки</div>;
 
   const kpis = [
     { Icon: Banknote, color: '#f59e0b', label: 'Долг поставщикам · сом', value: fmtSom(debtSom), sub: somCount + ' поставщиков' + (advSom > 0 ? ' · аванс ' + fmtSom(advSom) : '') },
     { Icon: DollarSign, color: '#22c55e', label: 'Долг поставщикам · $', value: fmtUsd(debtUsd), sub: usdCount + ' поставщиков' + (advUsd > 0 ? ' · аванс ' + fmtUsd(advUsd) : '') },
     { Icon: Users, color: '#60a5fa', label: 'Поставщиков', value: String(included.length), sub: somCount + ' сом · ' + usdCount + ' $' + (hidden.length ? ' · ' + hidden.length + ' скрыто' : '') },
-    { Icon: TrendingUp, color: '#a78bfa', label: 'Крупнейший долг', value: topSom ? fmtSom(topSom.som) : '—', sub: topSom ? cut(topSom.name, 20) : '' },
+    { Icon: TrendingUp, color: '#a78bfa', label: 'Крупнейший долг', value: topByRank ? (topDomUsd ? fmtUsd(topByRank.usd) : fmtSom(topByRank.som)) : '—', sub: topByRank ? cut(topByRank.name, 20) : '' },
   ];
-
-  if (loading) return <div style={{ color: 'var(--text2)', padding: 40, textAlign: 'center' }}><Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} /></div>;
-  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Ошибка загрузки</div>;
 
   const sortBtns: [string, string][] = [['amount', 'По долгу'], ['name', 'По имени']];
 
   return (
-    <div>
-      {/* Birlashgan ko'rinish — valyuta tab yo'q */}
+    <div className="supsec">
+      <style>{`
+        .supsec table tbody tr { transition: background .15s; }
+        .supsec table tbody tr:nth-child(even) { background: rgba(255,255,255,0.014); }
+        .supsec table tbody tr:hover { background: rgba(245,158,11,0.06); }
+        .supsec .sup-row { animation: supFade .22s ease both; }
+        @keyframes supFade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+        .supsec .kpi { transition: transform .15s ease, border-color .15s ease; }
+        .supsec .kpi:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.18); }
+        .supsec input[type=checkbox] { transition: transform .12s; }
+        .supsec input[type=checkbox]:active { transform: scale(.82); }
+        .supsec .pill { transition: all .15s ease; }
+        .supsec .pill:hover { border-color: rgba(245,158,11,0.6); }
+        @media (max-width: 560px) {
+          .supsec .col-pct { display: none; }
+          .supsec .sup-bars { max-width: 150px !important; }
+        }
+      `}</style>
+
+      {/* Birlashgan ko'rinish + Копировать */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ padding: '7px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)', fontSize: 13, fontWeight: 600 }}>
           Все валюты · <span style={{ color: '#f59e0b' }}>{somCount} сом</span> · <span style={{ color: '#22c55e' }}>{usdCount} $</span>
         </span>
+        <button onClick={copyTotals} className="pill" style={{
+          marginLeft: 'auto', padding: '7px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+          border: '1px solid ' + (copied ? '#22c55e' : 'var(--border)'), background: copied ? 'rgba(34,197,94,0.12)' : 'var(--bg2)',
+          color: copied ? '#22c55e' : 'var(--text2)',
+        }}>{copied ? '✓ Скопировано' : '⧉ Копировать'}</button>
       </div>
 
       {/* KPI dashboard */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 16 }}>
         {kpis.map((k, i) => (
-          <div key={i} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '16px 18px' }}>
+          <div key={i} className="kpi" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '16px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
               <div style={{ width: 38, height: 38, borderRadius: 10, background: k.color + '1f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <k.Icon size={20} color={k.color} />
@@ -1551,79 +1618,100 @@ function SuppliersSection() {
       </div>
 
       {/* Фильтры */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск поставщика…"
-          style={{ flex: 1, minWidth: 180, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ flex: 1, minWidth: 180, position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setQ(''); }} placeholder="Поиск поставщика…"
+            style={{ width: '100%', padding: '9px 34px 9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+          {q && <button onClick={() => setQ('')} title="Очистить" style={{ position: 'absolute', right: 8, background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 4 }}>×</button>}
+        </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {sortBtns.map(([k, lbl]) => (
-            <button key={k} onClick={() => setSortBy(k as any)} style={{
+            <button key={k} onClick={() => setSortBy(k as any)} className="pill" style={{
               padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
               border: '1px solid ' + (sortBy === k ? '#f59e0b' : 'var(--border)'),
               background: sortBy === k ? 'rgba(245,158,11,0.12)' : 'var(--bg2)', color: sortBy === k ? '#f59e0b' : 'var(--text2)',
             }}>{lbl}</button>
           ))}
         </div>
-        <button onClick={() => setOnlyDebts((v) => !v)} style={{
+        <button onClick={() => setOnlyDebts((v) => !v)} className="pill" style={{
           padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
           border: '1px solid ' + (onlyDebts ? '#f59e0b' : 'var(--border)'),
           background: onlyDebts ? 'rgba(245,158,11,0.12)' : 'var(--bg2)', color: onlyDebts ? '#f59e0b' : 'var(--text2)',
         }}>Только долги</button>
       </div>
 
+      {/* natija soni */}
+      {filtered && (
+        <div style={{ color: 'var(--text3)', fontSize: 12, marginBottom: 8 }}>Показано {list.length} из {included.length}</div>
+      )}
+
       {list.length === 0 ? (
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 32, textAlign: 'center', color: 'var(--text2)', fontSize: 13 }}>
-          {groups.length === 0 ? 'Нет поставщиков' : 'Ничего не найдено'}
+          {groups.length === 0 ? 'Нет поставщиков' : (hidden.length > 0 && !filtered ? 'Все поставщики скрыты — откройте «Скрытые» ниже' : 'Ничего не найдено')}
         </div>
       ) : (
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ color: 'var(--text2)', background: 'var(--bg3)' }}>
-                <th style={{ padding: '11px 14px', textAlign: 'center', width: 42 }} />
+                <th style={{ padding: '11px 14px', textAlign: 'center', width: 46 }} />
                 <th style={{ padding: '11px 14px', textAlign: 'left' }}>Поставщик</th>
                 <th style={{ padding: '11px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>Долг</th>
-                <th style={{ padding: '11px 14px', textAlign: 'right', width: 64 }}>%</th>
+                <th className="col-pct" style={{ padding: '11px 14px', textAlign: 'right', width: 70 }}>%</th>
               </tr>
             </thead>
             <tbody>
-              {list.map((g: any, i: number) => {
+              {list.map((g: any) => {
+                const isTop = topByRank && g.key === topByRank.key && sortBy === 'amount' && !q;
                 const neg = g.som < 0 || g.usd < 0;
-                const pctBar = Math.min(100, Math.abs(g.som) / maxSom * 100);
-                const pctTot = debtSom > 0 && g.som > 0 ? (g.som / debtSom * 100) : 0;
+                const somPct = debtSom > 0 && g.som > 0 ? (g.som / debtSom * 100) : 0;
+                const usdPct = debtUsd > 0 && g.usd > 0 ? (g.usd / debtUsd * 100) : 0;
                 return (
-                  <tr key={g.key} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                  <tr key={g.key} className="sup-row" style={{ borderTop: '1px solid var(--border)' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', borderLeft: '3px solid ' + (isTop ? '#f59e0b' : 'transparent') }}>
                       <input type="checkbox" checked={false} onChange={() => toggle(g.key)} title="Исключить из суммы и скрыть"
                         style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#f59e0b' }} />
                     </td>
                     <td style={{ padding: '10px 14px', color: 'var(--text)' }}>
-                      <div>
-                        {i === 0 && sortBy === 'amount' && !q && <span style={{ color: '#f59e0b', marginRight: 6 }}>★</span>}
-                        {g.name}
-                        {neg && <span style={{ marginLeft: 8, fontSize: 10, color: '#22c55e', border: '1px solid rgba(34,197,94,0.4)', borderRadius: 6, padding: '1px 6px' }}>аванс</span>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {isTop && <span style={{ color: '#f59e0b' }}>★</span>}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hl(g.name)}</span>
+                        {neg && <span style={{ fontSize: 10, color: '#22c55e', border: '1px solid rgba(34,197,94,0.4)', borderRadius: 6, padding: '1px 6px' }}>аванс</span>}
                       </div>
-                      <div style={{ height: 4, borderRadius: 4, marginTop: 6, background: 'var(--bg3)', overflow: 'hidden', maxWidth: 320 }}>
-                        <div style={{ height: '100%', width: Math.max(3, pctBar) + '%', background: '#f59e0b', transition: 'width .4s ease' }} />
+                      <div className="sup-bars" style={{ marginTop: 6, maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {g.som !== 0 && (
+                          <div style={{ height: 4, borderRadius: 4, background: 'var(--bg3)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: Math.max(3, Math.min(100, Math.abs(g.som) / maxSom * 100)) + '%', background: '#f59e0b', transition: 'width .4s ease' }} />
+                          </div>
+                        )}
+                        {g.usd !== 0 && (
+                          <div style={{ height: 4, borderRadius: 4, background: 'var(--bg3)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: Math.max(3, Math.min(100, Math.abs(g.usd) / maxUsd * 100)) + '%', background: '#22c55e', transition: 'width .4s ease' }} />
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {g.som !== 0 && <div style={{ fontWeight: 700, color: g.som < 0 ? '#22c55e' : 'var(--text)' }}>{fmtSom(g.som)}</div>}
-                      {g.usd !== 0 && <div style={{ fontWeight: 700, fontSize: g.som !== 0 ? 12 : 14, color: '#22c55e', marginTop: g.som !== 0 ? 2 : 0 }}>{fmtUsd(g.usd)}</div>}
+                      {g.som !== 0 && <div style={{ fontWeight: 700, fontSize: 14, color: g.som < 0 ? '#22c55e' : 'var(--text)' }}>{fmtSom(g.som)}</div>}
+                      {g.usd !== 0 && <div style={{ fontWeight: 700, fontSize: g.som !== 0 ? 13 : 14, color: '#22c55e', marginTop: g.som !== 0 ? 3 : 0 }}>{fmtUsd(g.usd)}</div>}
                     </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text3)', fontSize: 12 }}>{pctTot > 0 ? pctTot.toFixed(1) + '%' : '—'}</td>
+                    <td className="col-pct" style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {g.som !== 0 && <div style={{ fontSize: 12, color: 'var(--text3)', height: 18, lineHeight: '18px' }}>{somPct > 0 ? somPct.toFixed(1) + '%' : '—'}</div>}
+                      {g.usd !== 0 && <div style={{ fontSize: 12, color: 'var(--text3)', height: 18, lineHeight: '18px', marginTop: g.som !== 0 ? 3 : 0 }}>{usdPct > 0 ? usdPct.toFixed(1) + '%' : '—'}</div>}
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
             <tfoot>
               <tr style={{ borderTop: '2px solid var(--border)', background: 'var(--bg3)' }}>
-                <td />
+                <td style={{ borderLeft: '3px solid transparent' }} />
                 <td style={{ padding: '12px 14px', color: 'var(--text2)', fontWeight: 600 }}>ИТОГО ({included.length})</td>
                 <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  <div style={{ color: '#f59e0b', fontWeight: 700 }}>{fmtSom(debtSom)}</div>
-                  {debtUsd > 0 && <div style={{ color: '#22c55e', fontWeight: 700, fontSize: 12, marginTop: 2 }}>{fmtUsd(debtUsd)}</div>}
+                  <div style={{ color: '#f59e0b', fontWeight: 700, fontSize: 14 }}>{fmtSom(debtSom)}</div>
+                  {debtUsd > 0 && <div style={{ color: '#22c55e', fontWeight: 700, fontSize: 13, marginTop: 3 }}>{fmtUsd(debtUsd)}</div>}
                 </td>
-                <td />
+                <td className="col-pct" />
               </tr>
             </tfoot>
           </table>
@@ -1636,17 +1724,17 @@ function SuppliersSection() {
           <div onClick={() => setHiddenOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer', color: 'var(--text2)', fontSize: 13 }}>
             <ChevronDown size={16} style={{ transform: hiddenOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform .2s' }} />
             <span style={{ color: 'var(--text)', fontWeight: 600 }}>Скрытые ({hidden.length})</span>
-            <span>· {fmtSom(hidSom)}{hidUsd !== 0 ? ' · ' + fmtUsd(hidUsd) : ''} — не в сумме</span>
-            <button onClick={(e) => { e.stopPropagation(); restoreAll(); }} style={{ marginLeft: 'auto', padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg3)', color: '#f59e0b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Вернуть все</button>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>· {fmtSom(hidSom)}{hidUsd !== 0 ? ' · ' + fmtUsd(hidUsd) : ''} — не в сумме</span>
+            <button onClick={(e) => { e.stopPropagation(); restoreAll(); }} className="pill" style={{ marginLeft: 'auto', flexShrink: 0, padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg3)', color: '#f59e0b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Вернуть все</button>
           </div>
           {hiddenOpen && (
             <div style={{ borderTop: '1px solid var(--border)' }}>
-              {hidden.slice().sort((a: any, b: any) => b.som - a.som).map((g: any) => (
-                <div key={g.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderTop: '1px solid var(--border)', opacity: 0.7 }}>
+              {hidden.slice().sort((a: any, b: any) => rank(b) - rank(a)).map((g: any) => (
+                <div key={g.key} className="sup-row" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderTop: '1px solid var(--border)', opacity: 0.72 }}>
                   <input type="checkbox" checked onChange={() => toggle(g.key)} title="Вернуть в сумму"
                     style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#f59e0b' }} />
-                  <span style={{ color: 'var(--text2)', textDecoration: 'line-through', flex: 1 }}>{g.name}</span>
-                  <span style={{ color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: 'var(--text2)', textDecoration: 'line-through', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span>
+                  <span style={{ color: 'var(--text3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     {g.som !== 0 ? fmtSom(g.som) : ''}{g.som !== 0 && g.usd !== 0 ? ' · ' : ''}{g.usd !== 0 ? fmtUsd(g.usd) : ''}
                   </span>
                 </div>
