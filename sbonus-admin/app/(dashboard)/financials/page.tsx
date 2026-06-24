@@ -1436,298 +1436,223 @@ const SUPPLIER_COLORS = [
 ];
 
 function SuppliersSection() {
+  // SUP_PRO_V2 — som+$ bitta qatorda birlashgan + galochka bilan summadan chiqarib yashirish (persist: localStorage)
+  const LS_EXCL = 'sup_debts_excluded_v1';
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [days, setDays] = useState(90);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [q, setQ] = useState('');
+  const [sortBy, setSortBy] = useState<'amount' | 'name'>('amount');
+  const [onlyDebts, setOnlyDebts] = useState(false);
+  const [hiddenOpen, setHiddenOpen] = useState(false);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let cancel = false;
     setLoading(true);
-    setError('');
-    try {
-      const r = await productAPI.suppliers(days);
-      setData(r.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
-  }, [days]);
+    financialsAPI.getSupplierDebts()
+      .then((r: any) => { if (!cancel) setData(r.data); })
+      .catch(() => { if (!cancel) setData(null); })
+      .finally(() => { if (!cancel) setLoading(false); });
+    return () => { cancel = true; };
+  }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    try { const raw = localStorage.getItem(LS_EXCL); if (raw) setExcluded(new Set(JSON.parse(raw))); } catch { /* noop */ }
+  }, []);
+  const persistExcl = (set: Set<string>) => { try { localStorage.setItem(LS_EXCL, JSON.stringify(Array.from(set))); } catch { /* noop */ } };
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text2)' }}>
-      <Loader2 size={28} className="animate-spin" style={{ marginRight: 10 }} /> Загрузка поставщиков...
-    </div>
-  );
-  if (error) return (
-    <div style={{ textAlign: 'center', padding: 60, color: 'var(--danger)' }}>
-      {error}
-      <button onClick={load} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--border)', border: 'none', borderRadius: 10, color: 'var(--text)', cursor: 'pointer', display: 'block', margin: '12px auto 0' }}>
-        Повторить
-      </button>
-    </div>
-  );
-  if (!data) return null;
+  const allSups: any[] = data?.suppliers || [];
+  const fmtSom = (v: number) => fmt(Math.round(v)) + ' сом';
+  const fmtUsd = (v: number) => '$' + fmt(Math.round(v));
+  const cut = (s: string, n: number) => { const t = String(s || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  const norm = (s: string) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
-  const { summary, suppliers: allSuppliers } = data;
+  // Bir odamni (nom bo'yicha) guruhlash — ham som, ham dollar bitta qatorda
+  const groups = useMemo(() => {
+    const map = new Map<string, any>();
+    const order: string[] = [];
+    allSups.forEach((s: any) => {
+      const key = norm(s.name);
+      let g = map.get(key);
+      if (!g) { g = { key, name: s.name, som: 0, usd: 0, count: 0 }; map.set(key, g); order.push(key); }
+      const c = String(s.currency || 'SOM');
+      const amt = Number(s.amount) || 0;
+      if (c === 'USD') g.usd += amt; else g.som += amt;
+      g.count += 1;
+    });
+    return order.map((k) => map.get(k));
+  }, [allSups]);
 
-  const filtered = (allSuppliers || []).filter((s: any) =>
-    !search || s.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const toggle = (key: string) => setExcluded((prev) => {
+    const n = new Set(prev);
+    if (n.has(key)) n.delete(key); else n.add(key);
+    persistExcl(n); return n;
+  });
+  const restoreAll = () => setExcluded(() => { const n = new Set<string>(); persistExcl(n); return n; });
 
-  // Chart data — top 8 by sold_amount
-  const chartData = [...(allSuppliers || [])]
-    .filter((s: any) => s.sold_amount > 0)
-    .slice(0, 8)
-    .map((s: any) => ({
-      name: s.name.length > 14 ? s.name.slice(0, 13) + '…' : s.name,
-      fullName: s.name,
-      sold: Math.round(s.sold_amount),
-      stock: Math.round(s.stock_value),
-      margin: s.margin_pct,
-    }));
+  const included = useMemo(() => groups.filter((g: any) => !excluded.has(g.key)), [groups, excluded]);
+  const hidden = useMemo(() => groups.filter((g: any) => excluded.has(g.key)), [groups, excluded]);
+
+  const debtSom = included.reduce((s: number, g: any) => g.som > 0 ? s + g.som : s, 0);
+  const debtUsd = included.reduce((s: number, g: any) => g.usd > 0 ? s + g.usd : s, 0);
+  const advSom = included.reduce((s: number, g: any) => g.som < 0 ? s + Math.abs(g.som) : s, 0);
+  const advUsd = included.reduce((s: number, g: any) => g.usd < 0 ? s + Math.abs(g.usd) : s, 0);
+  const hidSom = hidden.reduce((s: number, g: any) => s + g.som, 0);
+  const hidUsd = hidden.reduce((s: number, g: any) => s + g.usd, 0);
+  const maxSom = included.reduce((mx: number, g: any) => Math.max(mx, Math.abs(g.som)), 1);
+  const somCount = groups.filter((g: any) => g.som !== 0).length;
+  const usdCount = groups.filter((g: any) => g.usd !== 0).length;
+  const topSom = included.filter((g: any) => g.som > 0).sort((a: any, b: any) => b.som - a.som)[0];
+
+  const list = useMemo(() => {
+    let arr = included.slice();
+    if (onlyDebts) arr = arr.filter((g: any) => g.som > 0 || g.usd > 0);
+    const t = q.trim().toLowerCase();
+    if (t) arr = arr.filter((g: any) => String(g.name).toLowerCase().includes(t));
+    arr.sort((a: any, b: any) => sortBy === 'name' ? String(a.name).localeCompare(String(b.name)) : ((b.som - a.som) || (b.usd - a.usd)));
+    return arr;
+  }, [included, q, sortBy, onlyDebts]);
+
+  const kpis = [
+    { Icon: Banknote, color: '#f59e0b', label: 'Долг поставщикам · сом', value: fmtSom(debtSom), sub: somCount + ' поставщиков' + (advSom > 0 ? ' · аванс ' + fmtSom(advSom) : '') },
+    { Icon: DollarSign, color: '#22c55e', label: 'Долг поставщикам · $', value: fmtUsd(debtUsd), sub: usdCount + ' поставщиков' + (advUsd > 0 ? ' · аванс ' + fmtUsd(advUsd) : '') },
+    { Icon: Users, color: '#60a5fa', label: 'Поставщиков', value: String(included.length), sub: somCount + ' сом · ' + usdCount + ' $' + (hidden.length ? ' · ' + hidden.length + ' скрыто' : '') },
+    { Icon: TrendingUp, color: '#a78bfa', label: 'Крупнейший долг', value: topSom ? fmtSom(topSom.som) : '—', sub: topSom ? cut(topSom.name, 20) : '' },
+  ];
+
+  if (loading) return <div style={{ color: 'var(--text2)', padding: 40, textAlign: 'center' }}><Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} /></div>;
+  if (!data) return <div style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>Ошибка загрузки</div>;
+
+  const sortBtns: [string, string][] = [['amount', 'По долгу'], ['name', 'По имени']];
 
   return (
     <div>
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
-        <KpiCard icon={Truck} label="Поставщиков" value={summary.total_suppliers} color="#FFE600" />
-        <KpiCard icon={Package} label="Товаров" value={summary.total_products} color="#3b82f6" />
-        <KpiCard icon={TrendingUp} label={`Продажи (${days}д)`} value={fmtMoney(summary.total_sold_amount)} color="#22c55e" />
-        <KpiCard icon={Wallet} label="Остатки (сом)" value={fmtMoney(summary.total_stock_value)} color="#f59e0b" />
-        {summary.avg_margin_pct !== null && (
-          <KpiCard icon={DollarSign} label="Средняя маржа" value={`${summary.avg_margin_pct}%`}
-            color={summary.avg_margin_pct >= 20 ? '#22c55e' : summary.avg_margin_pct >= 10 ? '#f59e0b' : '#ef4444'} />
-        )}
-        {summary.total_low_stock > 0 && (
-          <KpiCard icon={AlertTriangle} label="Мало остатков" value={summary.total_low_stock} color="#ef4444" />
-        )}
+      {/* Birlashgan ko'rinish — valyuta tab yo'q */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ padding: '7px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)', fontSize: 13, fontWeight: 600 }}>
+          Все валюты · <span style={{ color: '#f59e0b' }}>{somCount} сом</span> · <span style={{ color: '#22c55e' }}>{usdCount} $</span>
+        </span>
       </div>
 
-      {/* Bar Chart — top suppliers by sales */}
-      {chartData.length > 0 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, margin: 0 }}>
-              Топ поставщиков по продажам (топ 8)
-            </h3>
-            <span style={{ color: 'var(--text2)', fontSize: 12 }}>За {days} дней</span>
+      {/* KPI dashboard */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 16 }}>
+        {kpis.map((k, i) => (
+          <div key={i} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '16px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: k.color + '1f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <k.Icon size={20} color={k.color} />
+              </div>
+              <div style={{ color: 'var(--text2)', fontSize: 12, lineHeight: 1.2 }}>{k.label}</div>
+            </div>
+            <div style={{ color: 'var(--text)', fontSize: 22, fontWeight: 700 }}>{k.value}</div>
+            <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 2 }}>{k.sub}</div>
           </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="name" stroke="#8899aa" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" interval={0} />
-              <YAxis stroke="#8899aa" tickFormatter={fmtShort} />
-              <Tooltip
-                contentStyle={tooltipStyle}
-                formatter={(v: number, name: string) => [fmtMoney(v), name]}
-                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-              />
-              <Bar dataKey="sold" fill="#22c55e" radius={[4, 4, 0, 0]} name="Продажи" />
-              <Bar dataKey="stock" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Остаток" />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-            </BarChart>
-          </ResponsiveContainer>
+        ))}
+      </div>
+
+      {/* Фильтры */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск поставщика…"
+          style={{ flex: 1, minWidth: 180, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, outline: 'none' }} />
+        <div style={{ display: 'flex', gap: 6 }}>
+          {sortBtns.map(([k, lbl]) => (
+            <button key={k} onClick={() => setSortBy(k as any)} style={{
+              padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              border: '1px solid ' + (sortBy === k ? '#f59e0b' : 'var(--border)'),
+              background: sortBy === k ? 'rgba(245,158,11,0.12)' : 'var(--bg2)', color: sortBy === k ? '#f59e0b' : 'var(--text2)',
+            }}>{lbl}</button>
+          ))}
+        </div>
+        <button onClick={() => setOnlyDebts((v) => !v)} style={{
+          padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+          border: '1px solid ' + (onlyDebts ? '#f59e0b' : 'var(--border)'),
+          background: onlyDebts ? 'rgba(245,158,11,0.12)' : 'var(--bg2)', color: onlyDebts ? '#f59e0b' : 'var(--text2)',
+        }}>Только долги</button>
+      </div>
+
+      {list.length === 0 ? (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 32, textAlign: 'center', color: 'var(--text2)', fontSize: 13 }}>
+          {groups.length === 0 ? 'Нет поставщиков' : 'Ничего не найдено'}
+        </div>
+      ) : (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ color: 'var(--text2)', background: 'var(--bg3)' }}>
+                <th style={{ padding: '11px 14px', textAlign: 'center', width: 42 }} />
+                <th style={{ padding: '11px 14px', textAlign: 'left' }}>Поставщик</th>
+                <th style={{ padding: '11px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>Долг</th>
+                <th style={{ padding: '11px 14px', textAlign: 'right', width: 64 }}>%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((g: any, i: number) => {
+                const neg = g.som < 0 || g.usd < 0;
+                const pctBar = Math.min(100, Math.abs(g.som) / maxSom * 100);
+                const pctTot = debtSom > 0 && g.som > 0 ? (g.som / debtSom * 100) : 0;
+                return (
+                  <tr key={g.key} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      <input type="checkbox" checked={false} onChange={() => toggle(g.key)} title="Исключить из суммы и скрыть"
+                        style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#f59e0b' }} />
+                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text)' }}>
+                      <div>
+                        {i === 0 && sortBy === 'amount' && !q && <span style={{ color: '#f59e0b', marginRight: 6 }}>★</span>}
+                        {g.name}
+                        {neg && <span style={{ marginLeft: 8, fontSize: 10, color: '#22c55e', border: '1px solid rgba(34,197,94,0.4)', borderRadius: 6, padding: '1px 6px' }}>аванс</span>}
+                      </div>
+                      <div style={{ height: 4, borderRadius: 4, marginTop: 6, background: 'var(--bg3)', overflow: 'hidden', maxWidth: 320 }}>
+                        <div style={{ height: '100%', width: Math.max(3, pctBar) + '%', background: '#f59e0b', transition: 'width .4s ease' }} />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {g.som !== 0 && <div style={{ fontWeight: 700, color: g.som < 0 ? '#22c55e' : 'var(--text)' }}>{fmtSom(g.som)}</div>}
+                      {g.usd !== 0 && <div style={{ fontWeight: 700, fontSize: g.som !== 0 ? 12 : 14, color: '#22c55e', marginTop: g.som !== 0 ? 2 : 0 }}>{fmtUsd(g.usd)}</div>}
+                    </td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text3)', fontSize: 12 }}>{pctTot > 0 ? pctTot.toFixed(1) + '%' : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ borderTop: '2px solid var(--border)', background: 'var(--bg3)' }}>
+                <td />
+                <td style={{ padding: '12px 14px', color: 'var(--text2)', fontWeight: 600 }}>ИТОГО ({included.length})</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <div style={{ color: '#f59e0b', fontWeight: 700 }}>{fmtSom(debtSom)}</div>
+                  {debtUsd > 0 && <div style={{ color: '#22c55e', fontWeight: 700, fontSize: 12, marginTop: 2 }}>{fmtUsd(debtUsd)}</div>}
+                </td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
         </div>
       )}
 
-      {/* Controls */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
-          placeholder="🔍 Поиск поставщика..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            flex: 1, minWidth: 200, padding: '9px 14px',
-            background: 'var(--bg2)', border: '1px solid var(--border)',
-            borderRadius: 10, color: 'var(--text)', fontSize: 13,
-          }}
-        />
-        <select value={days} onChange={e => setDays(Number(e.target.value))} style={{
-          padding: '9px 14px', background: 'var(--bg2)', border: '1px solid var(--border)',
-          borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer',
-        }}>
-          <option value={30}>30 дней</option>
-          <option value={60}>60 дней</option>
-          <option value={90}>90 дней</option>
-          <option value={180}>180 дней</option>
-          <option value={365}>365 дней</option>
-        </select>
-        <button onClick={load} style={{
-          display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px',
-          background: 'var(--border)', border: '1px solid var(--bg3)',
-          borderRadius: 10, color: 'var(--text)', cursor: 'pointer', fontSize: 13,
-        }}>
-          <RefreshCw size={13} /> Обновить
-        </button>
-      </div>
-
-      {/* Table */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-        {/* Header */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 70px 140px 140px 80px 90px 70px',
-          gap: 0, padding: '12px 16px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg3)',
-        }}>
-          {['Поставщик', 'Товаров', 'Остаток', `Продажи (${days}д)`, 'Маржа', 'Остатки', 'ABC'].map((h, i) => (
-            <div key={i} style={{ color: 'var(--text2)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: i > 0 ? 'right' : 'left' }}>
-              {h}
+      {/* Скрытые (исключённые из суммы) */}
+      {hidden.length > 0 && (
+        <div style={{ marginTop: 14, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+          <div onClick={() => setHiddenOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer', color: 'var(--text2)', fontSize: 13 }}>
+            <ChevronDown size={16} style={{ transform: hiddenOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform .2s' }} />
+            <span style={{ color: 'var(--text)', fontWeight: 600 }}>Скрытые ({hidden.length})</span>
+            <span>· {fmtSom(hidSom)}{hidUsd !== 0 ? ' · ' + fmtUsd(hidUsd) : ''} — не в сумме</span>
+            <button onClick={(e) => { e.stopPropagation(); restoreAll(); }} style={{ marginLeft: 'auto', padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg3)', color: '#f59e0b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Вернуть все</button>
+          </div>
+          {hiddenOpen && (
+            <div style={{ borderTop: '1px solid var(--border)' }}>
+              {hidden.slice().sort((a: any, b: any) => b.som - a.som).map((g: any) => (
+                <div key={g.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderTop: '1px solid var(--border)', opacity: 0.7 }}>
+                  <input type="checkbox" checked onChange={() => toggle(g.key)} title="Вернуть в сумму"
+                    style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#f59e0b' }} />
+                  <span style={{ color: 'var(--text2)', textDecoration: 'line-through', flex: 1 }}>{g.name}</span>
+                  <span style={{ color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+                    {g.som !== 0 ? fmtSom(g.som) : ''}{g.som !== 0 && g.usd !== 0 ? ' · ' : ''}{g.usd !== 0 ? fmtUsd(g.usd) : ''}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-
-        {filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 48, color: 'var(--text2)' }}>Нет поставщиков</div>
-        )}
-
-        {filtered.map((sup: any, idx: number) => {
-          const isExpanded = expanded === sup.name;
-          const accentColor = SUPPLIER_COLORS[idx % SUPPLIER_COLORS.length];
-          const stockAlert = sup.out_of_stock_count > 0 ? 'critical' : sup.low_stock_count > 0 ? 'warn' : 'ok';
-
-          return (
-            <div key={sup.name} style={{ borderBottom: '1px solid var(--border)' }}>
-              {/* Row */}
-              <div
-                onClick={() => setExpanded(isExpanded ? null : sup.name)}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 70px 140px 140px 80px 90px 70px',
-                  gap: 0, padding: '14px 16px',
-                  cursor: 'pointer', alignItems: 'center',
-                  transition: 'background 0.15s',
-                  background: isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-                onMouseLeave={e => (e.currentTarget.style.background = isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent')}
-              >
-                {/* Name */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {isExpanded ? <ChevronDown size={14} color="var(--text2)" /> : <ChevronRight size={14} color="var(--text2)" />}
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0,
-                  }} />
-                  <span style={{ color: 'var(--text)', fontSize: 13, fontWeight: 500 }}>{sup.name}</span>
-                  {sup.top_categories?.[0] && (
-                    <span style={{ color: 'var(--text2)', fontSize: 11, background: 'var(--bg3)', padding: '2px 6px', borderRadius: 6 }}>
-                      {sup.top_categories[0].name}
-                    </span>
-                  )}
-                </div>
-                {/* Product count */}
-                <div style={{ textAlign: 'right', color: 'var(--text)', fontSize: 13 }}>{sup.product_count}</div>
-                {/* Stock value */}
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ color: 'var(--text)', fontSize: 13, fontWeight: 500 }}>{fmtMoney(sup.stock_value)}</div>
-                  {sup.cost_value > 0 && (
-                    <div style={{ color: 'var(--text2)', fontSize: 11 }}>с/с: {fmtMoney(sup.cost_value)}</div>
-                  )}
-                </div>
-                {/* Sold amount */}
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ color: sup.sold_amount > 0 ? '#22c55e' : 'var(--text2)', fontSize: 13, fontWeight: 500 }}>
-                    {sup.sold_amount > 0 ? fmtMoney(sup.sold_amount) : '—'}
-                  </div>
-                  {sup.sold_qty > 0 && (
-                    <div style={{ color: 'var(--text2)', fontSize: 11 }}>{fmt(Math.round(sup.sold_qty))} шт</div>
-                  )}
-                </div>
-                {/* Margin */}
-                <div style={{ textAlign: 'right' }}>
-                  {sup.margin_pct !== null ? (
-                    <span style={{
-                      color: sup.margin_pct >= 20 ? '#22c55e' : sup.margin_pct >= 10 ? '#f59e0b' : '#ef4444',
-                      fontSize: 13, fontWeight: 600,
-                    }}>
-                      {sup.margin_pct}%
-                    </span>
-                  ) : <span style={{ color: 'var(--text2)', fontSize: 12 }}>—</span>}
-                </div>
-                {/* Stock status */}
-                <div style={{ textAlign: 'right' }}>
-                  {stockAlert === 'critical' && (
-                    <span style={{ color: '#ef4444', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-                      <AlertTriangle size={12} /> {sup.out_of_stock_count} нет
-                    </span>
-                  )}
-                  {stockAlert === 'warn' && (
-                    <span style={{ color: '#f59e0b', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-                      <AlertTriangle size={12} /> {sup.low_stock_count} мало
-                    </span>
-                  )}
-                  {stockAlert === 'ok' && <span style={{ color: '#22c55e', fontSize: 12 }}>✓ ОК</span>}
-                </div>
-                {/* ABC */}
-                <div style={{ textAlign: 'right', display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                  {sup.abc.A > 0 && <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: 11, padding: '2px 5px', borderRadius: 5, fontWeight: 700 }}>A:{sup.abc.A}</span>}
-                  {sup.abc.B > 0 && <span style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', fontSize: 11, padding: '2px 5px', borderRadius: 5, fontWeight: 700 }}>B:{sup.abc.B}</span>}
-                  {sup.abc.C > 0 && <span style={{ background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', fontSize: 11, padding: '2px 5px', borderRadius: 5, fontWeight: 700 }}>C:{sup.abc.C}</span>}
-                </div>
-              </div>
-
-              {/* Expanded — top products */}
-              {isExpanded && sup.top_products?.length > 0 && (
-                <div style={{ padding: '0 16px 16px 40px', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    Топ товаров
-                  </div>
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    {sup.top_products.map((p: any, pi: number) => (
-                      <div key={pi} style={{
-                        display: 'grid', gridTemplateColumns: '2fr 90px 100px 110px 70px',
-                        padding: '8px 12px', background: 'var(--bg2)', borderRadius: 10,
-                        border: '1px solid var(--border)', alignItems: 'center', gap: 8,
-                      }}>
-                        <div>
-                          <div style={{ color: 'var(--text)', fontSize: 13 }}>{p.name}</div>
-                          <div style={{ color: 'var(--text2)', fontSize: 11 }}>{p.sku}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ color: 'var(--text2)', fontSize: 11 }}>Цена</div>
-                          <div style={{ color: 'var(--text)', fontSize: 13 }}>{fmtMoney(p.price)}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ color: 'var(--text2)', fontSize: 11 }}>На складе</div>
-                          <div style={{
-                            color: p.current_stock === 0 ? '#ef4444' : 'var(--text)', fontSize: 13,
-                          }}>{fmt(p.current_stock)} шт</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ color: 'var(--text2)', fontSize: 11 }}>Продажи</div>
-                          <div style={{ color: p.sold_amount > 0 ? '#22c55e' : 'var(--text2)', fontSize: 13 }}>
-                            {p.sold_amount > 0 ? fmtMoney(p.sold_amount) : '—'}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          {p.abc_class && (
-                            <span style={{
-                              background: p.abc_class === 'A' ? 'rgba(34,197,94,0.15)' : p.abc_class === 'B' ? 'rgba(59,130,246,0.15)' : 'rgba(139,92,246,0.15)',
-                              color: p.abc_class === 'A' ? '#22c55e' : p.abc_class === 'B' ? '#3b82f6' : '#8b5cf6',
-                              padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700,
-                            }}>{p.abc_class}</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Summary footer */}
-      {filtered.length > 0 && (
-        <div style={{ marginTop: 12, color: 'var(--text2)', fontSize: 12, textAlign: 'right' }}>
-          Показано {filtered.length} из {allSuppliers?.length || 0} поставщиков · Период: {days} дней
+          )}
         </div>
       )}
     </div>
