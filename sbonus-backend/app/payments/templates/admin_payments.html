@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Платежи рассрочки — оператор</title>
+<style>
+  :root{--bg:#0b1220;--card:#111c33;--line:#23304d;--txt:#eaf0fb;--mut:#8aa0c6;
+    --g:#22c55e;--g2:#16a34a;--w:#f59e0b;--r:#ef4444;--b:#3b82f6}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;padding:18px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:16px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  input,select,button{font:inherit}
+  input,select{background:var(--card);border:1px solid var(--line);color:var(--txt);
+    border-radius:10px;padding:9px 12px}
+  button{cursor:pointer;border:none;border-radius:10px;padding:9px 14px;font-weight:600;color:#fff}
+  .b-load{background:var(--b)} .b-ok{background:var(--g)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .amt{font-size:20px;font-weight:800}
+  .who{font-size:13px;color:var(--mut);margin-top:3px}
+  .badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+  .bd-pending{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .bd-claimed{background:rgba(245,158,11,.18);color:#fcd34d}
+  .bd-confirmed{background:rgba(59,130,246,.18);color:#93c5fd}
+  .bd-synced{background:rgba(34,197,94,.18);color:#86efac}
+  .bd-failed{background:rgba(239,68,68,.18);color:#fca5a5}
+  .acts{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .acts a,.acts button{font-size:13px;padding:8px 12px;border-radius:9px;text-decoration:none}
+  .lnk{background:var(--line);color:var(--txt)}
+  .empty{color:var(--mut);text-align:center;padding:40px}
+  .lock{max-width:360px;margin:60px auto;text-align:center}
+</style>
+</head>
+<body>
+<div id="lock" class="lock">
+  <h1>🔒 Платежи рассрочки</h1>
+  <p class="sub">Введите ключ доступа (X-Api-Key)</p>
+  <input id="key" type="password" placeholder="API ключ" style="width:100%;margin-bottom:10px">
+  <button class="b-load" style="width:100%" onclick="unlock()">Войти</button>
+</div>
+
+<div id="app" style="display:none">
+  <h1>💳 Платежи рассрочки</h1>
+  <div class="sub">Подтверждайте поступившие оплаты O!Bank → 1С создаст ПКО, долг уменьшится.</div>
+  <div class="bar">
+    <select id="filter" onchange="render()">
+      <option value="need">Требуют подтверждения</option>
+      <option value="all">Все</option>
+      <option value="pending">Ожидают оплаты</option>
+      <option value="synced">Проведены (ПКО)</option>
+    </select>
+    <button class="b-load" onclick="load()">🔄 Обновить</button>
+  </div>
+  <div id="list"></div>
+</div>
+
+<script>
+let KEY="", DATA=[];
+const $=id=>document.getElementById(id);
+const money=n=>(Number(n)||0).toLocaleString("ru-RU");
+
+function unlock(){
+  KEY=$("key").value.trim();
+  if(!KEY) return;
+  $("lock").style.display="none"; $("app").style.display="block";
+  load();
+}
+
+async function load(){
+  try{
+    const r=await fetch("/admin/payments/list?limit=200",{headers:{"X-Api-Key":KEY}});
+    if(r.status===401){ alert("Неверный ключ"); location.reload(); return; }
+    const d=await r.json(); DATA=d.payments||[]; render();
+  }catch(e){ $("list").innerHTML='<div class="empty">Ошибка загрузки</div>'; }
+}
+
+function badge(p){
+  if(p.status==="synced") return ['bd-synced','✅ ПКО '+(p.onec_doc_number||'')];
+  if(p.status==="failed") return ['bd-failed','⚠ ошибка 1С'];
+  if(p.confirmed) return ['bd-confirmed','💙 подтверждён'];
+  if(p.client_claimed_paid) return ['bd-claimed','🟡 клиент оплатил'];
+  return ['bd-pending','⏳ ожидает'];
+}
+
+function render(){
+  const f=$("filter").value;
+  let rows=DATA.filter(p=>{
+    if(f==="need") return !p.confirmed && p.status!=="synced";
+    if(f==="pending") return !p.confirmed && !p.client_claimed_paid;
+    if(f==="synced") return p.status==="synced";
+    return true;
+  });
+  if(f==="need") rows.sort((a,b)=>(b.client_claimed_paid?1:0)-(a.client_claimed_paid?1:0));
+  if(!rows.length){ $("list").innerHTML='<div class="empty">Нет платежей</div>'; return; }
+  $("list").innerHTML=rows.map(p=>{
+    const [bc,bt]=badge(p);
+    const canConfirm=!p.confirmed && p.status!=="synced";
+    return `<div class="card">
+      <div class="top">
+        <div><div class="amt">${money(p.amount)} сом</div>
+          <div class="who">${p.customer_fio||"—"} · ${p.customer_phone||""}${p.rtu_number?" · №"+p.rtu_number:""}</div></div>
+        <span class="badge ${bc}">${bt}</span>
+      </div>
+      <div class="acts">
+        ${p.public_url?`<a class="lnk" href="${p.public_url}" target="_blank">страница</a>`:""}
+        ${p.pay_url?`<a class="lnk" href="${p.pay_url}" target="_blank">ссылка O!Bank</a>`:""}
+        ${canConfirm?`<button class="b-ok" onclick="confirmPay('${p.payment_id}',${p.amount})">✅ Подтвердить оплату</button>`:""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function confirmPay(pid,amt){
+  if(!confirm(`Подтвердить поступление ${money(amt)} сом?\nКлиенту уйдёт квитанция, 1С создаст ПКО.`)) return;
+  try{
+    const r=await fetch(`/api/v1/webhook/1c/payment/${pid}/confirm`,{
+      method:"POST",headers:{"X-Api-Key":KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({note:"подтверждено оператором"})});
+    const d=await r.json();
+    if(d.ok){ load(); } else { alert("Не удалось: "+JSON.stringify(d)); }
+  }catch(e){ alert("Ошибка: "+e); }
+}
+</script>
+</body>
+</html>

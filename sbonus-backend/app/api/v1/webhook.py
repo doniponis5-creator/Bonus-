@@ -1272,3 +1272,56 @@ async def webhook_1c_cash_sync(body: _CashReq, request: Request, db: AsyncSessio
 
     await db.commit()
     return {"status": "ok", "created": created, "skipped": skipped}
+
+
+# ── Поставщики: восстановлено 2026-06-24 (ADDITIVE, HMAC). sb_sync → SUPPLIER_DEBTS ──
+@router.post("/1c/suppliers-sync")
+async def webhook_1c_suppliers_sync(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_signature: str = Header(None, alias="X-Signature"),
+) -> dict:
+    """1С (sb_sync) шлёт долги поставщикам → пишем Setting SUPPLIER_DEBTS. HMAC-защита."""
+    await _security_check(request, x_signature, db)
+    import json as _json
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    raw = body.get("suppliers", []) if isinstance(body, dict) else []
+    items = []
+    for s in raw:
+        if not isinstance(s, dict):
+            continue
+        name = str(s.get("name", "")).strip()[:200]
+        if not name:
+            continue
+        try:
+            amount = round(float(s.get("amount", 0) or 0), 2)
+        except Exception:
+            amount = 0.0
+        cur = str(s.get("currency", "USD")).strip().upper()
+        if cur in ("KGS", "SOM", "СОМ", "сом", "С"):
+            cur = "SOM"
+        elif cur != "USD":
+            cur = "USD"
+        items.append({
+            "id": str(uuid.uuid4()),
+            "name": name,
+            "currency": cur,
+            "amount": amount,
+            "notes": "",
+            "excluded": False,
+            "color": "",
+        })
+    for k, v in (("SUPPLIER_DEBTS", _json.dumps(items, ensure_ascii=False)),
+                 ("SUPPLIER_DEBTS_AT", datetime.now(timezone.utc).isoformat())):
+        r = await db.execute(select(Setting).where(Setting.key == k))
+        st = r.scalar_one_or_none()
+        if st:
+            st.value = v
+        else:
+            db.add(Setting(key=k, value=v))
+    await db.commit()
+    return {"status": "ok", "count": len(items)}
+

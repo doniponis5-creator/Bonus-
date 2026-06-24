@@ -75,6 +75,16 @@ class Settings(BaseSettings):
     # ─── Приложение ───
     contracts_public_base_url: str = "https://api.smartcentr.store"
     contracts_pdf_dir: str = "/app/contracts_pdf"
+    # ─── O!Dengi (O!Bank) онлайн-оплата рассрочки ───
+    obank_api_url: str = "https://mw-api.dengi.kg/api/json/json.php"
+    obank_sid: str = ""
+    obank_secret: str = ""
+    obank_version: str = "1005"
+    obank_test: str = "0"
+    obank_result_url: str = ""
+    obank_link_field: str = "paylink_url"
+    obank_verify_via_status: bool = True
+    obank_pay_link: str = ""
     greenapi_host: str = "https://api.green-api.com"
     app_env: str = "development"
     debug: bool = False

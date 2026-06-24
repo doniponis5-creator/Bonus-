@@ -354,6 +354,18 @@ app.include_router(contracts_public_router)
 
 app.include_router(api_v2_router)
 
+# ── SBonus+ онлайн-оплата рассрочки (O!Bank) ──
+from app.payments.payments_router import (
+    router_1c as payments_1c_router,
+    router_obank as payments_obank_router,
+    router_public as payments_public_router,
+    router_admin as payments_admin_router,
+)
+app.include_router(payments_1c_router, prefix="/api/v1")     # /api/v1/webhook/1c/payment/*
+app.include_router(payments_obank_router, prefix="/api/v1")  # /api/v1/webhook/obank/callback
+app.include_router(payments_public_router)                   # /pay/{short_code}
+app.include_router(payments_admin_router)                    # /admin/payments
+
 
 # Global exception handler — hide internals in production
 import logging as _logging

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Оплата рассрочки — Смарт Центр</title>
+<style>
+  :root{
+    --bg:#0b1220; --card:#111c33; --card2:#0e1830; --line:#23304d;
+    --txt:#eaf0fb; --mut:#8aa0c6; --accent:#22c55e; --accent2:#16a34a;
+    --obank:#ff5a1f; --obank2:#e0440f; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:linear-gradient(180deg,#0b1220,#0a0f1c);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    min-height:100vh;display:flex;justify-content:center;padding:20px}
+  .wrap{width:100%;max-width:440px}
+  .brand{display:flex;align-items:center;gap:10px;justify-content:center;margin:8px 0 18px}
+  .brand .logo{font-size:26px}
+  .brand h1{font-size:18px;margin:0;letter-spacing:.3px;font-weight:700}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;
+    padding:24px 22px;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+  .label{color:var(--mut);font-size:13px;margin-bottom:6px;text-align:center}
+  .amount{font-size:46px;font-weight:800;text-align:center;letter-spacing:-1px;line-height:1}
+  .amount span{font-size:22px;color:var(--mut);font-weight:600;margin-left:6px}
+  .meta{margin:18px 0 4px;border-top:1px dashed var(--line);padding-top:16px}
+  .row{display:flex;justify-content:space-between;font-size:14px;padding:7px 0}
+  .row .k{color:var(--mut)} .row .v{font-weight:600;text-align:right}
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+    border:none;border-radius:16px;padding:17px;font-size:17px;font-weight:700;
+    color:#fff;cursor:pointer;margin-top:16px;transition:transform .08s ease,filter .2s}
+  .btn:active{transform:scale(.98)}
+  .btn-obank{background:linear-gradient(135deg,var(--obank),var(--obank2))}
+  .btn-ghost{background:transparent;border:1.5px solid var(--line);color:var(--txt)}
+  .ref{margin-top:16px;background:var(--card2);border:1px dashed var(--line);
+    border-radius:14px;padding:12px 14px;font-size:13px;color:var(--mut);text-align:center}
+  .ref b{color:var(--txt);font-size:15px;letter-spacing:.5px}
+  .state{margin-top:16px;border-radius:16px;padding:16px;text-align:center;font-weight:600;display:none}
+  .state.paid{display:block;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#86efac}
+  .state.wait{display:block;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);color:#fcd34d}
+  .foot{text-align:center;color:var(--mut);font-size:12px;margin-top:18px;line-height:1.6}
+  .skeleton{height:46px;background:linear-gradient(90deg,#1a2742,#22314f,#1a2742);
+    border-radius:10px;animation:sk 1.2s infinite}
+  @keyframes sk{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="logo">🏪</span><h1>СМАРТ ЦЕНТР</h1></div>
+
+  <div class="card">
+    <div class="label">Сумма к оплате</div>
+    <div id="amount" class="amount skeleton" style="width:60%;margin:0 auto"></div>
+
+    <div class="meta" id="meta" style="display:none">
+      <div class="row"><span class="k">Договор</span><span class="v" id="rtu">—</span></div>
+      <div class="row"><span class="k">Клиент</span><span class="v" id="fio">—</span></div>
+      <div class="row"><span class="k">Телефон</span><span class="v" id="phone">—</span></div>
+    </div>
+
+    <div id="actions" class="hidden">
+      <button class="btn btn-obank" id="btnPay">💳 Оплатить через O!Bank</button>
+      <div class="ref" id="refBox" style="display:none">
+        В комментарии к платежу укажите код:<br><b id="refCode"></b>
+      </div>
+      <button class="btn btn-ghost" id="btnPaid">Я уже оплатил(а)</button>
+    </div>
+
+    <div class="state wait" id="stWait">⏳ Спасибо! Платёж проверяется. Квитанция придёт в WhatsApp.</div>
+    <div class="state paid" id="stPaid">✅ Оплата получена! Квитанция отправлена в WhatsApp. Спасибо! 💚</div>
+  </div>
+
+  <div class="foot">
+    Оплата проходит через <b>O!Bank</b>.<br>
+    После зачисления долг по рассрочке уменьшится автоматически.
+  </div>
+</div>
+
+<script>
+const code = location.pathname.split("/").filter(Boolean).pop();
+const $ = id => document.getElementById(id);
+const money = n => (Number(n)||0).toLocaleString("ru-RU");
+let payUrl = "", poll = null;
+
+async function load(){
+  try{
+    const r = await fetch(`/pay/${code}/data`);
+    if(!r.ok) throw 0;
+    const d = await r.json();
+    render(d);
+  }catch(e){ $("amount").classList.remove("skeleton"); $("amount").textContent="Ошибка"; }
+}
+
+function render(d){
+  payUrl = d.pay_url || "";
+  const a = $("amount");
+  a.classList.remove("skeleton"); a.style.width="auto";
+  a.innerHTML = `${money(d.amount)}<span>${d.currency||"сом"}</span>`;
+  $("rtu").textContent = d.rtu_number ? "№"+d.rtu_number : "—";
+  $("fio").textContent = d.customer_fio || "—";
+  $("phone").textContent = d.customer_phone_masked || "—";
+  $("meta").style.display="block";
+
+  if(d.confirmed || d.status==="confirmed" || d.status==="synced"){
+    $("actions").classList.add("hidden");
+    $("stWait").style.display="none";
+    $("stPaid").style.display="block";
+    if(poll) clearInterval(poll);
+    return;
+  }
+  $("actions").classList.remove("hidden");
+  if(payUrl && /[?&](ref|comment|order)/i.test(payUrl)===false && d.payment_id){
+    // ссылка без авто-референса → просим указать код в комментарии
+    $("refCode").textContent = d.payment_id;
+    $("refBox").style.display="block";
+  }
+  if(d.client_claimed_paid){ $("stWait").style.display="block"; }
+}
+
+$("btnPay").onclick = async ()=>{
+  try{ await fetch(`/pay/${code}/start`,{method:"POST"}); }catch(e){}
+  if(payUrl){ window.location.href = payUrl; }
+  else { alert("Ссылка на оплату недоступна. Обратитесь в магазин."); }
+};
+
+$("btnPaid").onclick = async ()=>{
+  $("btnPaid").disabled = true;
+  try{ await fetch(`/pay/${code}/i-paid`,{method:"POST"}); }catch(e){}
+  $("stWait").style.display="block";
+  if(!poll) poll = setInterval(load, 5000);
+};
+
+load();
+// мягкий поллинг, чтобы поймать подтверждение
+setTimeout(()=>{ if(!poll) poll = setInterval(load, 8000); }, 8000);
+</script>
+</body>
+</html>
