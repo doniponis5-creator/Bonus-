@@ -111,7 +111,14 @@ function DashboardPage() {
     if (tab !== 'promo' || recsLoadedRef.current) return;
     recsLoadedRef.current = true;
     customerAPI.recommendations()
-      .then(r => setRecs(r.data?.items || []))
+      .then(r => {
+        const items = Array.isArray(r.data?.items) ? r.data.items : [];
+        setRecs(items.map((item: any) => ({
+          name: String(item?.name || 'Товар'),
+          price: Number(item?.price) > 0 ? Number(item.price) : 0,
+          category: item?.category ? String(item.category) : '',
+        })).filter((item: { name: string }) => item.name.trim().length > 0));
+      })
       .catch(() => {});
   }, [tab]);
 
@@ -499,16 +506,16 @@ function DashboardPage() {
               <p className="caption" style={{ marginBottom: 10 }}>На основе ваших покупок в Смарт Центр</p>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {recs.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: i < recs.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < recs.length - 1 ? '1px solid var(--border)' : 'none', minWidth: 0 }}>
                     <div className="icon-tile" style={{ background: 'var(--accent-dim)' }}>
                       <Sparkles size={15} color="var(--accent)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                      {p.category && <div className="caption" style={{ marginTop: 1 }}>{p.category}</div>}
+                      {p.category && <div className="caption" style={{ marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.category}</div>}
                     </div>
                     {p.price > 0 && (
-                      <div className="numeric" style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      <div className="numeric" style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, maxWidth: 96, textAlign: 'right' }}>
                         {Math.round(p.price).toLocaleString('ru-RU')} <span style={{ fontSize: 12, color: 'var(--text-2)' }}>сом</span>
                       </div>
                     )}

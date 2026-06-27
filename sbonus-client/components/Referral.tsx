@@ -58,9 +58,17 @@ export default function Referral({ referralCode, onBalanceChange }: { referralCo
     else copy();
   };
   const copy = () => {
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const done = () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(link).then(done).catch(() => {
+        window.prompt('Скопируйте ссылку', link);
+      });
+      return;
+    }
+    window.prompt('Скопируйте ссылку', link);
   };
 
   const claim = async (n: number) => {
@@ -122,7 +130,7 @@ export default function Referral({ referralCode, onBalanceChange }: { referralCo
       </button>
 
       {/* ── Вторичные действия ── */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 16 }}>
         <SecBtn onClick={copy} icon={copied ? <Check size={16} /> : <Copy size={16} />} label={copied ? 'Скопировано' : 'Копировать'} active={copied} />
         <SecBtn onClick={nativeShare} icon={<Share2 size={16} />} label="Поделиться" />
         <SecBtn onClick={() => setShowQR(v => !v)} icon={<QrCode size={16} />} label="QR-код" active={showQR} />
@@ -220,13 +228,13 @@ export default function Referral({ referralCode, onBalanceChange }: { referralCo
 function SecBtn({ onClick, icon, label, active }: { onClick: () => void; icon: React.ReactNode; label: string; active?: boolean }) {
   return (
     <button onClick={onClick} className="tap" style={{
-      flex: 1, padding: '11px 0', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
+      minWidth: 0, padding: '11px 4px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
       border: active ? '1px solid var(--accent-border)' : '1px solid var(--border)',
       background: active ? 'var(--accent-dim)' : 'var(--card-strong)',
       color: active ? 'var(--accent)' : 'var(--text)',
       fontSize: 12, fontWeight: 600, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
     }}>
-      {icon}{label}
+      {icon}<span style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
     </button>
   );
 }
