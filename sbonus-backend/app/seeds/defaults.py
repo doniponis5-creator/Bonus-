@@ -64,6 +64,19 @@ async def seed_default_data(db: AsyncSession) -> None:
         db.add(Setting(key=_report_phone_key, value=settings.shop_phone))
         logger.info("Created setting: %s", _report_phone_key)
 
+    _default_settings = {
+        "BALANCE_REMINDER_INACTIVE_DAYS": "14",
+        "BALANCE_REMINDER_INTERVAL_DAYS": "14",
+        "BONUS_EXPIRATION_DAYS": "365",
+        "BONUS_EXPIRATION_WARNING_DAYS": "60",
+        "BONUS_EXPIRATION_NOTICE_DAYS": "60",
+    }
+    for key, value in _default_settings.items():
+        result = await db.execute(select(Setting).where(Setting.key == key))
+        if not result.scalar_one_or_none():
+            db.add(Setting(key=key, value=value))
+            logger.info("Created setting: %s", key)
+
     # ── WhatsApp шаблоны (upsert — обновляем если текст изменился) ──
     _wa_templates = {
         "WHATSAPP_TEMPLATE_EARN": (

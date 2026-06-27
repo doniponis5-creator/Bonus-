@@ -129,7 +129,7 @@ async def lifespan(app: FastAPI):
     )
 
     # Cron: Smart Comeback Reminder — каждый день 12:00
-    # Макс 2 напоминания за цикл, 14 дней cooldown, 50 за запуск
+    # Клиенты с бонусами > 0: после 14 дней без покупки, затем не чаще 1 раза в 14 дней.
     scheduler.add_job(
         send_balance_reminders,
         CronTrigger(hour=12, minute=0),
@@ -285,7 +285,7 @@ async def lifespan(app: FastAPI):
     logger.info("Cron: expiration warnings scheduled at 10:00 daily")
     logger.info("Cron: notification retry scheduled every 15 min")
     logger.info("Cron: weekly report scheduled at Mon 08:00")
-    logger.info("Cron: smart comeback reminder at 12:00 daily (max 2 per cycle, 50/run)")
+    logger.info("Cron: smart comeback reminder at 12:00 daily (14d inactive, 14d cooldown, 50/run)")
     logger.info("Cron: WA auto-triggers: birthday 09:30 (sleeping DISABLED → smart reminder)")
     logger.info("Cron: Telegram reports at 09:00 & 21:00 daily")
     logger.info("Cron: P&L Telegram report at 21:30 daily")

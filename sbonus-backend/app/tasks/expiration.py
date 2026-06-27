@@ -53,12 +53,16 @@ async def _get_expiration_settings(db) -> tuple[int, int]:
     result = await db.execute(
         select(Setting).where(Setting.key.in_([
             "BONUS_EXPIRATION_DAYS",
+            "BONUS_EXPIRATION_NOTICE_DAYS",
             "BONUS_EXPIRATION_WARNING_DAYS",
         ]))
     )
     s_map = {s.key: s.value for s in result.scalars().all()}
     exp_days = int(s_map.get("BONUS_EXPIRATION_DAYS", settings.bonus_expiration_days))
-    warn_days = int(s_map.get("BONUS_EXPIRATION_WARNING_DAYS", settings.bonus_expiration_warning_days))
+    warn_days = int(
+        s_map.get("BONUS_EXPIRATION_NOTICE_DAYS")
+        or s_map.get("BONUS_EXPIRATION_WARNING_DAYS", settings.bonus_expiration_warning_days)
+    )
     return exp_days, warn_days
 
 
@@ -258,7 +262,7 @@ async def _notify_expiration(db, customer_id, expired_amount: Decimal, new_balan
     ))
 
 
-async def _notify_expiration_warning(db, customer_id, amount: Decimal, balance: Decimal, warn_days: int = 30):
+async def _notify_expiration_warning(db, customer_id, amount: Decimal, balance: Decimal, warn_days: int = 60):
     """Уведомление: бонусы скоро истекут."""
     import asyncio
     from app.models import Customer, Setting
