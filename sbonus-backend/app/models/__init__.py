@@ -540,8 +540,8 @@ class PurchaseItem(Base):
     transaction_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True
     )
-    product_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("products.id"), nullable=False
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("products.id"), nullable=True
     )
     receipt_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     quantity: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
@@ -551,7 +551,7 @@ class PurchaseItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    product: Mapped["Product"] = relationship(back_populates="purchase_items")
+    product: Mapped["Product | None"] = relationship(back_populates="purchase_items")
 
 
 # ═══════════════════════════════════════════

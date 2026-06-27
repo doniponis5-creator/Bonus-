@@ -635,6 +635,12 @@ class SalesSyncRequest(BaseModel):
     sales: list[SalesSyncEntry]
 
 
+class SalesSyncCleanupRequest(BaseModel):
+    branch_id: Optional[str] = Field(None, max_length=50)
+    month: str = Field(..., pattern=r"^\d{4}-\d{2}$")
+    valid_receipts: list[str] = Field(default_factory=list)
+
+
 class ExpensesSyncEntry(BaseModel):
     category: str = Field(..., max_length=100)
     amount: float = 0

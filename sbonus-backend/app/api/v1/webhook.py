@@ -1129,18 +1129,21 @@ async def webhook_1c_expenses(
     return {"success": True, "created": created, "skipped": skipped}
 
 
+from app.schemas import SalesSyncCleanupRequest as _SalesCleanupReq
 from app.schemas import SalesSyncRequest as _SalesReq
 
 @router.post("/1c/sales-sync")
 async def webhook_1c_sales_sync(body: _SalesReq, request: Request, db: AsyncSession = Depends(get_db), x_signature: str = Header(None, alias="X-Signature")) -> dict:
     await _security_check(request, x_signature, db)
     from app.models import PurchaseItem, Product
-    from sqlalchemy import select, update
+    from sqlalchemy import delete, or_, select
     from datetime import datetime
     created = updated = noprod = 0
     for sale in body.sales:
-        ex = await db.execute(select(PurchaseItem.id).where(PurchaseItem.receipt_number == sale.receipt_number).limit(1))
-        receipt_exists = ex.scalar_one_or_none() is not None
+        old_result = await db.execute(select(PurchaseItem).where(PurchaseItem.receipt_number == sale.receipt_number))
+        old_items = old_result.scalars().all()
+        receipt_exists = len(old_items) > 0
+        transaction_id = next((item.transaction_id for item in old_items if item.transaction_id), None)
         sdate = None
         if sale.date:
             for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
@@ -1148,30 +1151,87 @@ async def webhook_1c_sales_sync(body: _SalesReq, request: Request, db: AsyncSess
                     sdate = datetime.strptime(sale.date, fmt); break
                 except Exception:
                     pass
+
+        if receipt_exists:
+            await db.execute(delete(PurchaseItem).where(PurchaseItem.receipt_number == sale.receipt_number))
+
         for it in (sale.items or []):
             pr = await db.execute(select(Product).where(Product.sku == it.sku).limit(1))
             product = pr.scalar_one_or_none()
             if not product:
                 noprod += 1
-                continue
+            total_value = getattr(it, "total", None)
+            tot = total_value if total_value not in (None, 0) else (it.price * it.quantity)
             cost = getattr(it, "cost_price", 0) or 0
-            if receipt_exists:
-                if cost and cost > 0:
-                    await db.execute(update(PurchaseItem).where(PurchaseItem.receipt_number == sale.receipt_number, PurchaseItem.product_id == product.id).values(cost_price=cost))
-            else:
-                tot = it.total if (it.total and it.total > 0) else (it.price * it.quantity)
-                pi = PurchaseItem(transaction_id=None, product_id=product.id, receipt_number=sale.receipt_number, quantity=it.quantity, price=it.price, total=tot)
-                if cost and cost > 0:
-                    pi.cost_price = cost
-                if sdate:
-                    pi.created_at = sdate
-                db.add(pi)
+            pi = PurchaseItem(
+                transaction_id=transaction_id,
+                product_id=(product.id if product else None),
+                receipt_number=sale.receipt_number,
+                quantity=it.quantity,
+                price=it.price,
+                total=tot,
+            )
+            if cost and cost > 0:
+                pi.cost_price = cost
+            if sdate:
+                pi.created_at = sdate
+            db.add(pi)
         if receipt_exists:
             updated += 1
         else:
             created += 1
     await db.commit()
     return {"status": "ok", "created": created, "updated": updated, "no_product": noprod}
+
+
+@router.post("/1c/sales-sync/cleanup")
+async def webhook_1c_sales_sync_cleanup(body: _SalesCleanupReq, request: Request, db: AsyncSession = Depends(get_db), x_signature: str = Header(None, alias="X-Signature")) -> dict:
+    await _security_check(request, x_signature, db)
+    from app.models import PurchaseItem
+    from sqlalchemy import delete, or_, select
+    from datetime import datetime
+
+    valid_receipts = {str(r).strip() for r in body.valid_receipts if str(r).strip()}
+    if len(valid_receipts) < 5:
+        raise HTTPException(status_code=400, detail={"code": "TOO_FEW_RECEIPTS", "message": "valid_receipts must contain at least 5 receipts"})
+
+    start = datetime.strptime(body.month + "-01", "%Y-%m-%d")
+    year = start.year + (1 if start.month == 12 else 0)
+    month = 1 if start.month == 12 else start.month + 1
+    end = datetime(year, month, 1)
+    receipt_filter = or_(
+        PurchaseItem.receipt_number.like("РТУ-%"),
+        PurchaseItem.receipt_number.like("ЧК-%"),
+        PurchaseItem.receipt_number.like("ВЗ-%"),
+    )
+
+    existing_result = await db.execute(
+        select(PurchaseItem.receipt_number)
+        .where(
+            PurchaseItem.created_at >= start,
+            PurchaseItem.created_at < end,
+            PurchaseItem.receipt_number != None,  # noqa: E711
+            receipt_filter,
+        )
+        .distinct()
+    )
+    existing = {row[0] for row in existing_result.all() if row[0]}
+    stale = sorted(existing - valid_receipts)
+
+    deleted = 0
+    if stale:
+        result = await db.execute(
+            delete(PurchaseItem).where(
+                PurchaseItem.created_at >= start,
+                PurchaseItem.created_at < end,
+                receipt_filter,
+                PurchaseItem.receipt_number.in_(stale),
+            )
+        )
+        deleted = int(result.rowcount or 0)
+
+    await db.commit()
+    return {"status": "ok", "month": body.month, "valid": len(valid_receipts), "stale_receipts": len(stale), "deleted": deleted}
 
 
 from app.schemas import ExpensesSyncRequest as _ExpReq
