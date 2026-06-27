@@ -82,7 +82,9 @@ DEFAULT_SEGMENTS = [
 
 def _pick_segment(segments: list[dict]) -> dict:
     """Weighted random pick."""
-    weights = [s["probability"] for s in segments]
+    weights = [max(0, float(s.get("probability", 0))) for s in segments]
+    if not segments or sum(weights) <= 0:
+        raise ValueError("No wheel segments with positive probability")
     return random.choices(segments, weights=weights, k=1)[0]
 
 
@@ -126,6 +128,55 @@ async def _available_segments(db: AsyncSession, segments: list[dict]) -> list[di
         if stock is None or won.get(_stock_setting_key(s), 0) < int(stock):
             available.append(s)
     return available
+
+
+def _fallback_none_segment(segments: list[dict]) -> dict:
+    """Вернуть безопасный пустой сегмент, когда призовые сегменты недоступны."""
+    for s in segments:
+        if s.get("prize_type") == "none":
+            return {**s, "probability": 1.0}
+    return {"id": 0, "label": "Попробуйте!", "value": 0, "color": "#64748b", "probability": 1.0, "prize_type": "none"}
+
+
+async def _reserve_stock_if_needed(db: AsyncSession, segment: dict) -> str | None:
+    """Зарезервировать лимитированный приз. Возвращает Redis-lock key или None."""
+    if segment.get("stock") is None or not segment.get("id"):
+        return None
+
+    won_key = _stock_setting_key(segment)
+    lock_key = f"wheel:stock:{won_key}"
+    acquired = await redis_client.set(lock_key, "1", nx=True, ex=10)
+    if not acquired:
+        return ""
+
+    won_res = await db.execute(select(Setting).where(Setting.key == won_key).with_for_update())
+    won_rec = won_res.scalar_one_or_none()
+    won_count = int(won_rec.value or 0) if won_rec else 0
+    if won_count >= int(segment["stock"]):
+        await redis_client.delete(lock_key)
+        return ""
+
+    if won_rec:
+        won_rec.value = str(won_count + 1)
+    else:
+        db.add(Setting(key=won_key, value="1"))
+    return lock_key
+
+
+async def _pick_segment_with_stock_reservation(db: AsyncSession, segments: list[dict]) -> tuple[dict, str | None]:
+    """Выбрать сегмент и атомарно зарезервировать stock, если он есть."""
+    candidates = [
+        s for s in await _available_segments(db, segments)
+        if float(s.get("probability", 0)) > 0
+    ]
+    while candidates:
+        winner = _pick_segment(candidates)
+        stock_lock_key = await _reserve_stock_if_needed(db, winner)
+        if stock_lock_key != "":
+            return winner, stock_lock_key
+        candidates = [s for s in candidates if s.get("id") != winner.get("id")]
+
+    return _fallback_none_segment(segments), None
 
 
 # ─── Endpoints ───
@@ -211,32 +262,18 @@ async def _do_spin(db: AsyncSession, customer_id: uuid.UUID) -> SpinResultRespon
             detail={"code": "NO_SPINS", "message": "Нет доступных попыток. Сделайте покупку!"},
         )
 
-    # Increment spin counter IMMEDIATELY (inside lock)
+    # Reserve a valid segment before consuming a spin.
+    stock_lock_key = None
+
+    # Выбрать сегмент (с учётом запаса призов)
+    segments = await _get_segments(db)
+    winner, stock_lock_key = await _pick_segment_with_stock_reservation(db, segments)
+    prize_type = winner.get("prize_type", "bonus")
+
     if spin_record:
         spin_record.value = str(used_spins + 1)
     else:
         db.add(Setting(key=spin_key, value="1"))
-
-    # Выбрать сегмент (с учётом запаса призов)
-    segments = await _get_segments(db)
-    available = await _available_segments(db, segments)
-    if not available:
-        # Все призы с лимитом исчерпаны → запасной "пустой" сегмент
-        available = [s for s in segments if s.get("prize_type") == "none"] or [
-            {"id": 0, "label": "Попробуйте!", "value": 0, "color": "#64748b", "probability": 1.0, "prize_type": "none"}
-        ]
-    winner = _pick_segment(available)
-    prize_type = winner.get("prize_type", "bonus")
-
-    # Уменьшить запас приза (если задан stock) — атомарно внутри блокировки
-    if winner.get("stock") is not None and winner.get("id"):
-        won_key = _stock_setting_key(winner)
-        won_res = await db.execute(select(Setting).where(Setting.key == won_key).with_for_update())
-        won_rec = won_res.scalar_one_or_none()
-        if won_rec:
-            won_rec.value = str(int(won_rec.value or 0) + 1)
-        else:
-            db.add(Setting(key=won_key, value="1"))
 
     # Получить аккаунт (locked)
     result = await db.execute(
@@ -281,6 +318,8 @@ async def _do_spin(db: AsyncSession, customer_id: uuid.UUID) -> SpinResultRespon
         message = "Не повезло! Попробуйте в следующий раз!"
 
     await db.commit()
+    if stock_lock_key:
+        await redis_client.delete(stock_lock_key)
 
     # ── Уведомления (fire-and-forget) ──
     customer_name = customer.full_name if customer else "Неизвестный"

@@ -15,7 +15,6 @@ import BonusWheel from '@/components/BonusWheel';
 import Leaderboard from '@/components/Leaderboard';
 import MyCoupons from '@/components/MyCoupons';
 import ReviewBonus from '@/components/ReviewBonus';
-import PWAInstall from '@/components/PWAInstall';
 import Gamification from '@/components/Gamification';
 import Referral from '@/components/Referral';
 import { customerAPI, customerAuthAPI, wheelAPI, type CabinetMe } from '@/lib/api';
@@ -137,16 +136,10 @@ function DashboardPage() {
   useEffect(() => {
     if (!data || spinCheckedRef.current) return;
     spinCheckedRef.current = true;
-    try {
-      if (sessionStorage.getItem('sbonus_spin_prompt_shown')) return;
-    } catch { /* ignore */ }
     wheelAPI.status()
       .then(r => {
         const n = r.data?.spins_available || 0;
-        if (n > 0) {
-          setSpinPrompt(n);
-          try { sessionStorage.setItem('sbonus_spin_prompt_shown', '1'); } catch { /* ignore */ }
-        }
+        setSpinPrompt(n > 0 ? n : 0);
       })
       .catch(() => {});
   }, [data]);
@@ -768,9 +761,6 @@ function DashboardPage() {
           </div>
         </>
       )}
-
-      {/* PWA Install Banner — не показываем в нативном приложении */}
-      {!native && <PWAInstall />}
 
       {/* Bottom padding for tab bar */}
       <div style={{ height: 80 }} />

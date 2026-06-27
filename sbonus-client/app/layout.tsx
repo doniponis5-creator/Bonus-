@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
+import PWAInstall from '@/components/PWAInstall';
 
 export const metadata: Metadata = {
   title: 'S Bonus — Личный кабинет · Смарт Центр',
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
+        <PWAInstall />
         <script
           dangerouslySetInnerHTML={{
             __html: `
