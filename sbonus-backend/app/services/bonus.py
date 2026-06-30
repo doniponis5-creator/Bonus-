@@ -832,6 +832,19 @@ class BonusService:
             .replace("{name}", customer_name or "")
             .replace("{link}", cabinet_link)
         )
+        button_url = None
+        if "{link}" in tmpl_row.value:
+            button_url = cabinet_link
+            msg = (
+                msg.replace(cabinet_link + "\n", "")
+                .replace(cabinet_link, "")
+                .replace("\U0001f4f1 \u041b\u0438\u0447\u043d\u044b\u0439 \u043a\u0430\u0431\u0438\u043d\u0435\u0442: \n", "")
+                .replace("\U0001f4f1 \u041b\u0438\u0447\u043d\u044b\u0439 \u043a\u0430\u0431\u0438\u043d\u0435\u0442: ", "")
+                .replace("\u041b\u0438\u0447\u043d\u044b\u0439 \u043a\u0430\u0431\u0438\u043d\u0435\u0442: \n", "")
+                .replace("\u041b\u0438\u0447\u043d\u044b\u0439 \u043a\u0430\u0431\u0438\u043d\u0435\u0442: ", "")
+                .replace("\n\n\n", "\n\n")
+                .strip()
+            )
 
         # Используем tracked отправку если есть customer_id
         if customer_id:
@@ -843,6 +856,7 @@ class BonusService:
                 event_type=event_type,
                 instance_id=instance_id,
                 api_token=api_token,
+                button_url=button_url,
             )
         else:
             import asyncio

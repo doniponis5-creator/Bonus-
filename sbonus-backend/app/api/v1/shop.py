@@ -351,7 +351,25 @@ async def create_order(
                 msg += f"🚗 Доставка: {float(delivery_fee):,.0f} сом\n"
             msg += f"💵 К оплате: {float(total):,.0f} сом\n\n"
             msg += "📞 Мы свяжемся для подтверждения!"
-            await send_whatsapp_message(cust.phone, msg)
+            wa_settings = await db.execute(
+                select(Setting).where(Setting.key.in_([
+                    "ENABLE_WHATSAPP_NOTIFICATIONS",
+                    "GREENAPI_INSTANCE_ID",
+                    "GREENAPI_API_TOKEN",
+                ]))
+            )
+            wa_cfg = {s.key: s.value for s in wa_settings.scalars().all()}
+            if (
+                wa_cfg.get("ENABLE_WHATSAPP_NOTIFICATIONS") == "true"
+                and wa_cfg.get("GREENAPI_INSTANCE_ID")
+                and wa_cfg.get("GREENAPI_API_TOKEN")
+            ):
+                await send_whatsapp_message(
+                    cust.phone,
+                    msg,
+                    wa_cfg["GREENAPI_INSTANCE_ID"],
+                    wa_cfg["GREENAPI_API_TOKEN"],
+                )
     except Exception:
         pass
 

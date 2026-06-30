@@ -44,6 +44,24 @@ async def _get_setting(db, key: str, default: str | None = None) -> str | None:
     return default
 
 
+async def _get_wa_config(db) -> tuple[str, str] | None:
+    result = await db.execute(
+        select(Setting).where(Setting.key.in_([
+            "ENABLE_WHATSAPP_NOTIFICATIONS",
+            "GREENAPI_INSTANCE_ID",
+            "GREENAPI_API_TOKEN",
+        ]))
+    )
+    cfg = {s.key: s.value for s in result.scalars().all()}
+    if str(cfg.get("ENABLE_WHATSAPP_NOTIFICATIONS") or "").lower() != "true":
+        return None
+    instance_id = str(cfg.get("GREENAPI_INSTANCE_ID") or "").strip()
+    api_token = str(cfg.get("GREENAPI_API_TOKEN") or "").strip()
+    if not instance_id or not api_token:
+        return None
+    return instance_id, api_token
+
+
 def _fmt(amount) -> str:
     """12000 -> '12 000'."""
     try:
@@ -53,24 +71,25 @@ def _fmt(amount) -> str:
 
 
 # ─────────────────────────── WhatsApp adapter ───────────────────────────
-async def _send_wa(phone: str, text: str) -> bool:
+async def _send_wa(db, phone: str, text: str) -> bool:
     """
     GreenAPI orqali yuborish. send_whatsapp_message signaturasi loyihada
     boshqacha bo'lsa (masalan to=/message=), faqat shu yerni moslang.
     """
     if not phone:
         return False
+    wa_config = await _get_wa_config(db)
+    if not wa_config:
+        logger.warning("nasiya: WhatsApp o'chirilgan yoki GreenAPI sozlanmagan")
+        return False
+    instance_id, api_token = wa_config
     try:
-        result = await send_whatsapp_message(phone, text)
-        return True if result is None else bool(result)
-    except TypeError:
-        # nomli argument bo'lsa
-        try:
-            result = await send_whatsapp_message(phone=phone, message=text)
-            return True if result is None else bool(result)
-        except Exception as e:  # noqa
-            logger.warning("nasiya: WA signature mos emas: %s", e)
-            return False
+        return await send_whatsapp_message(
+            phone=phone,
+            message=text,
+            instance_id=instance_id,
+            api_token=api_token,
+        )
     except Exception as e:  # noqa
         logger.warning("nasiya: WA yuborilmadi (%s): %s", phone, e)
         return False
@@ -89,7 +108,7 @@ async def send_debtor_reminder(db, debt: NasiyaDebt) -> bool:
         due_date=debt.due_date.isoformat() if debt.due_date else "",
         days_left=days_left,
     )
-    return await _send_wa(debt.debtor_phone, text)
+    return await _send_wa(db, debt.debtor_phone, text)
 
 
 def _build_owner_message(debts: list[NasiyaDebt], today: date) -> str:
@@ -166,7 +185,7 @@ async def run_nasiya_reminders() -> None:
             due_or_overdue = [d for d in rows if d.due_date and d.due_date <= today]
             if due_or_overdue:
                 msg = _build_owner_message(due_or_overdue, today)
-                await _send_wa(owner_phone, msg)
+                await _send_wa(db, owner_phone, msg)
 
         await db.commit()
         logger.info("nasiya: tugadi — qarzdorga %s ta eslatma", sent_debtor)
