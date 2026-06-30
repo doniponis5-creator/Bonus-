@@ -491,7 +491,7 @@ async def _notify_wheel_whatsapp(
 ):
     """WhatsApp уведомление клиенту о выигрыше на колесе."""
     try:
-        from app.services.whatsapp import send_whatsapp_message
+        from app.services.whatsapp import send_whatsapp_button_message, send_whatsapp_message
 
         # Read credentials from DB Settings (same as all other services)
         async with db_factory() as db:
@@ -531,7 +531,17 @@ async def _notify_wheel_whatsapp(
         else:
             return  # Не уведомляем о пустых спинах
 
-        await send_whatsapp_message(phone, msg, instance_id, api_token)
+        button_msg = msg.replace(f"\n\n👤 Личный кабинет: {cabinet_url}", "").strip()
+        ok, _ = await send_whatsapp_button_message(
+            phone=phone,
+            message=button_msg,
+            button_text="Личный кабинет",
+            button_url=cabinet_url,
+            instance_id=instance_id,
+            api_token=api_token,
+        )
+        if not ok:
+            await send_whatsapp_message(phone, msg, instance_id, api_token)
     except Exception:
         pass  # Не ломаем основной flow
 
