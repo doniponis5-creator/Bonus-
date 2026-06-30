@@ -67,7 +67,6 @@ async def send_whatsapp_button_message(
         payload = {
             "chatId": chat_id,
             "body": message,
-            "footer": button_text,
             "buttons": [
                 {
                     "type": "url",
