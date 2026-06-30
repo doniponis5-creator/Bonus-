@@ -64,6 +64,10 @@ async def send_whatsapp_button_message(
     try:
         chat_id = format_phone(phone)
         url = f"https://api.green-api.com/waInstance{instance_id.strip()}/sendInteractiveButtons/{api_token.strip()}"
+        cabinet_prompt = "Для входа нажмите кнопку ниже 👇"
+        if button_text.strip().lower() == "личный кабинет" and cabinet_prompt not in message:
+            message = f"{message.rstrip()}\n\n{cabinet_prompt}"
+
         payload = {
             "chatId": chat_id,
             "body": message,
